@@ -1,13 +1,32 @@
-typedef struct {
-	int spsr;
+enum TASK_STATE {
+    ACTIVE = 0,
+    READY,
+    BLOCKED,
+    DEFUNCT
+} taskState;
+
+typedef struct taskdes {
+	// State
+    int spsr;
+    // Stack Pointer
 	int sp;
+    // The first function this runs
 	void (* start )();
 
-    int tid;
-    int parentTid;
+    int id;             // A unique identifying id
+    int parentId;       // The unique id of the parent
 
+    int returnValue;    // What the heck is this?
+
+    int priority;       // A priority value (ranges from 0->2)
+    
+    enum TASK_STATE state;
+
+    tskdes *nextPQ;
+    tskdes *prevPQ;
 
 } TD;
+
 typedef struct {
 	int arg0;
 	int arg1;
