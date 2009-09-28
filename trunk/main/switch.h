@@ -2,6 +2,11 @@ typedef struct {
 	int spsr;
 	int sp;
 	void (* start )();
+
+    int tid;
+    int parentTid;
+
+
 } TD;
 typedef struct {
 	int arg0;
