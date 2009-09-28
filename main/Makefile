@@ -24,8 +24,8 @@ main.s: main.c main.h
 main.o: main.s
 	$(AS) $(ASFLAGS) -o main.o main.s
 
-main.elf: main.o switch.o
-	$(LD) $(LDFLAGS) -o $@ main.o switch.o -lbwio -lgcc
+main.elf: main.o switch.o requests.o
+	$(LD) $(LDFLAGS) -o $@ main.o switch.o requests.o -lbwio -lgcc
 
 switch.REDO: switch.c switch.h
 	$(XCC) -S $(CFLAGS) -o switch.REDO switch.c
@@ -33,6 +33,12 @@ switch.REDO: switch.c switch.h
 switch.o: switch.s
 	$(AS) $(ASFLAGS) -o switch.o switch.s
 	
+requests.s: requests.c requests.h
+	$(XCC) -S $(CFLAGS) requests.c
+
+requests.o: requests.s
+	$(AS) $(ASFLAGS) -o requests.o requests.s
+
 clean:
 	-rm -f main.elf main.s *.o main.map
 
