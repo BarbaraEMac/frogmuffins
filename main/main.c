@@ -1,33 +1,19 @@
- /*
- * dgoc_a1.c
+/*
+ * CS 452: Kernel
+ * becmacdo
+ * dgoc
  */
 
 #include <bwio.h>
 #include <ts7200.h>
 #include "switch.h"
+
 #define FOREVER     for( ; ; )
 #define WAIT        for( i=0; i<200000; i++) {}
-#define INPUT_LEN   256
-#define INPUT_HIST  1
-#define NUM_TRNS    81
-#define NUM_SWTS    256
-#define SW_CNT      22
-#define SW_WAIT     100
-#define SNSR_WAIT   100
-#define TRAIN_WAIT  500
-#define TRAIN_TRIES 5
+#define NUM_TDs     64
+
 
 /*
-int timeout = 250;
-
-typedef struct {
-    char box;
-    int num;
-    char trains[NUM_TRNS];
-    char switches[NUM_SWTS];
-    int* clock;
-} globals;
-
 // the following funciton was copied and modified from wikipedia
 int rev_log2(unsigned char x) {
   int r = 0;
@@ -40,10 +26,29 @@ void charset( char*str, int len, char ch=0 ) {
     while( (--len) >= 0 ) str[len] = ch;
 }*/
 
-void kerxit() {
+void firstTask () {
 
+    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
 
+    bwputstr (COM2, "First: exiting.");
+ 
+    Exit();
 }
+
+void userTaskStart ( TD *td ) {
+    
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+
+    Pass();
+    
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+
+    Exit();
+}
+
 void test( ) {
 	for( ;; ) {
 		bwputstr( COM2, "Task ending.\r\n" );
@@ -53,16 +58,6 @@ void test( ) {
 }
 
 int main( int argc, char* argv[] ) {
-//	char str[] = "Hello\n\r";
-    // Initialize variables
-
-    // Set up the communication ports
-/*	bwsetfifo( COM2, OFF );
-    bwsetspeed( COM1, 2400 );
-	bwsetfifo( COM1, OFF );
-    int *flag = (int *)( UART1_BASE + UART_LCRH_OFFSET );
-    *flag |= 0x60 | STP2_MASK;
-    */
 
     // Set up the timer
     int data, *junk;
@@ -82,7 +77,6 @@ int main( int argc, char* argv[] ) {
 	
     data = (int *) junk;
 	
-
     bwsetfifo( COM2, OFF );
     bwputstr( COM2, "Page table base: " );
     bwputr( COM2, data );
@@ -95,7 +89,4 @@ int main( int argc, char* argv[] ) {
 	}
     bwputstr( COM2, "Exiting normally" );
     return 0;
-
 }
-
-
