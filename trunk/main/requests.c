@@ -14,14 +14,14 @@ int MyTid () {
     asm ("swi #2");
 }
 
-int MyParentTid();
+int MyParentTid() {
     asm ("swi #3");
 }
 
-void Pass ();
+void Pass () {
     asm ("swi #4");
 }
 
-void Exit ();
+void Exit () {
     asm ("swi #5");
 }

@@ -7,6 +7,7 @@
 #include <bwio.h>
 #include <ts7200.h>
 #include "switch.h"
+#include "requests.h"
 
 #define FOREVER     for( ; ; )
 #define WAIT        for( i=0; i<200000; i++) {}
@@ -26,6 +27,17 @@ void charset( char*str, int len, char ch=0 ) {
     while( (--len) >= 0 ) str[len] = ch;
 }*/
 
+void userTaskStart ( TD *td ) {
+    
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+
+    Pass();
+    
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+
+    Exit();
+}
+
 void firstTask () {
 
     bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
@@ -38,17 +50,6 @@ void firstTask () {
     Exit();
 }
 
-void userTaskStart ( TD *td ) {
-    
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
-
-    Pass();
-    
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
-
-    Exit();
-}
-
 void test( ) {
 	for( ;; ) {
 		bwputstr( COM2, "Task ending.\r\n" );
@@ -57,9 +58,49 @@ void test( ) {
 	}
 }
 
+void initialize ( TD *tds ) {
+    // Init things to zero?
+
+
+}
+
+TD * getNextRequest ( TD *td ) {
+    TD *newTd;
+
+    return newTd;
+}
+
+void service ( TD *td ) {
+    // Do some context switching into here
+    // Switch based on value of system call code
+    // do the action!
+
+}
+
+TD * schedule () {
+    // Schedule the next task to run?
+    // Probably do some fun scheduling algorotihm here
+
+
+}
+
 int main( int argc, char* argv[] ) {
 
-    // Set up the timer
+    TD taskDescriptors [64];
+    TD *active, *nextRequest;
+
+    // This is what we will end up with.
+    // Look, it's already done.
+/*
+    initialize ( taskDescriptors );
+
+    FOREVER {
+        nextRequest = getNextRequest (active);
+        service (nextRequest);
+        active = schedule ();
+    }
+*/
+
     int data, *junk;
 	int i;
 	// Set up the Software interrupt for context switches
