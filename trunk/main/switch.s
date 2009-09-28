@@ -55,9 +55,6 @@ kerExit:
 	ldmia 	r0, {ip, sp}
 	#; restore the active task
 	ldmfd	sp!, {r4-r9, sl, fp, lr}
-	mov		r1, sp
-	mov		r0, #1
-	bl		bwputr(PLT)
 	mov		r3, lr
 	#; put the return value in r0
 	ldmia 	r1, {r0}
