@@ -1,0 +1,29 @@
+	.file	"switch.c"
+	.text
+	.align	2
+	.global	kerEnt
+	.type	kerEnt, %function
+kerEnt:
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 1, uses_anonymous_args = 0
+	mov	ip, sp
+	stmfd	sp!, {fp, ip, lr, pc}
+	sub	fp, ip, #4
+	ldmfd	sp, {fp, sp, pc}
+	.size	kerEnt, .-kerEnt
+	.align	2
+	.global	kerExit
+	.type	kerExit, %function
+kerExit:
+	@ args = 0, pretend = 0, frame = 8
+	@ frame_needed = 1, uses_anonymous_args = 0
+	mov	ip, sp
+	stmfd	sp!, {fp, ip, lr, pc}
+	sub	fp, ip, #4
+	sub	sp, sp, #8
+	str	r0, [fp, #-16]
+	str	r1, [fp, #-20]
+	sub	sp, fp, #12
+	ldmfd	sp, {fp, sp, pc}
+	.size	kerExit, .-kerExit
+	.ident	"GCC: (GNU) 4.0.2"

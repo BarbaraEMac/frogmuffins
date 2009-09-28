@@ -1,0 +1,118 @@
+Archive member included because of file (symbol)
+
+../lib/libbwio.a(bwio.o)      main.o (bwsetfifo)
+/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+                              ../lib/libbwio.a(bwio.o) (__udivsi3)
+/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+                              ../lib/libbwio.a(bwio.o) (__umodsi3)
+/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
+                              /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o) (__div0)
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+                0x0000000000218000                . = 0x218000
+
+.data           0x0000000000218000        0x0
+                0x0000000000218000                _DataStart = .
+ *(.data)
+                0x0000000000218000                _DataEnd = .
+
+.data.rel.ro    0x0000000000218000        0xc
+ .data.rel.ro   0x0000000000218000        0xc main.o
+
+.bss            0x000000000021800c        0x0
+                0x000000000021800c                _BssStart = .
+ *(.bss)
+                0x000000000021800c                _BssEnd = .
+
+.text           0x000000000021800c     0x19ac
+ *(.text)
+ .text          0x000000000021800c      0x1fc main.o
+                0x000000000021800c                kerxit
+                0x000000000021801c                test
+                0x000000000021806c                main
+ .text          0x0000000000218208       0x80 switch.o
+                0x0000000000218250                kerExit
+                0x0000000000218208                kerEnt
+ .text          0x0000000000218288     0x148c ../lib/libbwio.a(bwio.o)
+                0x0000000000218840                bwputr
+                0x0000000000218fb8                bwi2a
+                0x000000000021837c                bwsetfifo
+                0x0000000000218a44                bwclear
+                0x000000000021869c                bwputc
+                0x0000000000219310                scan
+                0x0000000000218ccc                bwa2d
+                0x0000000000218288                clock_init
+                0x0000000000218324                wait
+                0x0000000000218550                bwsendc
+                0x0000000000218444                bwsetspeed
+                0x0000000000218760                c2x
+                0x0000000000218d74                bwa2i
+                0x00000000002196ac                sscanf
+                0x0000000000218ae4                bwgetc
+                0x0000000000218e74                bwui2a
+                0x000000000021901c                bwformat
+                0x00000000002182fc                clock_stop
+                0x0000000000218b9c                bwreadc
+                0x000000000021893c                bwputw
+                0x00000000002192d8                bwprintf
+                0x00000000002187c0                bwputx
+                0x00000000002188c0                bwputstr
+ .text          0x0000000000219714      0x110 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+                0x0000000000219714                __udivsi3
+                0x000000000021980c                __aeabi_uidivmod
+ .text          0x0000000000219824       0xcc /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+                0x0000000000219824                __umodsi3
+ .text          0x00000000002198f0        0x4 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
+                0x00000000002198f0                __aeabi_ldiv0
+                0x00000000002198f0                __div0
+                0x00000000002198f0                __aeabi_idiv0
+ *(.got)
+ .got           0x00000000002198f4       0x10 main.o
+ *(.got.plt)
+ .got.plt       0x0000000000219904        0xc main.o
+                0x0000000000219904                _GLOBAL_OFFSET_TABLE_
+ *(.rodata)
+ .rodata        0x0000000000219910       0xa8 main.o
+ *(.glue_7)
+ *(.glue_7t)
+
+.rel.dyn
+LOAD main.o
+LOAD switch.o
+LOAD ../lib/libbwio.a
+LOAD /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a
+OUTPUT(main.elf elf32-littlearm)
+
+.comment        0x0000000000000000       0x36
+ .comment       0x0000000000000000       0x12 main.o
+ .comment       0x0000000000000012       0x12 switch.o
+ .comment       0x0000000000000024       0x12 ../lib/libbwio.a(bwio.o)
+
+.debug_line     0x0000000000000000      0x14f
+ .debug_line    0x0000000000000000       0x86 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+ .debug_line    0x0000000000000086       0x6f /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+ .debug_line    0x00000000000000f5       0x5a /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
+
+.debug_info     0x0000000000000000      0x153
+ .debug_info    0x0000000000000000       0x71 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+ .debug_info    0x0000000000000071       0x71 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+ .debug_info    0x00000000000000e2       0x71 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
+
+.debug_abbrev   0x0000000000000000       0x3c
+ .debug_abbrev  0x0000000000000000       0x14 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+ .debug_abbrev  0x0000000000000014       0x14 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+ .debug_abbrev  0x0000000000000028       0x14 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
+
+.debug_aranges  0x0000000000000000       0x60
+ .debug_aranges
+                0x0000000000000000       0x20 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_udivsi3.o)
+ .debug_aranges
+                0x0000000000000020       0x20 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_umodsi3.o)
+ .debug_aranges
+                0x0000000000000040       0x20 /u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2/libgcc.a(_dvmd_tls.o)
