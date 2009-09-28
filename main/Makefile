@@ -30,8 +30,8 @@ main.elf: main.o switch.o requests.o
 switch.REDO: switch.c switch.h
 	$(XCC) -S $(CFLAGS) -o switch.REDO switch.c
 
-switch.o: switch.s
-	$(AS) $(ASFLAGS) -o switch.o switch.s
+switch.o: switch.S
+	$(AS) $(ASFLAGS) -o switch.o switch.S
 	
 requests.s: requests.c requests.h
 	$(XCC) -S $(CFLAGS) requests.c
@@ -40,7 +40,7 @@ requests.o: requests.s
 	$(AS) $(ASFLAGS) -o requests.o requests.s
 
 clean:
-	-rm -f main.elf main.s *.o main.map
+	-rm -f main.elf *.s *.o main.map
 
 copy: 
 	cp main.elf /u/cs452/tftpboot/ARM/dgoc
