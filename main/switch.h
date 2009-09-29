@@ -22,8 +22,8 @@ typedef struct taskdes {
     
     enum TASK_STATE state;
 
-    tskdes *nextPQ;
-    tskdes *prevPQ;
+    //TD *nextPQ;
+    //TD *prevPQ;
 
 } TD;
 
