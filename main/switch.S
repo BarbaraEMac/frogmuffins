@@ -18,7 +18,6 @@ kerEnt:
 	#; overwrite lr
 	mov	 	lr, ip
 	#; save active task's state
-	mov 	ip, sp
 	stmfd	sp!, {r4-r9, sl, fp, lr}
 	mov 	ip, sp
 	#; switch to supervisor mode
