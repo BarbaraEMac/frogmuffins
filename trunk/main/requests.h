@@ -4,6 +4,8 @@
  * dgoc
  */
 
+#ifndef __REQUESTS_H__
+#define __REQUESTS_H__
 
 // These are really system calls - Cowan calls them "requests"
 
@@ -47,3 +49,5 @@ void Pass ();
  * Terminate execution forever.
  */
 void Exit ();
+
+#endif
