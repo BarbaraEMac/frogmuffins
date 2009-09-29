@@ -29,11 +29,11 @@ void charset( char*str, int len, char ch=0 ) {
 
 void userTaskStart ( TD *td ) {
     
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
 
     Pass();
     
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->tid, td->parentTid);
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
 
     Exit();
 }
