@@ -22,7 +22,7 @@ struct request;
 // * pop the registers of the kernel from its stack;
 // * fill in the request with its arguments;
 // * put the sp and the spsr into the TD of the active task.
-void kernEnter();
+void kernelEnter();
 
 // kerExit switches from the kernel to the task described, 
 // doing the following:
@@ -34,6 +34,6 @@ void kernEnter();
 // * return to svc state;
 // * install the spsr of the active task; and
 // * install the pc of the active task.
-void kernExit(struct taskdesc *active, struct request *req);
+void kernelExit(struct taskdesc *active, struct request *req);
 
 int syscall(int arg0, int arg1, int arg3, int type);
