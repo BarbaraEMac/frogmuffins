@@ -3,11 +3,15 @@
  * becmacdo
  * dgoc
  */
+#ifndef __SWITCH_H__
+#define __SWITCH_H__
+
+#define PC_OFFSET 9
 
 // Forward declare these. We don't actually use them,
 // so we don't need to include them.
-struct taskdesc;
-struct request;
+#include "td.h"
+#include "requests.h"
 
 // kerEnt allows a task to return exectution to the kernel, 
 // doing the following:
@@ -34,6 +38,8 @@ void kernelEnter();
 // * return to svc state;
 // * install the spsr of the active task; and
 // * install the pc of the active task.
-void kernelExit(struct taskdesc *active, struct request *req);
+void kernelExit(TD *active, Request *req);
 
 int syscall(int arg0, int arg1, int arg3, int type);
+
+#endif
