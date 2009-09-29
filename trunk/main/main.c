@@ -16,6 +16,8 @@
 #define NUM_TDs	 64
 
 
+// TODO: Write an assert library. We will need it.
+
 /*
 // the following funciton was copied and modified from wikipedia
 int rev_log2(unsigned char x) {
@@ -29,56 +31,6 @@ void charset( char*str, int len, char ch=0 ) {
 	while( (--len) >= 0 ) str[len] = ch;
 }*/
 
-typedef struct {
-	
-	TD tdArray[64];
-	int frontPtr;
-	int backPtr;
-
-	TD *pq[4]; // We have 5 priorities
-
-	int nextId;
-
-} TDManager;
-
-TD * createTask ( int priority, void (*start)(), int parentId, TDManager *manager ) {
-
-	// Grab the new task
-	TD *newTask = &manager->tdArray[manager->backPtr];
- 	int *pcOnStack;
-	// Initialize the values
-	// TODO: Put into a nice function
-	newTask->spsr = 0x10;	
-	newTask->sp = 0; //TODO
-	pcOnStack = newTask->sp + PC_OFFSET;
-
-	newTask->start = start;
-	
-	newTask->id = manager->nextId;
-	newTask->parentId = parentId;
-	
-	newTask->returnValue = 0;
-	newTask->priority = priority;
-	newTask->state = READY;
-
-	// Insert into PQ
-	TD *nextTask = manager->pq[priority];
-	TD *prevTask = nextTask->prevPQ;
-
-	prevTask->nextPQ = newTask;
-	nextTask->prevPQ = newTask;
-	newTask->nextPQ	= nextTask;
-	newTask->prevPQ	= prevTask;
-
-	manager->pq[priority] = newTask;
-
-	// Fix manager
-	manager->backPtr += 1;	// Advance pointer
-	manager->nextId += 1;		// Advance next valid task id
-
-	return newTask;
-}
-
 void test( ) {
 	for( ;; ) {
 		bwputstr( COM2, "Task ending.\r\n" );
@@ -87,10 +39,18 @@ void test( ) {
 	}
 }
 
-void initialize ( TD *tds ) {
-	// Init things to zero?
+TD * initialize ( TDManager *manager ) {
+    int i;
+    
+    for ( i = 0; i < MAX_PRIORITY; i ++ ) {
+        manager->pq[i] = 0;
+    }
 
-
+    manager->frontPtr = 0;
+    manager->backPtr  = 0;
+    manager->nextId   = 0;
+    
+    return kernCreateTask ( 1, &firstTaskStart, getNextId(manager), manager );
 }
 
 void getNextRequest ( TD *td, Request *ret ) {
@@ -105,7 +65,7 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = createTask(req->arg0, req->arg1, td->id, manager);
+			child = kernCreateTask(req->arg0, req->arg1, td->id, manager);
 			
 			td->returnValue = child->id;
 			break;
@@ -133,28 +93,46 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 // Schedule the next task to run?
 // Probably do some fun scheduling algorotihm here
 TD * schedule ( TDManager *manager ) {
-	
-	return 0;
+    TD **pq = manager->pq;
+    TD *itr;
+    int i;
+
+
+    // TODO: Starvation? I like starving tasks ...
+    for ( i = 0; i < MAX_PRIORITY; i ++ ) {
+        itr = pq[i];
+
+        while( itr->priority == i ) {
+            if ( itr->state == READY ) {
+                return itr;
+            }
+            itr = itr->nextPQ;
+        }
+
+    }
+    return 0;
+    //    put all defunct at back
+    //   if you reach a defunct, start at beginning
+    //  if all defunct, return 0;
 }
 
 
 int main( int argc, char* argv[] ) {
 	TDManager taskManager;
-	TD		active;
+	TD		*active;
 	Request	nextRequest;
 
 	// This is what we will end up with.
 	// Look, it's already done.
 /*
-	active = initialize ( taskDescriptors, taskPriorities );
+	active = initialize ( &taskManager );
 
 	FOREVER {
 		getNextRequest (active, &nextRequest);
-		service (active, nextRequest);
-		active = schedule (taskPriorities);
+		service (active, &nextRequest, &taskManager);
+		active = schedule (&taskManager);
 	}
 */
-
 	int data, *junk;
 	int i;
 	// Set up the Software interrupt for context switches
