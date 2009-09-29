@@ -6,6 +6,8 @@
 #ifndef __TD_H__
 #define __TD_H__
 
+#define MAX_PRIORITY 2
+
 enum TASK_STATE {
 	ACTIVE = 0,		 // Only 1 task will ever be active
 	READY,				// Task may be selected to be active
@@ -34,8 +36,31 @@ struct taskdesc {
 	TD *prevPQ; // Link to the prev TD in the PQ
 };
 
+typedef struct {
+	
+	TD tdArray[64];
+	int frontPtr;
+	int backPtr;
+
+    TD *pq[MAX_PRIORITY + 1];
+
+	int nextId;
+
+} TDManager;
+
+
+void firstTaskStart ();
+
 void userTaskStart (TD *t);
 
-void firstTask ();
+TD * getUnusedTask ( TDManager *manager );
+
+int getNextId ( TDManager *manager );
+
+void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *manager );
+
+void insertInPQ (TD *td, TDManager *manager );
+
+TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *manager );
 
 #endif
