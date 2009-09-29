@@ -16,29 +16,22 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map main.map -N  -T orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -L../lib
 
-all:  main.s main.elf 
+SOURCES = main.o switch.o requests.o 
 
-main.s: main.c main.h
-	$(XCC) -S $(CFLAGS) main.c
+all:  main.s requests.s switch.S main.elf 
 
-main.o: main.s
-	$(AS) $(ASFLAGS) -o main.o main.s
+%.s: %.c %.h
+	$(XCC) -S $(CFLAGS) $<
 
-main.elf: main.o switch.o requests.o
-	$(LD) $(LDFLAGS) -o $@ main.o switch.o requests.o -lbwio -lgcc
+%.o: %.s
+	$(AS) $(ASFLAGS) -o $@ $<
 
-switch.REDO: switch.c switch.h
-	$(XCC) -S $(CFLAGS) -o switch.REDO switch.c
+main.elf: $(SOURCES)
+	$(LD) $(LDFLAGS) -o $@ $(SOURCES) -lbwio -lgcc
 
 switch.o: switch.S
 	$(AS) $(ASFLAGS) -o switch.o switch.S
 	
-requests.s: requests.c requests.h
-	$(XCC) -S $(CFLAGS) requests.c
-
-requests.o: requests.s
-	$(AS) $(ASFLAGS) -o requests.o requests.s
-
 clean:
 	-rm -f main.elf *.s *.o main.map
 
