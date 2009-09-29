@@ -109,10 +109,8 @@ int main( int argc, char* argv[] ) {
 
 
 	// Set up the first task
-	TD task1 = { 0x00000010, 0x21B000, &test };
-	junk = 0x21B020;
-//	*junk = 0x21B000;
-//	junk = 0x21B024;
+	TD task1 = { 0x00000010, 0x21B000-0x24, &test };
+	junk = 0x21AFFC;
 	*junk = &test;
 	Request r1 = {2, 3, 4, 5};
 	
@@ -124,7 +122,7 @@ int main( int argc, char* argv[] ) {
     bwputstr( COM2, "\r\n" );
     bwputr( COM2,  (int) &test);
 	for( i=0; i<8; i++ ) {
-		bwprintf( COM2, "Got into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
+		bwprintf( COM2, "Going into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 		kerExit(&task1, &r1);
 		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 	}
