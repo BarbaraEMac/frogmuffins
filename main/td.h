@@ -12,6 +12,7 @@ enum TASK_STATE {
 } taskState;
 
 typedef struct taskdesc {
+    int returnValue;    // TODO: What the heck is this?
     int spsr;           // Saved Processor State Register
 	int sp;             // Stack Pointer
 	void (* start )();  // The first function this runs
@@ -19,7 +20,6 @@ typedef struct taskdesc {
     int id;             // A unique identifying id
     int parentId;       // The unique id of the parent
 
-    int returnValue;    // TODO: What the heck is this?
 
     int priority;       // A priority value (ranges from 0->4)
                         
