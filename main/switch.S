@@ -7,8 +7,6 @@ kerEnt:
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 1, uses_anonymous_args = 0
 	#; acquire the arguments
-	#; get the request type
-	ldr		r2, [lr, #-4]   
 	#; save the active task's lr
 	mov 	ip, lr
 	#; switch to system mode
@@ -25,13 +23,14 @@ kerEnt:
 	bic		r3, r3, #0x1f
 	orr		r3, r3, #0x13
 	msr 	CPSR_c, r3
-	#; acquire the spc of the active task
-	mrs 	r3, SPSR
 	#; restore the kernel's registers holding the address of TD and Request
 	ldmfd	sp!, {r4, r5}
+	#; get the request type note lr is the svc's lr
+	ldr		r3, [lr, #-4]   
 	#; fill the request with the arguments
-	stmia	r5, {r0, r1, r2}
+	stmia	r5, {r0, r1, r2, r3}
 	#; put the sp, and spsr into the active task
+	mrs 	r3, SPSR
 	stmia	r4, {r3, ip}
 	#; restore the rest of kernel's registers
 	#; jump back to the kernel -this returns to where kerExit would return to 
