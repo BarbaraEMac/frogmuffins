@@ -29,7 +29,53 @@ void charset( char*str, int len, char ch=0 ) {
     while( (--len) >= 0 ) str[len] = ch;
 }*/
 
+typedef struct {
+    
+    TD tdArray[64];
+    int frontPtr;
+    int backPtr;
 
+    TD *pq[4]; // We have 5 priorities
+
+    int nextId;
+
+} TDManager;
+
+TD * createTask ( int priority, void (*start)(), int parentId, TDManager *manager ) {
+
+    // Grab the new task
+    TD *newTask = &manager->tdArray[manager->backPtr];
+ 
+    // Initialize the values
+    // TODO: Put into a nice function
+    newTask->spsr = // TODO: ????
+    newTask->sp = // TODO: ????
+    newTask->start = start;
+    
+    newTask->id = manager->nextId;
+    newTask->parentId = parentId;
+    
+    newTask->returnValue = //TODO: ???
+    newTask->priority = priority;
+    newTask->state = READY;
+
+    // Insert into PQ
+    TD *nextTask = manager->pq[priority];
+    TD *prevTask = nextTask->prevPQ;
+
+    prevTask->nextPQ = newTask;
+    nextTask->prevPQ = newTask;
+    newTask->nextPQ  = nextTask;
+    newTask->prevPQ  = prevTask;
+
+    manager->pq[priority] = newTask;
+
+    // Fix manager
+    manager->backPtr += 1;   // Advance pointer
+    manager->nextId += 1;       // Advance next valid task id
+
+    return newTask;
+}
 
 void test( ) {
 	for( ;; ) {
@@ -51,88 +97,49 @@ void getNextRequest ( TD *td, Request *ret ) {
 
 }
 
-void service ( TD *td, Request *nxt, TaskManager *pq ) { 
+void service ( TD *td, Request *req, TDManager *manager ) { 
+    TD *child;
     
     // Determine the request type and handle the call
-    switch (nxt->type) {
+    switch ( req->type ) {
         case CREATE:
-            createTask(nxt->arg0, nxt->arg1, td->id, pq);
+            child = createTask(req->arg0, req->arg1, td->id, manager);
             
-
+            td->returnValue = child->id;
             break;
+        
         case MYTID:
-            // Return td->id
-
+            td->returnValue = td->id;
             break;
+        
         case MYPARENTTID:
-            // return td->parentId;
-
-
+            td->returnValue = td->parentId;
             break;
-
-        case PASS:
-
-
-            break;
+        
         case EXIT:
             // Set the state to defunct so it never runs again
             td->state = DEFUNCT;
+            break;
+
+        case PASS:
+        default:
+            // For now, do nothing
             break;
     }
 }
 
 // Schedule the next task to run?
 // Probably do some fun scheduling algorotihm here
-TD * schedule ( TD *taskPs ) {
+TD * schedule ( TDManager *manager ) {
     
-
+    return 0;
 }
-
-void createTask ( int priority, void (*start)(), int parentId, TaskManager *pq ) {
-
-    // Grab the new task
-    TD *newTask = pq->tdArray[pq->backPtr];
- 
-    // Initialize the values
-    // TODO: Put into a nice function
-    newTask->spsr = // TODO: ????
-    newTask->sp = // TODO: ????
-    newTask->start = start;
-    
-    newTask->id = manager->nextId;
-    newTask->parentId = parentId;
-    
-    newTask->returnValue = //TODO: ???
-    newTask->priority = priority;
-    newTask->state = READY;
-
-    // Insert into PQ
-    TD *nextTask = manager->pq[priority];
-    TD *prevTasl = nextTask->prevPQ;
-
-    prevTask
-
-    manager->backPtr += 1;   // Advance pointer
-    manager->nextId += 1;       // Advance next valid task id
-}
-typedef struct {
-    
-    TD tdArray [64];
-    int frontPtr;
-    int backPtr;
-
-    TD taskPriorities [4]; // We have 5 priorities
-
-    int nextId;
-
-} TaskManager;
 
 
 int main( int argc, char* argv[] ) {
-    TaskManager taskPQ;
-
-    TD active;
-    Request nextRequest;
+    TDManager taskManager;
+    TD        active;
+    Request   nextRequest;
 
     // This is what we will end up with.
     // Look, it's already done.

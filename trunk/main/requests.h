@@ -8,19 +8,19 @@
 // These are really system calls - Cowan calls them "requests"
 
 // More to be added later
-enum REQUEST_CODE {
-    CREATE = 0,
+enum RequestCode {
+    CREATE = 1,
     MYTID,
     MYPARENTTID,
     PASS,
     EXIT
-} requestCode;
+};
 
-typedef struct request {
+typedef struct {
     int arg0;   // First argument to function
 	int arg1;   // Second argument to function
 	int arg2;   // Third argument to function
-	enum REQUEST_CODE type; //   
+	enum RequestCode type; //   
 } Request;
 
 /**

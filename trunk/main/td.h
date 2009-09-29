@@ -15,15 +15,17 @@ typedef struct taskdesc {
     int returnValue;    // TODO: What the heck is this?
     int spsr;           // Saved Processor State Register
 	int sp;             // Stack Pointer
-	void (* start )();  // The first function this runs
+    
+    int returnValue;    // Value to pass to asm if we need to return anything to a syscall
+	
+    void (* start )();  // The first function this runs
 
     int id;             // A unique identifying id
     int parentId;       // The unique id of the parent
 
-
     int priority;       // A priority value (ranges from 0->4)
                         
-    enum TASK_STATE state; // State of the task
+    enum TASK_STATE state;  // State of the task
 
     struct taskdes *nextPQ; // Link to the next TD in the PQ
     struct taskdes *prevPQ; // Link to the prev TD in the PQ
