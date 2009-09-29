@@ -6,8 +6,13 @@
 
 #include "requests.h"
 
+// TOD0: Use the ENUM! Do not hardcode these in!
+
+
 int Create (int priority, void (*code) () ) {
     asm ("swi #1");
+
+    // TODO: return something ie. get something back
 }
 
 int MyTid () {

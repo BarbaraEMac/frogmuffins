@@ -6,8 +6,10 @@
 
 #include <bwio.h>
 #include <ts7200.h>
+
 #include "switch.h"
 #include "requests.h"
+#include "td.h"
 
 #define FOREVER     for( ; ; )
 #define WAIT        for( i=0; i<200000; i++) {}
@@ -27,28 +29,7 @@ void charset( char*str, int len, char ch=0 ) {
     while( (--len) >= 0 ) str[len] = ch;
 }*/
 
-void userTaskStart ( TD *td ) {
-    
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
 
-    Pass();
-    
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
-
-    Exit();
-}
-
-void firstTask () {
-
-    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
-
-    bwputstr (COM2, "First: exiting.");
- 
-    Exit();
-}
 
 void test( ) {
 	for( ;; ) {
@@ -70,10 +51,33 @@ TD * getNextRequest ( TD *td ) {
     return newTd;
 }
 
-void service ( TD *td ) {
-    // Do some context switching into here
-    // Switch based on value of system call code
-    // do the action!
+void service ( TD *td, Request *nxt ) {
+    
+    // Determine the request type and handle the call
+    switch (nxt->type) {
+        case CREATE:
+
+            break;
+        case MYTID:
+
+
+            break;
+        case MYPARENTTID:
+
+
+
+            break;
+
+        case PASS:
+
+            break;
+        case EXIT:
+            
+
+            break;
+
+    }
+
 
 }
 
@@ -87,7 +91,8 @@ TD * schedule () {
 int main( int argc, char* argv[] ) {
 
     TD taskDescriptors [64];
-    TD *active, *nextRequest;
+    TD *active;
+    Request *nextRequest;
 
     // This is what we will end up with.
     // Look, it's already done.
@@ -96,7 +101,7 @@ int main( int argc, char* argv[] ) {
 
     FOREVER {
         nextRequest = getNextRequest (active);
-        service (nextRequest);
+        service (active, nextRequest);
         active = schedule ();
     }
 */
