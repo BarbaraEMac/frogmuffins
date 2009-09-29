@@ -123,8 +123,8 @@ int main( int argc, char* argv[] ) {
     bwputr( COM2, data );
     bwputstr( COM2, "\r\n" );
     bwputr( COM2,  (int) &test);
-	for( i=0; i<4; i++ ) {
-		bwputstr( COM2, "Going into context switch\r\n" );
+	for( i=0; i<8; i++ ) {
+		bwprintf( COM2, "Got into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 		kerExit(&task1, &r1);
 		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 	}
