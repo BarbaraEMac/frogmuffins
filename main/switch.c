@@ -5,5 +5,5 @@ void kerEnt() {
 
 }
 
-void kerExit(TD *active, Request *req) {
+void kerExit(struct taskdesc *active, struct request *req) {
 }
