@@ -21,7 +21,7 @@ typedef struct taskdesc {
 
     int returnValue;    // TODO: What the heck is this?
 
-    int priority;       // A priority value (ranges from 0->2)
+    int priority;       // A priority value (ranges from 0->4)
                         
     enum TASK_STATE state; // State of the task
 

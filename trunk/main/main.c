@@ -45,64 +45,104 @@ void initialize ( TD *tds ) {
 
 }
 
-TD * getNextRequest ( TD *td ) {
-    TD *newTd;
+void getNextRequest ( TD *td, Request *ret ) {
 
-    return newTd;
+    kerExit (td, ret);
+
 }
 
-void service ( TD *td, Request *nxt ) {
+void service ( TD *td, Request *nxt, TaskManager *pq ) { 
     
     // Determine the request type and handle the call
     switch (nxt->type) {
         case CREATE:
+            createTask(nxt->arg0, nxt->arg1, td->id, pq);
+            
 
             break;
         case MYTID:
-
+            // Return td->id
 
             break;
         case MYPARENTTID:
-
+            // return td->parentId;
 
 
             break;
 
         case PASS:
 
+
             break;
         case EXIT:
-            
-
+            // Set the state to defunct so it never runs again
+            td->state = DEFUNCT;
             break;
-
     }
+}
 
+// Schedule the next task to run?
+// Probably do some fun scheduling algorotihm here
+TD * schedule ( TD *taskPs ) {
+    
 
 }
 
-TD * schedule () {
-    // Schedule the next task to run?
-    // Probably do some fun scheduling algorotihm here
+void createTask ( int priority, void (*start)(), int parentId, TaskManager *pq ) {
 
+    // Grab the new task
+    TD *newTask = pq->tdArray[pq->backPtr];
+ 
+    // Initialize the values
+    // TODO: Put into a nice function
+    newTask->spsr = // TODO: ????
+    newTask->sp = // TODO: ????
+    newTask->start = start;
+    
+    newTask->id = manager->nextId;
+    newTask->parentId = parentId;
+    
+    newTask->returnValue = //TODO: ???
+    newTask->priority = priority;
+    newTask->state = READY;
 
+    // Insert into PQ
+    TD *nextTask = manager->pq[priority];
+    TD *prevTasl = nextTask->prevPQ;
+
+    prevTask
+
+    manager->backPtr += 1;   // Advance pointer
+    manager->nextId += 1;       // Advance next valid task id
 }
+typedef struct {
+    
+    TD tdArray [64];
+    int frontPtr;
+    int backPtr;
+
+    TD taskPriorities [4]; // We have 5 priorities
+
+    int nextId;
+
+} TaskManager;
+
 
 int main( int argc, char* argv[] ) {
+    TaskManager taskPQ;
 
-    TD taskDescriptors [64];
-    TD *active;
-    Request *nextRequest;
+    TD active;
+    Request nextRequest;
 
     // This is what we will end up with.
     // Look, it's already done.
 /*
-    initialize ( taskDescriptors );
+    active = initialize ( taskDescriptors, taskPriorities );
 
     FOREVER {
-        nextRequest = getNextRequest (active);
+        getNextRequest (active, &nextRequest);
         service (active, nextRequest);
-        active = schedule ();
+        active = schedule (taskPriorities);
     }
 */
 
