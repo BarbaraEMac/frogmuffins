@@ -1,9 +1,9 @@
 	.file	"switch.c"
 	.text
 	.align	2
-	.global	kerEnt
-	.type	kerEnt, %function
-kerEnt:
+	.global	kernelEnter
+	.type	kernelEnter, %function
+kernelEnter:
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 1, uses_anonymous_args = 0
 	#; acquire the arguments
@@ -33,16 +33,16 @@ kerEnt:
 	stmia	r5, {r0, r1, r2, r3}
 	#; put the sp, and spsr into the active task
 	mrs 	r3, SPSR
-	stmia	r4, {r3, ip}
+	stmia	r4, {r0, r3, ip}
 	#; restore the rest of kernel's registers
-	#; jump back to the kernel -this returns to where kerExit would return to 
+	#; jump back to the kernel -this returns to where kernelExit would return to 
 	#; if it were a normal function
 	ldmfd	sp!, {r4-r9, sl, fp, pc}
-	.size	kerEnt, .-kerEnt
+	.size	kernelEnter, .-kernelEnter
 	.align	2
-	.global	kerExit
-	.type	kerExit, %function
-kerExit:
+	.global	kernelExit
+	.type	kernelExit, %function
+kernelExit:
 	@ args = 0, pretend = 0, frame = 8
 	@ frame_needed = 1, uses_anonymous_args = 0
 	#; store the kernel state
@@ -53,7 +53,7 @@ kerExit:
 	msr 	CPSR_c, r2
 	#; install the active tasks's sp and copy the spsr to ip and
 	#; put the return value in r0
-	ldmia 	r0, {ip, sp, r0}
+	ldmia 	r0, {r0, ip, sp}
 	#; restore the active task
 	ldmfd	sp!, {r4-r9, sl, fp, lr}
 	mov		r3, lr
@@ -66,5 +66,15 @@ kerExit:
 	msr 	SPSR_cxsf, ip
 	#; install the pc of the active task
 	movs 	pc, r3
-	.size	kerExit, .-kerExit
+	.size	kernelExit, .-kernelExit
+	.align	2
+	.global	syscall
+	.type	syscall, %function
+syscall:
+	@ args = 0, pretend = 0, frame = 16
+	@ frame_needed = 1, uses_anonymous_args = 0
+	orr		r3, r3, #0xEF000000
+	str 	r3, [pc, #-4]
+	swi
+	.size	syscall, .-syscall
 	.ident	"GCC: (GNU) 4.0.2"
