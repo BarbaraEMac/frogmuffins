@@ -27,6 +27,7 @@ kerEnt:
 	ldmfd	sp!, {r4, r5}
 	#; get the request type note lr is the svc's lr
 	ldr		r3, [lr, #-4]   
+	bic		r3,	r3, #0xFF000000
 	#; fill the request with the arguments
 	stmia	r5, {r0, r1, r2, r3}
 	#; put the sp, and spsr into the active task

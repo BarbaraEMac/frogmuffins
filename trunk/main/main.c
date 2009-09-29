@@ -130,6 +130,8 @@ int main( int argc, char* argv[] ) {
 		bwprintf( COM2, "Going into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 		kerExit(&task1, &r1);
 		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
+		bwprintf( COM2, "Returned a0=%x a1=%x a2=%x type=%x\r\n", r1.arg0, r1.arg1, r1.arg2, r1.type );
+
 	}
     bwputstr( COM2, "Exiting normally" );
     return 0;
