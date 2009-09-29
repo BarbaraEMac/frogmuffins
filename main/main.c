@@ -34,7 +34,7 @@ void charset( char*str, int len, char ch=0 ) {
 void test( ) {
 	for( ;; ) {
 		bwputstr( COM2, "Task ending.\r\n" );
-		asm( "swi" );
+		asm( "swi #0xDEADBE" );
 		bwputstr( COM2, "Task starting\r\n" );
 	}
 }
