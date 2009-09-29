@@ -51,13 +51,12 @@ kerExit:
 	mrs 	r2, CPSR 
 	orr		r2, r2, #0x1f
 	msr 	CPSR_c, r2
-	#; install the active tasks's sp and copy the spsr to ip
-	ldmia 	r0, {ip, sp}
+	#; install the active tasks's sp and copy the spsr to ip and
+	#; put the return value in r0
+	ldmia 	r0, {ip, sp, r0}
 	#; restore the active task
 	ldmfd	sp!, {r4-r9, sl, fp, lr}
 	mov		r3, lr
-	#; put the return value in r0
-	ldmia 	r1, {r0}
 	#; switch to supervisor mode
 	mrs 	r2, CPSR 
 	bic		r2, r2, #0x1f
