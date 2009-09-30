@@ -28,6 +28,7 @@ struct taskdesc {
 	int id;			 	// A unique identifying id
 	int parentId;		// The unique id of the parent
 
+	// TODO: Do not store the priority of the task?
 	int priority;		// A priority value (ranges from 0->4)
 						
 	enum TASK_STATE state;	// State of the task
@@ -39,12 +40,15 @@ struct taskdesc {
 typedef struct {
 	
 	TD tdArray[64];
-	int frontPtr;
-	int backPtr;
+	int frontPtr;	// Not currently used
+	int backPtr;	
 
-    TD *pq[MAX_PRIORITY + 1];
+    TD *readyQueue[MAX_PRIORITY + 1];
+	int highestPriority;
 
-	int nextId;
+	int nextId;		// TODO: Should be the same as backPtr (off by 1)
+
+	TD *blockedQueue;
 
 } TDManager;
 
@@ -59,7 +63,10 @@ int getNextId ( TDManager *manager );
 
 void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *manager );
 
-void insertInPQ (TD *td, TDManager *manager );
+void insertInReady (TD *td, TDManager *manager);
+void insertInBlocked (TD *td, TDManager *manager);
+void insertInQueue (TD *head, TD *td);
+TD * removeFromQueue (TD *td);
 
 TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *manager );
 

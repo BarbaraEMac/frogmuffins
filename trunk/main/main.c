@@ -12,7 +12,7 @@
 #include "td.h"
 
 #define FOREVER	 for( ; ; )
-#define WAIT		for( i=0; i<200000; i++) {}
+#define WAIT	 for( i=0; i<200000; i++) {}
 #define NUM_TDs	 64
 
 
@@ -45,12 +45,14 @@ TD * initialize ( TDManager *manager ) {
     int i;
     
     for ( i = 0; i < MAX_PRIORITY; i ++ ) {
-        manager->pq[i] = 0;
+        manager->readyQueue[i] = 0;
     }
 
     manager->frontPtr = 0;
     manager->backPtr  = 0;
     manager->nextId   = 0;
+	manager->highestPriority = 0;
+	manager->blockedQueue = 0;
     
     return kernCreateTask ( 1, &firstTaskStart, getNextId(manager), manager );
 }
@@ -94,28 +96,53 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 
 // Schedule the next task to run?
 // Probably do some fun scheduling algorotihm here
-TD * schedule ( TDManager *manager ) {
-    TD **pq = manager->pq;
-    TD *itr;
-    int i;
+TD * schedule ( TD *oldTask, TDManager *manager ) {
+    TD **readyQueue = manager->readyQueue;
+	
+	// Handle the previous task
+	switch (oldTask->state) {
+		case ACTIVE:
+			insertInReady (oldTask, manager);
+			break;
+		case BLOCKED:
+			insertInBlocked (oldTask, manager);
+			break;
+		case DEFUNCT:
+		default:
+			break;
+	}
+	
+	int highest = manager->highestPriority;
+	
+	// Pop new task off the ready queue
+	TD *ret = readyQueue[highest];
+	TD *newHead = removeFromQueue ( ret );
+	
+	if ( newHead == ret ) {
+		newHead = 0;	// TODO: fix this hack
+		
+		// Reset the highest priority pointer
+		int i = highest + 1;
 
+		// Find the next highest non-empty slot
+		for ( ; i <= MAX_PRIORITY; i ++ ) {
+			if ( readyQueue[i] != 0 ) {
+				manager->highestPriority = i;
+			}
+		}
+		
+		// If we have no tasks left, set to an error code.
+		if ( manager->highestPriority == highest ) {
+			manager->highestPriority = MAX_PRIORITY + 1;
+		}
+	}
 
-    // TODO: Starvation? I like starving tasks ...
-    for ( i = 0; i < MAX_PRIORITY; i ++ ) {
-        itr = pq[i];
-
-        while( itr->priority == i ) {
-            if ( itr->state == READY ) {
-                return itr;
-            }
-            itr = itr->nextPQ;
-        }
-
-    }
-    return 0;
-    //    put all defunct at back
-    //   if you reach a defunct, start at beginning
-    //  if all defunct, return 0;
+	// Reassign the head - either to the new task OR 0
+	manager->readyQueue[highest] = newHead;
+	
+	// Set the state to active since this task is going to run
+	ret->state = ACTIVE;
+	return ret;
 }
 
 
@@ -129,11 +156,10 @@ int main( int argc, char* argv[] ) {
 	// Look, it's already done.
 
 	active = initialize ( &taskManager );
-
 	FOREVER {
 		getNextRequest (active, &nextRequest);
 		service (active, &nextRequest, &taskManager);
-		active = schedule (&taskManager);
+		active = schedule (active, &taskManager);
 	}
 */
 	int *junk;

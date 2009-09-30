@@ -10,6 +10,7 @@
 #include "td.h"
 #include "requests.h"
 #include "switch.h"
+#include "assert.h"
 
 void firstTaskStart () {
 
@@ -72,72 +73,62 @@ void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *
     td->prevPQ = 0;
 }
 
-void insertInPQ (TD *td, TDManager *manager ) {
-    int i;
-    int priority = td->priority;
+void insertInReady ( TD *td, TDManager *manager ) {
+	int priority = td->priority;
 
-    TD *next = manager->pq[priority];
-    TD *prev;
-    TD *itr;
+	insertInQueue ( manager->readyQueue[priority], td );
+	
+	// If this new task has the highest priority,
+	// set this pointer. Makes for faster scheduling.
+	if ( manager->highestPriority > priority ) {
+		manager->highestPriority = priority;
+	}
 
-    // First td for this priority
-    if ( next == 0 ) {
-        
-        // Check all lower priorities for prev value
-        for ( i = priority - 1; i >= 0; i -- ) {
-            itr = manager->pq[i];
-            
-            // Found one
-            if ( itr != 0 ) {
-                next = itr->nextPQ; // Could be 0
+	// Set to ready since it is in the ready queue
+	td->state = READY;
+}
 
-                td->prevPQ = itr;
-                td->nextPQ = next;
+void insertInBlocked ( TD *td, TDManager *manager ) {
+	
+	insertInQueue ( manager->blockedQueue, td );
+}
 
-                itr->nextPQ = td;
-                
-                if ( next != 0 ) {
-                    next->prevPQ = td;
-                }
+void insertInQueue ( TD *head, TD *newTail ) {
 
-                break;
-            }
-        }
+	// If the queue was empty, add this as the only item.
+	if ( head == 0 ) {
+		newTail->prevPQ = newTail;
+		newTail->nextPQ = newTail;
+		
+		head = newTail;
+	}
+	// Add as a new tail
+	else {
+		TD *tail = head->prevPQ; // Cannot be 0, could be head
 
-        // This td is highest priority
-        if ( i < 0 ) {
-            td->prevPQ = 0; // Just to assert (it should already be 0)
-    
-            // Now check for any lower priorities
-            for ( i = priority + 1; i <= MAX_PRIORITY; i ++ ) {
-                itr = manager->pq[i];
+		head->prevPQ = newTail;
+		newTail->nextPQ = head;
 
-                // Found one
-                if ( itr != 0 ) {
-                    td->nextPQ  = itr;
-                    itr->prevPQ = td;
-                    
-                    break;
-                }
-            }
-        }
-    }
-    // There is another td at this priority
-    else {
-        prev = next->prevPQ; // Could be 0
+		tail->nextPQ = newTail;
+		newTail->prevPQ = tail;
+	}
+}
 
-        td->nextPQ = next;
-        td->prevPQ = prev;
+TD * removeFromQueue ( TD *td ) {
 
-        next->prevPQ = td;
+	assert (td->prevPQ != 0);
+	assert (td->nextPQ != 0);
 
-        if ( prev != 0 ) {
-            prev->nextPQ = td;
-        }
-    }
+	TD *prev = td->prevPQ; // Can be td itself
+	TD *next = td->nextPQ; // Can be td itself
 
-    // Put the new task in the manager's PQ
-    manager->pq[priority] = td;
+	prev->nextPQ = next;	// Reset the links
+	next->prevPQ = prev;
+	
+	td->nextPQ = 0;			// Ensure this task points to nothing
+	td->prevPQ = 0;
+
+	return next; // could be td - which is confusing
 }
 
 TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *manager ) {
@@ -148,8 +139,8 @@ TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *ma
 	// Initialize the values
 	initTaskDesc ( newTask, priority, start, parentId, manager );
 
-	// Insert into PQ
-    insertInPQ (newTask, manager);
+	// Insert into ready queue
+    insertInReady (newTask, manager);
 	
     return newTask;
 }
