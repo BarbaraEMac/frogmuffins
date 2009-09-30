@@ -41,6 +41,7 @@ void userTaskStart ( TD *td ) {
 TD * getUnusedTask ( TDManager *manager ) {
     TD *ret = &manager->tdArray[manager->backPtr];
     manager->backPtr += 1;
+	// TODO THIS WILL RUN OFF THE END
 
     return ret;
 }
@@ -49,15 +50,16 @@ int getNextId ( TDManager *manager ) {
     int ret = manager->nextId;
     manager->nextId += 1;
 
+	// TODO this needs to be synchronized with the backptr.
+	// I suggest using the backptr for this, or setting the id directly in getUnusedTask
     return ret;
 }
 
 void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *manager ) {
- 	int *pcOnStack;
     
     td->spsr = 0x10;	
-	td->sp = 0; //TODO
-	pcOnStack = td->sp + PC_OFFSET;
+	td->sp = 0x21A000; //TODO
+	td->sp[PC_OFFSET] = (int) s;
 
 	td->start = s;
 	
@@ -72,7 +74,6 @@ void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *
     td->nextPQ = 0;
     td->prevPQ = 0;
 }
-
 void insertInReady ( TD *td, TDManager *manager ) {
 	int priority = td->priority;
 
