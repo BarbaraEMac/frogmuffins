@@ -8,13 +8,13 @@
 
 #ifdef DEBUG 
 
-void __assert ( int exp, char *mess );
+void __assert ( int test, char *exp, char *line, char *file );
 
-#define assert(exp) __assert(exp, #exp);
+#define assert(exp) __assert(exp, #exp, __LINE__, __FILE__ )
 
 #else
 
-#define assert(exp) do {} while (0);
+#define assert(exp) do {} while (0)
 
 #endif
 

@@ -10,10 +10,10 @@
 #include <bwio.h>
 #include <ts7200.h>
 
-void __assert ( int exp, char *mess ) {
+void __assert ( int test, char *exp, char *line, char *file ) {
 	
-	if ( !exp ) {
-		bwprintf (COM2, "Assert Failure: %s.\n\r", mess );
+	if ( !test ) {
+		bwprintf (COM2, "Assert Failure: %s at line #%s in file %s.\n\r", exp, line, file );
 		// TODO: Stack trace
 	}
 }
