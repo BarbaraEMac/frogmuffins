@@ -22,6 +22,7 @@ typedef struct {
     int arg0;   // First argument to function
 	int arg1;   // Second argument to function
 	int arg2;   // Third argument to function
+	int arg3;   // Fourth argument to function
 	enum RequestCode type; //   
 } Request;
 

@@ -10,26 +10,21 @@ kernelEnter:
 	#; save the active task's lr
 	mov 	ip, lr
 	#; switch to system mode
-	mrs 	r3, CPSR 
-	orr		r3, r3, #0x1f
-	msr 	CPSR_c, r3
+	msr 	CPSR_c, #0xDF
 	#; save active task's state 
 	#; NOTE: ip holds the place to return to
 	stmfd	sp!, {r4-r9, sl, fp, ip, lr}
 	mov 	ip, sp
 	#; switch to supervisor mode
-	mrs 	r3, CPSR
-	bic		r3, r3, #0x1f
-	orr		r3, r3, #0x13
-	msr 	CPSR_c, r3
+	msr 	CPSR_c, #0xD3
 	#; restore the kernel's registers holding the address of TD and Request
 	ldmfd	sp!, {r4, r5}
 	#; get the request type note lr is the svc's lr
-	ldr		r3, [lr, #-4]   
+	ldr		r6, [lr, #-4]   
 	#; this line is MAGIC (I think the assembler is really smart)
-	bic		r3,	r3, #0xFF000000
+	bic		r6,	r6, #0xFF000000
 	#; fill the request with the arguments
-	stmia	r5, {r0, r1, r2, r3}
+	stmia	r5, {r0, r1, r2, r3, r6}
 	#; put the sp, and spsr into the active task
 	mrs 	r3, SPSR
 	stmia	r4, {r3, ip}
@@ -47,9 +42,7 @@ kernelExit:
 	#; store the kernel state
 	stmfd	sp!, {r0, r1, r4-r9, sl, fp, lr}
 	#; switch to system mode
-	mrs 	r2, CPSR 
-	orr		r2, r2, #0x1f
-	msr 	CPSR_c, r2
+	msr 	CPSR_c, #0xDF
 	#; install the active tasks's sp and copy the spsr to ip and
 	ldmia 	r0, {r3, sp}
 	#; put the return value in r0
@@ -57,10 +50,7 @@ kernelExit:
 	#; restore the active task
 	ldmfd	sp!, {r4-r9, sl, fp, ip, lr}
 	#; switch to supervisor mode
-	mrs 	r2, CPSR 
-	bic		r2, r2, #0x1f
-	orr		r2, r2, #0x13
-	msr 	CPSR_c, r2
+	msr 	CPSR_c, #0xD3
 	#; install the spsr
 	msr 	SPSR_cxsf, r3
 	#; install the pc of the active task
