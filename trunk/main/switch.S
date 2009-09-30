@@ -13,10 +13,9 @@ kernelEnter:
 	mrs 	r3, CPSR 
 	orr		r3, r3, #0x1f
 	msr 	CPSR_c, r3
-	#; overwrite lr
-	mov	 	lr, ip
-	#; save active task's state
-	stmfd	sp!, {r4-r9, sl, fp, lr}
+	#; save active task's state 
+	#; NOTE: ip holds the place to return to
+	stmfd	sp!, {r4-r9, sl, fp, ip, lr}
 	mov 	ip, sp
 	#; switch to supervisor mode
 	mrs 	r3, CPSR
@@ -33,7 +32,7 @@ kernelEnter:
 	stmia	r5, {r0, r1, r2, r3}
 	#; put the sp, and spsr into the active task
 	mrs 	r3, SPSR
-	stmia	r4, {r0, r3, ip}
+	stmia	r4, {r3, ip}
 	#; restore the rest of kernel's registers
 	#; jump back to the kernel -this returns to where kernelExit would return to 
 	#; if it were a normal function
@@ -52,20 +51,20 @@ kernelExit:
 	orr		r2, r2, #0x1f
 	msr 	CPSR_c, r2
 	#; install the active tasks's sp and copy the spsr to ip and
+	ldmia 	r0, {r3, sp}
 	#; put the return value in r0
-	ldmia 	r0, {r0, ip, sp}
+	ldr		r0, [r0, #8]
 	#; restore the active task
-	ldmfd	sp!, {r4-r9, sl, fp, lr}
-	mov		r3, lr
+	ldmfd	sp!, {r4-r9, sl, fp, ip, lr}
 	#; switch to supervisor mode
 	mrs 	r2, CPSR 
 	bic		r2, r2, #0x1f
 	orr		r2, r2, #0x13
 	msr 	CPSR_c, r2
 	#; install the spsr
-	msr 	SPSR_cxsf, ip
+	msr 	SPSR_cxsf, r3
 	#; install the pc of the active task
-	movs 	pc, r3
+	movs 	pc, ip
 	.size	kernelExit, .-kernelExit
 	.align	2
 	.global	syscall
@@ -73,8 +72,12 @@ kernelExit:
 syscall:
 	@ args = 0, pretend = 0, frame = 16
 	@ frame_needed = 1, uses_anonymous_args = 0
+	#; set the first byte of r3 to be swi
+	bic		r3,	r3, #0xFF000000
 	orr		r3, r3, #0xEF000000
+	#; put the changes in the next instruction
 	str 	r3, [pc, #-4]
-	swi
+	swi	
+	mov		pc, lr
 	.size	syscall, .-syscall
 	.ident	"GCC: (GNU) 4.0.2"
