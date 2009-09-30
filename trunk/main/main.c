@@ -4,6 +4,7 @@
  * dgoc
  */
 
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -16,7 +17,6 @@
 #define NUM_TDs	 64
 
 
-// TODO: Write an assert library. We will need it.
 
 /*
 // the following funciton was copied and modified from wikipedia
@@ -69,7 +69,7 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = kernCreateTask(req->arg0, req->arg1, td->id, manager);
+			child = kernCreateTask(req->args[0], req->args[1], td->id, manager);
 			
 			td->returnValue = child->id;
 			break;
@@ -173,7 +173,7 @@ int main( int argc, char* argv[] ) {
 	TD task1 = { 0x10, 0x21B000-0x38, &test };
 	junk = (int *) 0x21AFF8;
 	*junk = &test;
-	Request r1 = {2, 3, 4, 5};
+	Request r1;
 	
 	
 	bwprintf( COM2, "Location of test: %x\r\n", &test );

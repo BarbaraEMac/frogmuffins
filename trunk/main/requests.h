@@ -23,10 +23,6 @@ typedef struct {
 	int const * const args;	// place in user memory where arguments are stored
 	// NOTE: The 5th argument is in args[22] 
 	// and NOT args[4] as would be expected
-    int arg0;   // First argument to function
-	int arg1;   // Second argument to function
-	int arg2;   // Third argument to function
-	int arg3;   // Fourth argument to function
 	
 
 } Request;

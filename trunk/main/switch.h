@@ -6,7 +6,7 @@
 #ifndef __SWITCH_H__
 #define __SWITCH_H__
 
-#define PC_OFFSET 7
+#define PC_OFFSET 12
 
 // Forward declare these. We don't actually use them,
 // so we don't need to include them.
