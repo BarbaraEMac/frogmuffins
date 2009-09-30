@@ -18,9 +18,9 @@ enum TASK_STATE {
 typedef struct taskdesc TD;
 
 struct taskdesc {
-	int returnValue;	// Value to pass to asm if we need to return anything to a syscall
 	int spsr;			// Saved Processor State Register
 	void *sp;			// Stack Pointer
+	int returnValue;	// Value to pass to asm if we need to return anything to a syscall
 	
 	
 	void (* start )();	// The first function this runs

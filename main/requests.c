@@ -5,25 +5,30 @@
  */
 
 #include "requests.h"
+#include "switch.h"
 
-// TODO: Use the ENUM! Do not hardcode these in!
 
 int Create (int priority, void (*code) () ) {
-    asm ("swi #1");
+	asm("swi #1");
+	//return syscall(priority, (int) code, 0, CREATE);
 }
 
 int MyTid () {
-    asm ("swi #2");
+	asm("swi #2");
+//	return syscall(0, 0, 0, MYTID);
 }
 
 int MyParentTid() {
-    asm ("swi #3");
+	asm("swi #3");
+	//return syscall(0, 0, 0, MYPARENTTID);
 }
 
 void Pass () {
-    asm ("swi #4");
+	asm("swi #4");
+	//syscall(0, 0, 0, PASS);
 }
 
 void Exit () {
-    asm ("swi #5");
+	asm("swi #5");
+	//syscall(0, 0, 0, EXIT);
 }

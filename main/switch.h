@@ -6,7 +6,7 @@
 #ifndef __SWITCH_H__
 #define __SWITCH_H__
 
-#define PC_OFFSET 9
+#define PC_OFFSET 7
 
 // Forward declare these. We don't actually use them,
 // so we don't need to include them.
@@ -40,6 +40,6 @@ void kernelEnter();
 // * install the pc of the active task.
 void kernelExit(TD *active, Request *req);
 
-int syscall(int arg0, int arg1, int arg3, int type);
+int syscall(int arg0, int arg1, int arg3, enum RequestCode type);
 
 #endif

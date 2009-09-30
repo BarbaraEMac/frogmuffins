@@ -32,10 +32,12 @@ void charset( char*str, int len, char ch=0 ) {
 }*/
 
 void test( ) {
+	int i =0, id= 0;
 	for( ;; ) {
-		bwputstr( COM2, "Task ending.\r\n" );
-		asm( "swi #0xDEADBE" );
-		bwputstr( COM2, "Task starting\r\n" );
+		bwprintf( COM2, "Task ending. i=%d\r\n", i );
+		id = MyTid();
+		i++;
+		bwprintf( COM2, "Task starting i=%d, id=%x\r\n", i, id );
 	}
 }
 
@@ -118,13 +120,14 @@ TD * schedule ( TDManager *manager ) {
 
 
 int main( int argc, char* argv[] ) {
-	TDManager taskManager;
+	bwsetfifo( COM2, OFF );
+/*	TDManager taskManager;
 	TD		*active;
 	Request	nextRequest;
 
 	// This is what we will end up with.
 	// Look, it's already done.
-/*
+
 	active = initialize ( &taskManager );
 
 	FOREVER {
@@ -133,7 +136,7 @@ int main( int argc, char* argv[] ) {
 		active = schedule (&taskManager);
 	}
 */
-	int data, *junk;
+	int *junk;
 	int i;
 	// Set up the Software interrupt for context switches
 	int *swi = (int *) 0x28;
@@ -141,25 +144,23 @@ int main( int argc, char* argv[] ) {
 
 
 	// Set up the first task
-	TD task1 = { 0x10, 0x21B000-0x24, &test };
-	junk = 0x21AFFC;
+	TD task1 = { 0x10, 0x21B000-0x28, &test };
+	junk = (int *) 0x21AFF8;
 	*junk = &test;
 	Request r1 = {2, 3, 4, 5};
 	
-	data = (int *) junk;
 	
-	bwsetfifo( COM2, OFF );
-	bwputstr( COM2, "Page table base: " );
-	bwputr( COM2, data );
-	bwputstr( COM2, "\r\n" );
-	bwputr( COM2,	(int) &test);
+	bwprintf( COM2, "Location of test: %x\r\n", &test );
+	bwprintf( COM2, "Location of request: %x\r\n", &r1 );
 	for( i=0; i<8; i++ ) {
 		bwprintf( COM2, "Going into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
+		task1.returnValue = 0xDEADBEEF;
 		kernelExit(&task1, &r1);
 		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
 		bwprintf( COM2, "Returned a0=%x a1=%x a2=%x type=%x\r\n", r1.arg0, r1.arg1, r1.arg2, r1.type );
 
 	}
 	bwputstr( COM2, "Exiting normally" );
+	//*/
 	return 0;
 }
