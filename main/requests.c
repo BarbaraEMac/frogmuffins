@@ -32,3 +32,8 @@ void Exit () {
 	asm("swi #5");
 	//syscall(0, 0, 0, EXIT);
 }
+
+int Test5( int a0, int a1, int a2, int a3, int a5) {
+	asm("swi #0x42");
+}
+

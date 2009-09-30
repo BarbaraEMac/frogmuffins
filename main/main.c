@@ -35,7 +35,7 @@ void test( ) {
 	int i =0, id= 0;
 	for( ;; ) {
 		bwprintf( COM2, "Task ending. i=%d\r\n", i );
-		id = MyTid();
+		id = Test5(5, 4, 3, 2, 0xFEEDDEAD);
 		i++;
 		bwprintf( COM2, "Task starting i=%d, id=%x\r\n", i, id );
 	}
@@ -170,7 +170,7 @@ int main( int argc, char* argv[] ) {
 
 
 	// Set up the first task
-	TD task1 = { 0x10, 0x21B000-0x28, &test };
+	TD task1 = { 0x10, 0x21B000-0x38, &test };
 	junk = (int *) 0x21AFF8;
 	*junk = &test;
 	Request r1 = {2, 3, 4, 5};
@@ -183,7 +183,7 @@ int main( int argc, char* argv[] ) {
 		task1.returnValue = 0xDEADBEEF;
 		kernelExit(&task1, &r1);
 		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
-		bwprintf( COM2, "Returned a0=%x a1=%x a2=%x type=%x\r\n", r1.arg0, r1.arg1, r1.arg2, r1.type );
+		bwprintf( COM2, "Returned a0=%x a1=%x a2=%x a3=%x a4=%x type=%x\r\n", r1.args[0], r1.args[1], r1.args[2], r1.args[3], r1.args[22], r1.type );
 
 	}
 	bwputstr( COM2, "Exiting normally" );
