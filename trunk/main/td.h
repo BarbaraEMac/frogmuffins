@@ -6,7 +6,12 @@
 #ifndef __TD_H__
 #define __TD_H__
 
-#define MAX_PRIORITY 2
+#define MAX_PRIORITY 	2
+#define USER_START 		0x00044f88
+#define USER_END		0x01fdd000
+
+// Pointer the begining of task execution
+typedef void (* Task) ();
 
 enum TASK_STATE {
 	ACTIVE = 0,		 // Only 1 task will ever be active
@@ -19,16 +24,14 @@ typedef struct taskdesc TD;
 
 struct taskdesc {
 	int spsr;			// Saved Processor State Register
-	void *sp;			// Stack Pointer
+	int *sp;			// Stack Pointer
 	int returnValue;	// Value to pass to asm if we need to return anything to a syscall
 	
-	
-	void (* start )();	// The first function this runs
-
 	int id;			 	// A unique identifying id
 	int parentId;		// The unique id of the parent
 
 	// TODO: Do not store the priority of the task?
+	// Yes, because the task might ask for it.
 	int priority;		// A priority value (ranges from 0->4)
 						
 	enum TASK_STATE state;	// State of the task
@@ -57,17 +60,15 @@ void firstTaskStart ();
 
 void userTaskStart (TD *t);
 
-TD * getUnusedTask ( TDManager *manager );
+TD * getUnusedTask ( TDManager *manager ); // Also sets the Task id
 
-int getNextId ( TDManager *manager );
-
-void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *manager );
+void initTaskDesc ( TD *td, int priority, Task start, int parentId );
 
 void insertInReady (TD *td, TDManager *manager);
 void insertInBlocked (TD *td, TDManager *manager);
-void insertInQueue (TD *head, TD *td);
+void insertInQueue (TD **head, TD *td);		// Updated the new head of the Queue
 TD * removeFromQueue (TD *td);
 
-TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *manager );
+TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager );
 
 #endif
