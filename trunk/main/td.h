@@ -6,7 +6,7 @@
 #ifndef __TD_H__
 #define __TD_H__
 
-#define MAX_PRIORITY 	2
+#define NUM_PRIORITY 	3
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
 
@@ -46,7 +46,7 @@ typedef struct {
 	int frontPtr;	// Not currently used
 	int backPtr;	
 
-    TD *readyQueue[MAX_PRIORITY + 1];
+    TD *readyQueue[NUM_PRIORITY];
 	int highestPriority;
 
 	int nextId;		// TODO: Should be the same as backPtr (off by 1)

@@ -16,14 +16,14 @@ void firstTaskStart () {
 
     // Create low priority
     bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
- //   bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
     // Create high priority
- //   bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
- //   bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
 
-//    bwputstr (COM2, "First: exiting.");
+    bwputstr (COM2, "First: exiting.");
  
-//    Exit();
+    Exit();
 }
 
 
@@ -85,32 +85,25 @@ void insertInBlocked ( TD *td, TDManager *manager ) {
 }
 
 void insertInQueue ( TD **head, TD *newTail ) {
-	bwprintf( COM2, "Head=%x, newTail=%x \r\n", *head, newTail);
+	debug ( "insertInQueue head=%x, newTail=%x \r\n", *head, newTail );
 	
 	// If the queue was empty, add this as the only item.
 	if ( *head == 0 ) {
-		bwputstr (COM2, "this queue was empty - adding as head\n\r.");
 		newTail->prevPQ = newTail;
 		newTail->nextPQ = newTail;
 	}
 	// Add as a new tail
 	else {
-		bwputstr (COM2, "add this as a tail\n\r");
 		TD *tail = (*head)->prevPQ; // Cannot be 0, could be head
-		bwputstr (COM2, "1\n\r");
 		// Update inserted's elements pointers
 		newTail->nextPQ = *head;
-		bwputstr (COM2, "2\n\r");
 		newTail->prevPQ = tail;
-		bwputstr (COM2, "3\n\r");
 		// Put the element in the queue
 		(*head)->prevPQ = newTail;
-		bwputstr (COM2, "4\n\r");
 		tail->nextPQ = newTail;
-		bwputstr (COM2, "5\n\r");
 	}
 	*head = newTail;
-	bwputstr (COM2, "6\n\r");
+	debug ( "new head=%x\n\r", *head );
 }
 
 TD * removeFromQueue ( TD *td ) {
@@ -132,14 +125,14 @@ TD * removeFromQueue ( TD *td ) {
 
 TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager ) {
 	
-	bwprintf (COM2, "kernCreateTask: priority: %d, parent: %d manager: %x\n\r", priority, parentId, manager);
+	debug ( "kernCreateTask: priority=%d, parent=%d manager %x\n\r", priority, parentId, manager);
 	// Grab the new task
 	TD *newTask = initNewTaskDesc ( priority, start, parentId, manager );
-	bwprintf (COM2, "	init task %d\n\r", newTask);
+	debug ( "	init task %d\n\r", newTask );
 
 	// Insert into ready queue
     insertInReady (newTask, manager);
-	bwputstr (COM2, "	inserted in ready queue\n\r");
+	debug ( "	inserted in ready queue\n\r" );
 	
     return newTask;
 }

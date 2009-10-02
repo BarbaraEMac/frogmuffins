@@ -32,20 +32,10 @@ void charset( char*str, int len, char ch=0 ) {
 	while( (--len) >= 0 ) str[len] = ch;
 }*/
 
-void test( ) {
-	int i =0, id= 0;
-	for( ;; ) {
-		bwprintf( COM2, "Task ending. i=%d\r\n", i );
-		id = Test5(5, 4, 3, 2, 0xFEEDDEAD);
-		i++;
-		bwprintf( COM2, "Task starting i=%d, id=%x\r\n", i, id );
-	}
-}
-
 TD * initialize ( TDManager *manager ) {
     int i;
     
-    for ( i = 0; i < MAX_PRIORITY; i ++ ) {
+    for ( i = 0; i < NUM_PRIORITY; i ++ ) {
         manager->readyQueue[i] = 0;
     }
 
@@ -78,7 +68,7 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 			child = kernCreateTask(req->args[0], (Task) req->args[1], td->id, manager);
 			
 			td->returnValue = child->id;
-			//break;
+			break;
 		
 		case MYTID:
 			td->returnValue = td->id;
@@ -131,7 +121,7 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 		int i = highest + 1;
 
 		// Find the next highest non-empty slot
-		for ( ; i <= MAX_PRIORITY; i ++ ) {
+		for ( ; i < NUM_PRIORITY; i ++ ) {
 			if ( readyQueue[i] != 0 ) {
 				manager->highestPriority = i;
 			}
@@ -139,7 +129,7 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 		
 		// If we have no tasks left, set to an error code.
 		if ( manager->highestPriority == highest ) {
-			manager->highestPriority = MAX_PRIORITY + 1;
+			manager->highestPriority = NUM_PRIORITY;
 		}
 	}
 
