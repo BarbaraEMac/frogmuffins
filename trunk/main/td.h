@@ -21,6 +21,7 @@ enum TASK_STATE {
 } taskState;
 
 typedef struct taskdesc TD;
+typedef TD* Queue;
 
 struct taskdesc {
 	int spsr;			// Saved Processor State Register
@@ -46,26 +47,27 @@ typedef struct {
 	int frontPtr;	// Not currently used
 	int backPtr;	
 
-    TD *readyQueue[NUM_PRIORITY];
+    Queue readyQ[NUM_PRIORITY];
 	int highestPriority;
 
 	int nextId;		// TODO: Should be the same as backPtr (off by 1)
 
-	TD *blockedQueue;
+	Queue blockedQ;
 
 } TDManager;
 
 
 void firstTaskStart ();
+void userTaskStart ();
 
-void userTaskStart (TD *t);
-
+void managerInit( TDManager *manager );
 TD * initNewTaskDesc ( int priority, Task start, int parentId, TDManager *manager );
 
 void insertInReady (TD *td, TDManager *manager);
 void insertInBlocked (TD *td, TDManager *manager);
-void insertInQueue (TD **head, TD *td);		// Updated the new head of the Queue
-TD * removeFromQueue (TD *td);
+
+Queue queueAdd (Queue head, TD *td);		// Returns the new head of the Queue
+Queue queuePop (Queue td);
 
 TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager );
 

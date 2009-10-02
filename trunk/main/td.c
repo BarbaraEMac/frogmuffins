@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -15,11 +15,11 @@
 void firstTaskStart () {
 
     // Create low priority
-    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\n\r", Create (2, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\r\n", Create (2, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\r\n", Create (2, &userTaskStart)); 
     // Create high priority
-    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\n\r", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\r\n", Create (0, &userTaskStart)); 
+    bwprintf (COM2, "Created: %d.\r\n", Create (0, &userTaskStart)); 
 
     bwputstr (COM2, "First: exiting.");
  
@@ -27,19 +27,34 @@ void firstTaskStart () {
 }
 
 
-void userTaskStart ( TD *td ) {
+void userTaskStart ( ) {
     
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid() );
 
-  //  Pass();
+    Pass();
     
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\n\r", td->id, td->parentId);
+    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid() );
 
-  //  Exit();
+    Exit();
+}
+
+void managerInit ( TDManager *manager ) {
+    int i;
+    
+    for ( i = 0; i < NUM_PRIORITY; i ++ ) {
+        manager->readyQ[i] = 0;
+    }
+
+    manager->frontPtr = 0;
+    manager->backPtr  = 0;
+    manager->nextId   = 0;
+	manager->highestPriority = 0;
+	manager->blockedQ = 0;
+    
 }
 
 TD * initNewTaskDesc ( int priority, Task start, int parentId, TDManager *manager ) {
-    assert( manager->backptr < 64 );
+    assert( manager->backPtr < 64 );
 	TD *td = &manager->tdArray[manager->backPtr++];
 
 	// TODO THIS WILL RUN OFF THE END
@@ -64,15 +79,15 @@ TD * initNewTaskDesc ( int priority, Task start, int parentId, TDManager *manage
 }
 
 void insertInReady ( TD *td, TDManager *manager ) {
-	int priority = td->priority;
+	int p = td->priority;
 
-	bwputstr (COM2, "about to insert\n\r");
-	insertInQueue ( &manager->readyQueue[priority], td );
+	debug ( "about to insert\r\n");
+	manager->readyQ[p] = queueAdd ( manager->readyQ[p], td );
 	
 	// If this new task has the highest priority,
 	// set this pointer. Makes for faster scheduling.
-	if ( manager->highestPriority > priority ) {
-		manager->highestPriority = priority;
+	if ( manager->highestPriority > p ) {
+		manager->highestPriority = p;
 	}
 
 	// Set to ready since it is in the ready queue
@@ -81,32 +96,33 @@ void insertInReady ( TD *td, TDManager *manager ) {
 
 void insertInBlocked ( TD *td, TDManager *manager ) {
 	
-	insertInQueue ( &manager->blockedQueue, td );
+	manager->blockedQ =	queueAdd ( manager->blockedQ, td );
 }
 
-void insertInQueue ( TD **head, TD *newTail ) {
-	debug ( "insertInQueue head=%x, newTail=%x \r\n", *head, newTail );
+Queue queueAdd ( Queue head, TD *newTail ) {
+	debug ( "queueAdd head=%x, newTail=%x \r\n", head, newTail );
 	
 	// If the queue was empty, add this as the only item.
-	if ( *head == 0 ) {
+	if ( head == 0 ) {
 		newTail->prevPQ = newTail;
 		newTail->nextPQ = newTail;
 	}
 	// Add as a new tail
 	else {
-		TD *tail = (*head)->prevPQ; // Cannot be 0, could be head
+		TD *tail = head->prevPQ; // Cannot be 0, could be head
 		// Update inserted's elements pointers
-		newTail->nextPQ = *head;
+		newTail->nextPQ = head;
 		newTail->prevPQ = tail;
 		// Put the element in the queue
-		(*head)->prevPQ = newTail;
+		head->prevPQ = newTail;
 		tail->nextPQ = newTail;
 	}
-	*head = newTail;
-	debug ( "new head=%x\n\r", *head );
+	return newTail;
+	debug ( "new head=%x\r\n", head );
 }
 
-TD * removeFromQueue ( TD *td ) {
+Queue queuePop ( TD *td ) {
+	debug ( "queuePop td=%x \r\n", td );
 
 	assert (td->prevPQ != 0);
 	assert (td->nextPQ != 0);
@@ -125,14 +141,14 @@ TD * removeFromQueue ( TD *td ) {
 
 TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager ) {
 	
-	debug ( "kernCreateTask: priority=%d, parent=%d manager %x\n\r", priority, parentId, manager);
+	debug ( "kernCreateTask: priority=%d, parent=%d manager %x\r\n", priority, parentId, manager);
 	// Grab the new task
 	TD *newTask = initNewTaskDesc ( priority, start, parentId, manager );
-	debug ( "	init task %d\n\r", newTask );
+	debug ( "	init task %d\r\n", newTask );
 
 	// Insert into ready queue
     insertInReady (newTask, manager);
-	debug ( "	inserted in ready queue\n\r" );
+	debug ( "	inserted in ready queue\r\n" );
 	
     return newTask;
 }
