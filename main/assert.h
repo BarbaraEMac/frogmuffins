@@ -8,7 +8,7 @@
 
 #ifdef DEBUG 
 
-void __assert ( int test, char *exp, char *line, char *file );
+void __assert ( int test, char *exp, int line, char *file );
 
 #define assert(exp) __assert(exp, #exp, __LINE__, __FILE__ )
 

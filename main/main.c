@@ -11,6 +11,7 @@
 #include "switch.h"
 #include "requests.h"
 #include "td.h"
+#include "assert.h"
 
 #define FOREVER	 for( ; ; )
 #define WAIT	 for( i=0; i<200000; i++) {}
@@ -54,13 +55,16 @@ TD * initialize ( TDManager *manager ) {
 	manager->highestPriority = 0;
 	manager->blockedQueue = 0;
     
-    return kernCreateTask ( 1, &firstTaskStart, getNextId(manager), manager );
+    return kernCreateTask ( 1, &firstTaskStart, -1, manager );
 }
 
 void getNextRequest ( TD *td, Request *ret ) {
+	bwprintf( COM2, "Kernel Exit sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
 
 	kernelExit (td, ret);
 
+	bwprintf( COM2, "Kernel Entry sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
+	bwprintf( COM2, "Returned a0=%x a1=%x a2=%x a3=%x a4=%x type=%x\r\n", ret->args[0], ret->args[1], ret->args[2], ret->args[3], ret->args[22], ret->type );
 }
 
 void service ( TD *td, Request *req, TDManager *manager ) { 
@@ -69,10 +73,10 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = kernCreateTask(req->args[0], req->args[1], td->id, manager);
+			//child = kernCreateTask(req->args[0], (Task) req->args[1], td->id, manager);
 			
-			td->returnValue = child->id;
-			break;
+			//td->returnValue = child->id;
+			//break;
 		
 		case MYTID:
 			td->returnValue = td->id;
@@ -148,43 +152,39 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 
 int main( int argc, char* argv[] ) {
 	bwsetfifo( COM2, OFF );
-/*	TDManager taskManager;
+	// Set up the Software interrupt for context switches
+	int *swi = (int *) 0x28;
+	*swi = (int) &kernelEnter;
+	bwputstr( COM2, "Initialized interrupt handler.\r\n" );
+	
+	TDManager taskManager;
 	TD		*active;
 	Request	nextRequest;
 
 	// This is what we will end up with.
 	// Look, it's already done.
 
+	bwprintf( COM2, "Location of firsttask: %x\r\n", &firstTaskStart );
 	active = initialize ( &taskManager );
-	FOREVER {
+/*	FOREVER {
 		getNextRequest (active, &nextRequest);
 		service (active, &nextRequest, &taskManager);
 		active = schedule (active, &taskManager);
 	}
-*/
-	int *junk;
+//*/
+
 	int i;
-	// Set up the Software interrupt for context switches
-	int *swi = (int *) 0x28;
-	*swi = (int) &kernelEnter;
 
 
 	// Set up the first task
-	TD task1 = { 0x10, 0x21B000-0x38, &test };
-	junk = (int *) 0x21AFF8;
-	*junk = &test;
-	Request r1;
+//	TD task1 = { 0x10, (int *) 0x21B000-0x38 };
+//	task1.sp[PC_OFFSET] = (int) &firstTaskStart;
 	
 	
-	bwprintf( COM2, "Location of test: %x\r\n", &test );
-	bwprintf( COM2, "Location of request: %x\r\n", &r1 );
 	for( i=0; i<8; i++ ) {
-		bwprintf( COM2, "Going into a context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
-		task1.returnValue = 0xDEADBEEF;
-		kernelExit(&task1, &r1);
-		bwprintf( COM2, "Got back from context switch sp=%x spsr=%x\r\n", task1.sp, task1.spsr );
-		bwprintf( COM2, "Returned a0=%x a1=%x a2=%x a3=%x a4=%x type=%x\r\n", r1.args[0], r1.args[1], r1.args[2], r1.args[3], r1.args[22], r1.type );
-
+		getNextRequest (active, &nextRequest);
+		service (active, &nextRequest, &taskManager);
+		//active = schedule (active, &taskManager);
 	}
 	bwputstr( COM2, "Exiting normally" );
 	//*/

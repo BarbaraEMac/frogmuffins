@@ -39,31 +39,21 @@ void userTaskStart ( TD *td ) {
 }
 
 TD * getUnusedTask ( TDManager *manager ) {
-    TD *ret = &manager->tdArray[manager->backPtr];
-    manager->backPtr += 1;
+    assert( manager->backptr < 64 );
+	TD *ret = &manager->tdArray[manager->backPtr++];
+
 	// TODO THIS WILL RUN OFF THE END
+	ret->id = manager->nextId++;
 
     return ret;
 }
 
-int getNextId ( TDManager *manager ) {
-    int ret = manager->nextId;
-    manager->nextId += 1;
-
-	// TODO this needs to be synchronized with the backptr.
-	// I suggest using the backptr for this, or setting the id directly in getUnusedTask
-    return ret;
-}
-
-void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *manager ) {
+void initTaskDesc ( TD *td, int priority, Task start, int parentId ) {
     
     td->spsr = 0x10;	
-	td->sp = 0x21A000; //TODO
-	td->sp[PC_OFFSET] = (int) s;
-
-	td->start = s;
+	td->sp = (int *) 0x21B000; //TODO
+	td->sp[PC_OFFSET] = (int) start;
 	
-	td->id = getNextId (manager);
 	td->parentId = parentId;
 	
 	td->returnValue = 0;
@@ -71,13 +61,14 @@ void initTaskDesc ( TD *td, int priority, void (*s)(), int parentId, TDManager *
 	td->state = READY;
 
     // Temporary until we insert into PQ
+	// TODO: this is wasting instructions
     td->nextPQ = 0;
     td->prevPQ = 0;
 }
 void insertInReady ( TD *td, TDManager *manager ) {
 	int priority = td->priority;
 
-	insertInQueue ( manager->readyQueue[priority], td );
+	insertInQueue ( &manager->readyQueue[priority], td );
 	
 	// If this new task has the highest priority,
 	// set this pointer. Makes for faster scheduling.
@@ -91,28 +82,28 @@ void insertInReady ( TD *td, TDManager *manager ) {
 
 void insertInBlocked ( TD *td, TDManager *manager ) {
 	
-	insertInQueue ( manager->blockedQueue, td );
+	insertInQueue ( &manager->blockedQueue, td );
 }
 
-void insertInQueue ( TD *head, TD *newTail ) {
+void insertInQueue ( TD **head, TD *newTail ) {
 
 	// If the queue was empty, add this as the only item.
 	if ( head == 0 ) {
 		newTail->prevPQ = newTail;
 		newTail->nextPQ = newTail;
 		
-		head = newTail;
 	}
 	// Add as a new tail
 	else {
-		TD *tail = head->prevPQ; // Cannot be 0, could be head
-
-		head->prevPQ = newTail;
-		newTail->nextPQ = head;
-
-		tail->nextPQ = newTail;
+		TD *tail = (*head)->prevPQ; // Cannot be 0, could be head
+		// Update inserted's elements pointers
+		newTail->nextPQ = *head;
 		newTail->prevPQ = tail;
+		// Put the element in the queue
+		(*head)->prevPQ = newTail;
+		tail->nextPQ = newTail;
 	}
+	*head = newTail;
 }
 
 TD * removeFromQueue ( TD *td ) {
@@ -132,13 +123,13 @@ TD * removeFromQueue ( TD *td ) {
 	return next; // could be td - which is confusing
 }
 
-TD * kernCreateTask ( int priority, void (*start)(), int parentId, TDManager *manager ) {
+TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager ) {
 
 	// Grab the new task
 	TD *newTask = getUnusedTask (manager);
 
 	// Initialize the values
-	initTaskDesc ( newTask, priority, start, parentId, manager );
+	initTaskDesc ( newTask, priority, start, parentId );
 
 	// Insert into ready queue
     insertInReady (newTask, manager);
