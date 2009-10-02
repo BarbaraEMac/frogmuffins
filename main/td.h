@@ -10,7 +10,7 @@
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
 
-// Pointer the begining of task execution
+// Pointer the beginning of task execution
 typedef void (* Task) ();
 
 enum TASK_STATE {
@@ -60,9 +60,7 @@ void firstTaskStart ();
 
 void userTaskStart (TD *t);
 
-TD * getUnusedTask ( TDManager *manager ); // Also sets the Task id
-
-void initTaskDesc ( TD *td, int priority, Task start, int parentId );
+TD * initNewTaskDesc ( int priority, Task start, int parentId, TDManager *manager );
 
 void insertInReady (TD *td, TDManager *manager);
 void insertInBlocked (TD *td, TDManager *manager);
