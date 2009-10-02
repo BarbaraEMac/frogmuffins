@@ -59,6 +59,8 @@ TD * initialize ( TDManager *manager ) {
 }
 
 void getNextRequest ( TD *td, Request *ret ) {
+	bwprintf (COM2, "%x\n\r", td->sp);
+
 	bwprintf( COM2, "Kernel Exit sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
 
 	kernelExit (td, ret);
@@ -73,9 +75,9 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			//child = kernCreateTask(req->args[0], (Task) req->args[1], td->id, manager);
+			child = kernCreateTask(req->args[0], (Task) req->args[1], td->id, manager);
 			
-			//td->returnValue = child->id;
+			td->returnValue = child->id;
 			//break;
 		
 		case MYTID:
@@ -149,7 +151,6 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 	return ret;
 }
 
-
 int main( int argc, char* argv[] ) {
 	bwsetfifo( COM2, OFF );
 	// Set up the Software interrupt for context switches
@@ -180,9 +181,10 @@ int main( int argc, char* argv[] ) {
 //	TD task1 = { 0x10, (int *) 0x21B000-0x38 };
 //	task1.sp[PC_OFFSET] = (int) &firstTaskStart;
 	
-	
 	for( i=0; i<8; i++ ) {
+		bwputstr (COM2, "about to get next\n\r");
 		getNextRequest (active, &nextRequest);
+		bwputstr (COM2, "done getting next");
 		service (active, &nextRequest, &taskManager);
 		//active = schedule (active, &taskManager);
 	}
