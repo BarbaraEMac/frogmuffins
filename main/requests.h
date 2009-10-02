@@ -4,6 +4,7 @@
  * dgoc
  */
 
+#include "td.h"
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
@@ -30,7 +31,7 @@ typedef struct {
 /**
  * Create a new task with given priority and start function
  */
-int Create (int priority, void (*code) () );
+int Create (int priority, Task code );
 
 /**
  * Return the task id

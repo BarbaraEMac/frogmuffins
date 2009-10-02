@@ -10,7 +10,7 @@
 #define SWI(n) asm("swi #" #n)
 
 
-int Create (int priority, void (*code) () ) {
+int Create (int priority, Task code ) {
 	SWI(1);
 	//return syscall(priority, (int) code, 0, CREATE);
 }

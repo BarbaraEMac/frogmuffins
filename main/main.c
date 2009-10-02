@@ -32,31 +32,14 @@ void charset( char*str, int len, char ch=0 ) {
 	while( (--len) >= 0 ) str[len] = ch;
 }*/
 
-TD * initialize ( TDManager *manager ) {
-    int i;
-    
-    for ( i = 0; i < NUM_PRIORITY; i ++ ) {
-        manager->readyQueue[i] = 0;
-    }
-
-    manager->frontPtr = 0;
-    manager->backPtr  = 0;
-    manager->nextId   = 0;
-	manager->highestPriority = 0;
-	manager->blockedQueue = 0;
-    
-    return kernCreateTask ( 1, &firstTaskStart, -1, manager );
-}
-
 void getNextRequest ( TD *td, Request *ret ) {
-	bwprintf (COM2, "%x\n\r", td->sp);
 
-	bwprintf( COM2, "Kernel Exit sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
+	debug( "Kernel Exit sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
 
 	kernelExit (td, ret);
 
-	bwprintf( COM2, "Kernel Entry sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
-	bwprintf( COM2, "Returned a0=%x a1=%x a2=%x a3=%x a4=%x type=%x\r\n", ret->args[0], ret->args[1], ret->args[2], ret->args[3], ret->args[22], ret->type );
+	debug( "Kernel Entry sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr, td->sp[PC_OFFSET] );
+	debug( "Request type:%x args:%x %x %x %x %x \r\n", ret->type, ret->args[0], ret->args[1], ret->args[2], ret->args[3], ret->args[22] );
 }
 
 void service ( TD *td, Request *req, TDManager *manager ) { 
@@ -93,7 +76,7 @@ void service ( TD *td, Request *req, TDManager *manager ) {
 // Schedule the next task to run?
 // Probably do some fun scheduling algorotihm here
 TD * schedule ( TD *oldTask, TDManager *manager ) {
-    TD **readyQueue = manager->readyQueue;
+    TD **readyQ = manager->readyQ;
 	
 	// Handle the previous task
 	switch (oldTask->state) {
@@ -111,8 +94,8 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 	int highest = manager->highestPriority;
 	
 	// Pop new task off the ready queue
-	TD *ret = readyQueue[highest];
-	TD *newHead = removeFromQueue ( ret );
+	Queue ret = readyQ[highest];
+	Queue newHead = queuePop ( ret );
 	
 	if ( newHead == ret ) {
 		newHead = 0;	// TODO: fix this hack
@@ -122,7 +105,7 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 
 		// Find the next highest non-empty slot
 		for ( ; i < NUM_PRIORITY; i ++ ) {
-			if ( readyQueue[i] != 0 ) {
+			if ( readyQ[i] != 0 ) {
 				manager->highestPriority = i;
 			}
 		}
@@ -134,7 +117,7 @@ TD * schedule ( TD *oldTask, TDManager *manager ) {
 	}
 
 	// Reassign the head - either to the new task OR 0
-	manager->readyQueue[highest] = newHead;
+	manager->readyQ[highest] = newHead;
 	
 	// Set the state to active since this task is going to run
 	ret->state = ACTIVE;
@@ -155,8 +138,9 @@ int main( int argc, char* argv[] ) {
 	// This is what we will end up with.
 	// Look, it's already done.
 
-	bwprintf( COM2, "Location of firsttask: %x\r\n", &firstTaskStart );
-	active = initialize ( &taskManager );
+	debug( "Location of firsttask: %x\r\n", &firstTaskStart );
+	managerInit ( &taskManager );
+    active = kernCreateTask ( 1, &firstTaskStart, -1, &taskManager );
 /*	FOREVER {
 		getNextRequest (active, &nextRequest);
 		service (active, &nextRequest, &taskManager);
@@ -172,9 +156,9 @@ int main( int argc, char* argv[] ) {
 //	task1.sp[PC_OFFSET] = (int) &firstTaskStart;
 	
 	for( i=0; i<8; i++ ) {
-		bwputstr (COM2, "about to get next\n\r");
+		debug( "about to get next\r\n" );
 		getNextRequest (active, &nextRequest);
-		bwputstr (COM2, "done getting next");
+		debug( "done getting next\r\n" );
 		service (active, &nextRequest, &taskManager);
 		//active = schedule (active, &taskManager);
 	}
