@@ -44,31 +44,31 @@ struct taskdesc {
 typedef struct {
 	
 	TD tdArray[64];
+
 	int frontPtr;	// Not currently used
 	int backPtr;	
 
-    Queue readyQ[NUM_PRIORITY];
+    Queue ready[NUM_PRIORITY];
 	int highestPriority;
 
 	int nextId;		// TODO: Should be the same as backPtr (off by 1)
 
-	Queue blockedQ;
+	Queue blocked;
 
-} TDManager;
+	Queue defunct;	// Not currently used
 
+} PQ;
 
-void firstTaskStart ();
-void userTaskStart ();
+//TODO: Comments
+void pq_init (PQ *pq);
+TD * td_init (int priority, Task start, int parentId, PQ *pq);
 
-void managerInit( TDManager *manager );
-TD * initNewTaskDesc ( int priority, Task start, int parentId, TDManager *manager );
+void pq_insert (PQ *pq, TD *td);
+TD *pq_popReady (PQ *pq);
 
-void insertInReady (TD *td, TDManager *manager);
-void insertInBlocked (TD *td, TDManager *manager);
+void queue_push (Queue *head, TD *newTail);		// Returns the new head of the Queue
+TD * queue_pop  (Queue *head);
 
-Queue queueAdd (Queue head, TD *td);		// Returns the new head of the Queue
-Queue queuePop (Queue td);
-
-TD * kernCreateTask ( int priority, Task start, int parentId, TDManager *manager );
+TD * td_create (int priority, Task start, int parentId, PQ *pq);
 
 #endif
