@@ -35,7 +35,7 @@ arch/switch.o: arch/switch.S
 clean:
 	rm -f main/main.elf main/main.map
 	find . -name '*.[so]' -print | xargs rm -f
-	find . -name '*.~' -print | xargs rm -f
+	find . -name '*~' -print | xargs rm -f
 
 
 copy: 
