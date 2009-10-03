@@ -1,6 +1,14 @@
+/**
+ * CS 452: Kernel
+ * becmacdo
+ * dgoc
+ */
+
+// This is a file used to made switch.c.
+// It should not be used.
+
 #include "switch.h"
-// This is a file used to made switch.c
-// it should not be used
+
 void kernelEnter() {
 }
 
