@@ -4,7 +4,7 @@
  * dgoc
  */
 
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -137,7 +137,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
  * pq - The priority queues of the task descriptors.
  */
 TD *schedule ( TD *oldTask, PQ *pq ) {
-	assert ( td != 0 );
+	assert ( oldTask != 0 );
 	assert ( pq != 0 );
 	
 	debug ("schedule tid: %d parent: %d p: %d\r\n", oldTask->id,
