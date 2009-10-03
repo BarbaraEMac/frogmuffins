@@ -6,7 +6,6 @@
 kernelEnter:
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 1, uses_anonymous_args = 0
-	#; acquire the arguments
 	#; save the active task's lr
 	mov 	ip, lr
 	#; switch to system mode
@@ -42,7 +41,7 @@ kernelExit:
 	@ frame_needed = 1, uses_anonymous_args = 0
 	#; store the kernel state
 	stmfd	sp!, {r0, r1, r4-r10, fp, lr}
-	#; install the active tasks's sp and copy the spsr to ip and
+	#; fetch the active tasks's sp and spsr
 	ldmia 	r0, {r2, r3}
 	#; install the spsr
 	msr 	SPSR_cxsf, r2

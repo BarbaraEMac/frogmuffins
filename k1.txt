@@ -1,0 +1,91 @@
+												becmacdo	  Barbara Macdonald
+												dgoc				 Daniel Goc
+
+
+M""MMMMM""M                                     dP                  dP      d88  
+M  MMMM' .M                                     88                  88       88  
+M       .MM .d8888b. 88d888b. 88d888b. .d8888b. 88       88d888b. d8888P     88  
+M  MMMb. YM 88ooood8 88'  `88 88'  `88 88ooood8 88       88'  `88   88       88  
+M  MMMMb  M 88.  ... 88       88    88 88.  ... 88       88.  .88   88   dP  88  
+M  MMMMM  M `88888P' dP       dP    dP `88888P' dP       88Y888P'   dP   88 d88P 
+MMMMMMMMMMM                                              88                      
+                                                         dP                      
+
+Question 1
+==========
+    The executable is located in /u/dgoc/cs452/a1/test/main.elf
+
+    To operate the program type 'go', now that wasn't so hard was it?
+	There is no interactive input in this part of the assignnment, btw.
+	Mostly because you lied to me Matt, but that's okay I forgive you. This time.
+
+Question 2
+==========
+	The heart of the kernel is in the following loop:
+
+	FOREVER {
+		active = schedule (active, &taskManager);
+		getNextRequest (active, &nextRequest);
+		service (active, &nextRequest, &taskManager);
+	}
+
+	schedule() puts the active task on the priority queue and gets the highest priority task
+	that is ready. It sets it's state to ACTIVE.
+	...
+
+	getNextRequest() is a wrapper for the assembly function kernelExit() and they both take in 2
+	parameters: the active task and a structure holding the request.
+	The reason we have this wrapper is for debug statements, if this were production code,
+	it would be optimized away.
+
+	Inside kernelExit() first the kernel state is saved. Next the active task's sp ans spsr are
+	copied from it's task descriptor. The spsr is then installed. The return value is put into r0.
+	We switch to system mode, and restore the active task, carefully skipping r0.
+	We switch back to supervisor mode so that we can install the pc of the active task, 
+	while switching to the spsr.
+
+	When the task performs a system request, swi with the appropriate immediate value is executed.
+	This effectively calls kernelEntry() which first saves the active task's lr clobbering the ip
+	register, then switches to system mode, so that we can save active task's state. 
+	We then switch back to supervisor mode and restore the kernel's registers holding 
+	the address of active task's TD and Request. We put the sp, and spsr into the active task.
+	We get the request type using VERY COOL bit masking arithmentic, behold:
+		bic		r6,	r6, #0xFF000000 #; this line is MAGIC (I think the assembler is really smart)
+	Then we fill the request with the arguments, restore the rest of kernel's registers and
+	jump back to the kernel.
+	Note: this returns to where kernelExit would return to if it was a normal function.
+
+Question 3
+==========
+
+	
+
+Question 4
+==========
+
+	.:
+	arch  include  k1.txt  lib  main  Makefile  src  test
+
+	./arch:
+	switch.S
+
+	./include:
+	assert.h  bwio.h  main.h  requests.h  switch.h  td.h  ts7200.h
+
+	./lib:
+	libbwio.a
+
+	./main:
+	assert.c  main.c  orex.ld  requests.c td.c
+
+	./src:
+	bwio.c  libbwio_old.q  Makefile
+
+	./test:
+	dgoc_a1.c  dgoc_a1.elf  dgoc_a1.h  dgoc_a1.map  Makefile  orex.ld
+
+
+Question 5
+==========
+
+
