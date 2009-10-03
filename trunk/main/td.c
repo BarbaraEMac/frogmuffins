@@ -12,11 +12,10 @@
 #include "switch.h"
 #include "assert.h"
 
-
-
 void pq_init ( PQ *this ) {
     int i;
     
+	// Each ready priority queue should be empty.
     for ( i = 0; i < NUM_PRIORITY; i ++ ) {
         this->ready[i] = 0;
     }
@@ -28,11 +27,36 @@ void pq_init ( PQ *this ) {
 	this->blocked = 0;
 }
 
+TD * td_create (int priority, Task start, int parentId, PQ *pq) {
+	debug ( "td_create: priority=%d, parent=%d pq=%x\r\n",
+			priority, parentId, pq);
+	assert ( priority >= 0 );
+	assert ( priority < NUM_PRIORITY );
+	assert ( pq != 0 );
+
+	// Grab the new task
+	TD *newTask = td_init ( priority, start, parentId, pq );
+	assert (newTask != 0);
+
+	// Insert into ready queue
+    pq_insert (pq, newTask);
+	
+    return newTask;
+}
+
 TD * td_init ( int priority, Task start, int parentId, PQ *pq ) {
-    assert( pq->backPtr < 64 );
+	debug ( "td_init: priority=%d, parent=%d pq=%x\r\n",
+			priority, parentId, pq);
+    assert ( pq->backPtr < 64 );
+	assert ( priority >= 0 );
+	assert ( priority < NUM_PRIORITY );
+	assert ( pq != 0 );
+	
+	// Grab an unused TD from the array.
+	// TODO: Replace this once we have dynamic memory allocation.
 	TD *td = &pq->tdArray[pq->backPtr++];
 
-	// TODO THIS WILL RUN OFF THE END
+	// TODO: THIS WILL RUN OFF THE END
 	td->id = pq->nextId++;
 
     td->spsr = 0x10;	
@@ -43,6 +67,8 @@ TD * td_init ( int priority, Task start, int parentId, PQ *pq ) {
 	
 	td->returnValue = 0;
 	td->priority = priority;
+
+	// Tasks start as READY
 	td->state = READY;
 
     // Temporary until we insert into PQ
@@ -54,26 +80,26 @@ TD * td_init ( int priority, Task start, int parentId, PQ *pq ) {
 }
 
 void pq_insert ( PQ *this, TD *td ) {
-	// When we first create a task, it is ready.
-	// We should insert it into the ready queue
+	debug ("pq_insert this/pq=%x td=%x priority=%d.\r\n",
+			this, td, td->priority);
+	assert ( this != 0 );
 	assert ( td != 0 );
 
 	int p = td->priority;
-	debug("pq_insert td: %x priority: %d\r\n", td, p);
-	
 	switch ( td->state ) {
+		
 		case ACTIVE:
+			// Active tasks should be made ready and put on a ready queue.
 			td->state = READY;
 
 		case READY:
-			
+			// Add the TD to the ready queue
 			queue_push ( &this->ready[p], td );
 			
 			// If this new task has the highest priority,
 			// set this pointer. Makes for faster scheduling.
 			if ( p < this->highestPriority ) {
 				this->highestPriority = p;
-				debug ("	  HIGHEST PRIORITY: %d\r\n", p);
 			}
 
 			// Set to ready since it is in the ready queue
@@ -82,46 +108,52 @@ void pq_insert ( PQ *this, TD *td ) {
 			break;
 
 		case BLOCKED:
+			// Add the TD to the blocked queue.
 			queue_push ( &this->blocked, td );
 			break;
 		
 		case DEFUNCT:
 		default:
+			// Do nothing for defunct tasks for now ...
 			debug ("We are NOT adding %x at p: %d to a queue.\r\n", td, p);
 			break;
 	}
-	debug("pq_insert %x DONE\r\n", td);
 }
 
 TD *pq_popReady ( PQ *this ) {
-	int p = this->highestPriority;
-	debug("pq_popReady PQ:%x priority:%d\r\n", this, p);
+	debug("pq_popReady this/pq=%x priority=%d\r\n",
+		   this, p->highestPriority);
+	assert ( this != 0 );
 
+	int p = this->highestPriority;
+
+	// If p == NUM_PRIORITY, there are no TDs in any ready queue.
 	if ( p == NUM_PRIORITY ) {
 		return 0;
 	}
 
-	// this needs to have something
+	// This ready queue MUST have something.
 	assert (this->ready[p] != 0);
 
+	// Pop off the top of the queue.
 	TD *top = queue_pop ( &this->ready[p] );
+	
+	// If the queue is now empty, change the highest priority pointer.
 	if ( this->ready[p] == 0 ) {
-		debug ("POPPPPPP: readyQueue head: %x p:%d\r\n", this->ready[p], p);
-		
 		// Find the next highest non-empty slot
 		for ( p += 1; p < NUM_PRIORITY && this->ready[p] == 0 ; p++ ) {;}
 		
 		this->highestPriority = p;	// This might be off the end by 1
-		
-		debug ("		HIGHEST PRIORITY: %d\r\n", p);
 	}
 
-	debug("pq_popReady %x DONE\r\n");
+	// Return the top of the queue
 	return top;
 }
 
 void queue_push ( Queue *q, TD *newTail ) {
 	debug ( "queue_push head=%x, newTail=%x \r\n", *q, newTail );
+	assert ( q != 0 );
+	assert ( newTail != 0 );
 	
 	TD *head = *q;
 
@@ -135,26 +167,33 @@ void queue_push ( Queue *q, TD *newTail ) {
 	}
 	// Push as a new tail
 	else {
-		TD *tail = head->prevPQ; // Cannot be 0, could be head
+		TD *tail = head->prevPQ; // Cannot be 0; Could be head
+		assert ( tail != 0 );
+		assert ( tail->nextPQ != 0 );
+		
 		// Update inserted's elements pointers
 		newTail->nextPQ = head;
 		newTail->prevPQ = tail;
+		
 		// Put the element in the queue
 		head->prevPQ = newTail;
 		tail->nextPQ = newTail;
 	}
+
+	assert ( head != 0 );
 }
 
 TD *queue_pop (Queue *head) {
 	debug ( "queue_pop head=%x \r\n", *head );
+	assert ( head != 0 );
 
 	TD *top = *head;
+	assert ( top != 0 );
+	assert ( top->prevPQ != 0 );
+	assert ( top->nextPQ != 0 );
 
-	assert (top->prevPQ != 0);
-	assert (top->nextPQ != 0);
-
-	TD *prev = top->prevPQ; // Can be top itself
-	TD *next = top->nextPQ; // Can be top itself
+	TD *prev = top->prevPQ; // Cannot be 0; Can be top itself
+	TD *next = top->nextPQ; // Cannot be 0; Can be top itself
 
 	prev->nextPQ = next;	// Reset the links
 	next->prevPQ = prev;
@@ -162,23 +201,10 @@ TD *queue_pop (Queue *head) {
 	top->nextPQ = 0;		// Ensure this task points to nothing
 	top->prevPQ = 0;
 
-	// if top == next, we've popped the last one
-	debug ("pop: top: %x prev: %x next: %x\r\n", top, prev, next);
+	// If top == next, we've popped the last one on this queue.
+	debug ("	queue_pop: top: %x prev: %x next: %x\r\n", top, prev, next);
 	*head = (top == next) ? 0 : next;
 
+	// Return the old top of the queue
 	return top; 
-}
-
-TD * td_create (int priority, Task start, int parentId, PQ *pq) {
-	
-	debug ( "td_create: priority=%d, parent=%d this %x\r\n", priority, parentId, pq);
-	// Grab the new task
-	TD *newTask = td_init ( priority, start, parentId, pq );
-	debug ( "	init task %d\r\n", newTask );
-
-	// Insert into ready queue
-    pq_insert (pq, newTask);
-	debug ( "	inserted in ready queue\r\n" );
-	
-    return newTask;
 }
