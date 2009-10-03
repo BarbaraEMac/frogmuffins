@@ -4,11 +4,12 @@
  * dgoc
  */
 
-#include "td.h"
+// These are really system calls - Cowan calls them "requests"
+
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
-// These are really system calls - Cowan calls them "requests"
+#include "td.h"
 
 // More to be added later
 enum RequestCode {
@@ -20,12 +21,12 @@ enum RequestCode {
 };
 
 typedef struct {
-	enum RequestCode type; // the type of the request (including number of arguments)
-	int const * const args;	// place in user memory where arguments are stored
-	// NOTE: The 5th argument is in args[22] 
-	// and NOT args[4] as would be expected
+	enum RequestCode type; 	// The type of the request 
+							// Includes the number of arguments.
+	int const * const args;	// Place in user memory where arguments are stored.
 	
-
+	// NOTE: The 5th argument is in args[22] 
+	// and NOT args[4] as would be expected.
 } Request;
 
 /**
@@ -52,6 +53,4 @@ void Pass ();
  * Terminate execution forever.
  */
 void Exit ();
-
-
 #endif

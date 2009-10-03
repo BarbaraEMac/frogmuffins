@@ -8,8 +8,6 @@
 
 #define PC_OFFSET 12
 
-// Forward declare these. We don't actually use them,
-// so we don't need to include them.
 #include "td.h"
 #include "requests.h"
 
@@ -40,6 +38,8 @@ void kernelEnter();
 // * install the pc of the active task.
 void kernelExit(TD *active, Request *req);
 
+// This is not currently used.
+// We might change this in the future if needed.
 int syscall(int arg0, int arg1, int arg3, enum RequestCode type);
 
 #endif
