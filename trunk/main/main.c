@@ -160,7 +160,7 @@ int main( int argc, char* argv[] ) {
 		getNextRequest (active, &nextRequest);
 		debug( "done getting next\r\n" );
 		service (active, &nextRequest, &taskManager);
-		//active = schedule (active, &taskManager);
+		active = schedule (active, &taskManager);
 	}
 	bwputstr( COM2, "Exiting normally" );
 	//*/
