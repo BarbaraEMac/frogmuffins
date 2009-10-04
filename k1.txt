@@ -114,28 +114,69 @@ Question 4
 ==========
 
 	.:
-	arch  include  k1.txt  lib  main  Makefile  src  test
+	arch  include  k1.txt  lib  main  Makefile  src
 
 	./arch:
-	switch.S
+	switch.c  switch.S
 
 	./include:
-	assert.h  bwio.h  main.h  requests.h  switch.h  td.h  ts7200.h
+	assert.h  bwio.h  main.h  requests.h  shell.h  switch.h  td.h  ts7200.h
 
 	./lib:
 	libbwio.a
 
 	./main:
-	assert.c  main.c  orex.ld  requests.c td.c
+	assert.c  main.c  orex.ld  requests.c  shell.c  td.c  main.elf
 
 	./src:
 	bwio.c  libbwio_old.q  Makefile
 
-	./test:
-	dgoc_a1.c  dgoc_a1.elf  dgoc_a1.h  dgoc_a1.map  Makefile  orex.ld
 
+	NOTE: We are using Subversion as our version system.
+		  There will be .svn folders in each folder.
+
+	NOTE: k1.txt is the electronic version of this file.
 
 Question 5
 ==========
+	Here is our program's output:
 
+	Initializing serial port connection.
+	Initializing interrupt handler.
+	Created 1.
+	Created 2.
+	Tid: 3 Parent Tid: 0.
+	Tid: 3 Parent Tid: 0.
+	Created 3.
+	Tid: 4 Parent Tid: 0.
+	Tid: 4 Parent Tid: 0.
+	Created 4.
+	First: exiting.
+	Tid: 1 Parent Tid: 0.
+	Tid: 2 Parent Tid: 0.
+	Tid: 1 Parent Tid: 0.
+	Tid: 2 Parent Tid: 0.
+	Exiting normally.
 
+	The first task creates tasks 1 and 2 at a lower priority. Thus, the first task continues to run and
+	we don't schedule the 2 newest tasks. Then the first task creates task 3 with priority 0. This new task is
+	of the highest priority so it runs to completion (ie. we do not schedule a lower priority task until this
+	is done). Hence, the 3rd task outputs its data and exits.
+
+	At this time, the first task has the highest priority again and creates task 4 with priority 0. Similarly to
+	task 3, task 4 is of highest priority until it is done and, so, runs to completion without being interrupted.
+
+	After task 4 exits, the first task is scheduled to run again. It prints "First: exiting." and exits. 
+
+	Then the 2 lowest priority tasks, 1 and 2, are allowed to run. Since task 1 was created first and placed
+	into the ready queue for priority 2 first, it runs first. After printing its data and calling Pass(),
+	task 1 is placed onto the end of the ready queue. When schedule selects the next active task, task 2 is at
+	the head of the queue and runs. It prints its data, calls Pass(), and is placed on the back of the ready queue.
+	Task 1 is scheduled to run, prints its data for the final time and calls Exit(). At this point, it is
+	not added as the tail of a priority queue and will not be scheduled to run again. 
+
+	The final task on any priority queue is selected to run. Task 2 prints its data and calls exit. At this point,
+	there are no more tasks in any ready queue so the program exits.
+
+	Due to the order that the first task creates tasks and the priorities of each task, this output is in the 
+	correct order.
