@@ -108,7 +108,50 @@ Question 2
 Question 3
 ==========
 	The source code for our kernel is in: /u/becmacdonald/cs452/frogmuffins.
+
+	ea369f400a9760bd335875f91f1bd8a7  ./main/td.c
+	5c074b448b8c59e3a56f7821f3628ca3  ./main/main.c
+	db0506507411b53c43ba6d7492cf2a4d  ./main/main.s
+	cfb30380bf730795a77f18212903ca9b  ./main/shell.c
+	09bfc033eeca41496acfa4ab64e64839  ./main/requests.c
+	ac7847fcdda839ba269212b1d28f1195  ./main/requests.s
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./main/orex.ld
+	4ee8b3a59824cc02897bef2ad440a4b9  ./main/td.s
+	c8f2a7e4cbe0f9668b2c57a9fceabdd3  ./main/assert.s
+	aed75bc36784b2aa86feb73b0e1416f4  ./main/main.o
+	9eea2d619e290343c031f144927f0db6  ./main/requests.o
+	1e1397340ea67564549e4df071a093d7  ./main/.switch.h.swp
+	225f58c28eaf4b877ac9c48b807bfb94  ./main/td.o
+	5e328d051fe63d2a3bd967cdbe9b2a4a  ./main/assert.o
+	76245ab06fffe13737544b0178f2f7d5  ./main/main.map
+	95a29cc37775eac39cb92e24b9c8c159  ./main/main.elf
+	293c346a0faf1207a21f2eaba7c60612  ./main/.main.c.swp
+	42b6be77301a6c02f9b507227a15c18b  ./main/.td.c.swp
+	20a9ace9a475168df2bcc81f4a33088f  ./main/assert.c
+	42708ede38865ec9f0be08e5d0114d45  ./main/assert.a
 	
+	9af226f127c1fd759530cd45236c37b8  ./include/ts7200.h
+	202c969a8bf37c6eb5dcee583d9b1839  ./include/bwio.h
+	0ffe6fc9ccfc74335610e704cc16cc36  ./include/requests.h
+	76c65a8759268c9e024f02df40b06de1  ./include/assert.h
+	650f0bc012f3c2008b22034f4a58b40f  ./include/switch.h
+	f0210fab5c472fbd056c49576bcbe4d3  ./include/main.h
+	68b329da9893e34099c7d8ad5cb9c940  ./include/shell.h
+	7f135476a607bd3082ece94a396a1d3e  ./include/td.h
+	
+	8430a0c52c00b4ad0f7fe1ea08947999  ./lib/libbwio.a
+	
+	3ee2ef0374ebef573e911ec341f9d8cf  ./src/bwio.c
+	ba868ea1845b6aa4af4cb1feee528228  ./src/libbwio_old.q
+	d1ef80a878012b45924d0a442ac06827  ./src/Makefile
+	
+	4f566d2e14badb50a0280e269b52bae5  ./arch/switch.o
+	5ec4cc8fdd3c72e48e4f0cd5b0203850  ./arch/switch.S
+	d08e423eb97f6cfd334d848bd61b8421  ./arch/switch.c
+	
+	c91cec1d45d745ef81ece7f7fdff3fec  ./k1.txt
+	4784b5d53dc498f4c181ebe07f7cfed2  ./Makefile
+	2cd2b73b35a1b57b39a8fcf28f2eda3d  ./k1.txt~
 
 Question 4
 ==========
