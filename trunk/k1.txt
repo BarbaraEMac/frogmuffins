@@ -13,9 +13,9 @@ MMMMMMMMMMM                                              88
 
 Question 1
 ==========
-    The executable is located in /u/dgoc/cs452/a1/test/main.elf
+    The executable is located in /u/becmacdonald/cs452/frogmuffins/main/main.elf.
 
-    To operate the program type 'go', now that wasn't so hard was it?
+    To operate the program type 'go'. Now, that wasn't so hard was it?
 	There is no interactive input in this part of the assignnment, btw.
 	Mostly because you lied to me Matt, but that's okay I forgive you. This time.
 
@@ -24,28 +24,36 @@ Question 2
 	The heart of the kernel is in the following loop:
 
 	FOREVER {
-		active = schedule (active, &taskManager);
-		getNextRequest (active, &nextRequest);
-		service (active, &nextRequest, &taskManager);
+		activeTask = schedule (activeTask, &priorityQueues);
+		getNextRequest    	  (activeTask, &nextRequest);
+		service 			  (activeTask, &nextRequest, &priorityQueues);
 	}
 
-	schedule() puts the active task on the priority queue and gets the highest priority task
-	that is ready. It sets it's state to ACTIVE.
-	...
+	schedule() puts the active task on the ready queue for its priority. If the active task
+	is blocked or called Exit(), then it is added to the blocked queue or not added to
+	any queue, respectively. Then we grab the highest priority task from a ready queue and 
+	set it as the active task. If there are no remaining tasks on any ready queue, a null
+	active task is returned. We check this null task to determine when to stop running.
+
+	The only issue with this scheduling algorithm is that there is possibility of starvation
+	for the lower priority tasks. If a high priority task always has work to do and never calls
+	Exit(), this task will always be scheduled and any lower priority tasks will never run. This
+	is obviously unfair to low priority tasks, but this is the algorithm Professor Cowan gave 
+	in class.
 
 	getNextRequest() is a wrapper for the assembly function kernelExit() and they both take in 2
 	parameters: the active task and a structure holding the request.
-	The reason we have this wrapper is for debug statements, if this were production code,
-	it would be optimized away.
+	The reason we have this wrapper is for debug statements. If this were production code,
+	all debug statements would be optimized away using precompiler directives.
 
-	Inside kernelExit() first the kernel state is saved. Next the active task's sp ans spsr are
-	copied from it's task descriptor. The spsr is then installed. The return value is put into r0.
-	We switch to system mode, and restore the active task, carefully skipping r0.
+	Inside kernelExit(), the kernel state is saved first. Next, the active task's sp and spsr are
+	copied from its task descriptor. The spsr is then installed. The return value is put into r0.
+	We switch to system mode and restore the active task, carefully skipping r0.
 	We switch back to supervisor mode so that we can install the pc of the active task, 
 	while switching to the spsr.
 
 	When the task performs a system request, swi with the appropriate immediate value is executed.
-	This effectively calls kernelEntry() which first saves the active task's lr clobbering the ip
+	This effectively calls kernelEntry(). KernelEntry() saves the active task's lr, clobbering the ip
 	register, then switches to system mode, so that we can save active task's state. 
 	We then switch back to supervisor mode and restore the kernel's registers holding 
 	the address of active task's TD and Request. We put the sp, and spsr into the active task.
@@ -53,11 +61,53 @@ Question 2
 		bic		r6,	r6, #0xFF000000 #; this line is MAGIC (I think the assembler is really smart)
 	Then we fill the request with the arguments, restore the rest of kernel's registers and
 	jump back to the kernel.
-	Note: this returns to where kernelExit would return to if it was a normal function.
+	Note: This returns to where kernelExit would return to if it was a normal function.
+
+	Task descriptors are stored as structs and have the following members:
+		int spsr;				// Saved Processor State Register
+		int *sp;				// Stack Pointer
+		int returnValue;		// Value to pass to asm if we need to 
+								// return anything to a syscall
+		int id;			 		// A unique identifying id
+		int parentId;			// The unique id of the parent
+
+		int priority;			// A priority value (ranges from 0->2)
+							
+		enum TASK_STATE state;	// State of the task - ACTIVE, READY, BLOCKED, DEFUNCT
+
+		TD *nextPQ; 			// Link to the next TD in the PQ
+		TD *prevPQ; 			// Link to the prev TD in the PQ
+	
+	Our priority code is managed by a struct named PQ. It has the following members:
+		TD tdArray[64];			// Array of TDs until we have dynamic memory management
+
+		int backPtr;			// Points to the next unused TD in the array
+				
+		Queue ready[NUM_PRIORITY]; 	// The ready queue
+		int highestPriority;		// The highest non-empty bucket in the ready Q
+
+		int nextId;				// The next unique task id
+		Queue blocked;			// A single queue of blocked tasks
+	
+	Queue is simply a typedef'ed TD *.
+	
+	The ready queue has 1 bucket for each task priority. We currently have 3 unique priorities, but our
+	code is flexible enough to recognize more. Each bucket contains a circular queue of task descriptors.
+	The queues are circular so that we only need to store a pointer to the head of the list and can quickly 
+	follow its back pointer to reach the tail. This allows for fast insertion onto the tail of each ready queue.
+	When a queue only has 1 entry, the next and previous pointers are initialized to itself.
+
+	Since we are not blocking any tasks during kernel 1, the blocked queue is a singly linked list of tasks.
+	It will probably change for future assignments. 
+
+	The highest priority pointer keeps track of the highest priority of all tasks in the ready queue. When
+	it is time to schedule a new active task, we simply look at the head of the queue at this highest priority
+	and return it. It means we have to do more management of this pointer, but we can schedule the highest 
+	priority task in O(1) time. 
 
 Question 3
 ==========
-
+	The source code for our kernel is in: /u/becmacdonald/cs452/frogmuffins.
 	
 
 Question 4

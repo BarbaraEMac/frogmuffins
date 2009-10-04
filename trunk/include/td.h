@@ -38,7 +38,7 @@ struct taskdesc {
 	int id;			 	// A unique identifying id
 	int parentId;		// The unique id of the parent
 
-	int priority;		// A priority value (ranges from 0->4)
+	int priority;		// A priority value (ranges from 0->2)
 						
 	enum TASK_STATE state;	// State of the task - see enum above
 
