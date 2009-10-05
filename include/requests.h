@@ -88,14 +88,4 @@ int RegisterAs (char *name);
  */
 int WhoIs (char *name);
 
-//---------------------------------------------------------------------
-//-------------------------Kernel Calls--------------------------------
-//---------------------------------------------------------------------
-
-int send (int tid, char *msg, int msglen, char *reply, int rpllen);
-int receive (int *tid, char *msg, int msglen);
-int reply (int tid, char *reply, int rpllen);
-int registerAs (char *name);
-int whoIs (char *name);
-
 #endif

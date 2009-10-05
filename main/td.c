@@ -8,9 +8,10 @@
 #include <debug.h>
 #include <ts7200.h>
 
-#include "td.h"
+#include "error.h"
 #include "requests.h"
 #include "switch.h"
+#include "td.h"
 
 void pq_setUsed( PQ *this, int used, unsigned int idx ) {
 	debug( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
@@ -184,7 +185,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 	
 
 	// For now ....
-	return pd->tdArray[tid];
+	return &this->tdArray[tid];
 }
 
 void queue_push ( Queue *q, TD *newTail ) {
