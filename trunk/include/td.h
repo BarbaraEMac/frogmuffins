@@ -10,6 +10,10 @@
 #define NUM_PRIORITY 	3	// For now, we will use 3 priorities [0,2]
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
+#define NUM_TD			64
+#define NUM_BITFIELD	NUM_TD/32
+#define	STACK_SIZE		0x40000
+#define STACK_BASE		0x260000
 
 // Pointer the beginning of task execution
 typedef void (* Task) ();
@@ -32,6 +36,8 @@ typedef TD* Queue;
 // TIDs are really ints.
 typedef int TID;
 
+// Bitfield is also just an int
+typedef int BitField;
 /**
  * A Task Descriptor that the kernel uses to define a user task.
  */
@@ -40,6 +46,7 @@ struct taskdesc {
 	int *sp;			// Stack Pointer
 	int returnValue;	// Value to pass to asm if we need to 
 						// return anything to a syscall
+	int *sb;			// Stack base
 	TID id;			 	// A unique identifying id
 	TID parentId;		// The unique id of the parent
 
@@ -60,9 +67,8 @@ struct taskdesc {
  */
 typedef struct {
 	
-	TD tdArray[64];		// Use this until we have dynamic memory management
+	TD tdArray[NUM_TD]; // Use this until we have dynamic memory management
 
-	int frontPtr;		// TODO: Not currently used
 	int backPtr;		// Points to the next unused TD in the array
 			
     Queue ready[NUM_PRIORITY]; 	// The ready queue
@@ -73,6 +79,8 @@ typedef struct {
 	Queue blocked;		// A single queue of blocked tasks
 
 	Queue defunct;		// TODO: Not currently used
+
+	BitField used[NUM_BITFIELD];// bitfield mask telling us which td's are used
 
 } PQ;
 
