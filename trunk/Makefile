@@ -23,11 +23,13 @@ all:  main/main.s main/requests.s arch/switch.S main/td.s main/assert.s main/mai
 %.s: %.c ../include/%.h
 	$(XCC) -S $(CFLAGS) -o $@ $<
 
+%.o: %c
+
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
 main/main.elf: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -lgcc
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lgcc 
 
 arch/switch.o: arch/switch.S
 	$(AS) $(ASFLAGS) -o arch/switch.o arch/switch.S
