@@ -117,6 +117,14 @@ void pq_insert (PQ *pq, TD *td);
 TD *pq_popReady (PQ *pq);
 
 /**
+ * Fetches a TD from the task id.
+ * pq - The priority queue manager.
+ * tid - The id of the task to find.
+ * RETURN: A pointer to the TD corresponding to the given tid.
+ */
+TD *pq_fetchById (PQ *pq, TID tid);
+
+/**
  * Given a pointer to the head of a queue, push a new entry as the tail.
  * head - A pointer to the head of the queue.
  * newTail - The TD to insert onto the queue.

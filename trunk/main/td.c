@@ -153,6 +153,19 @@ TD *pq_popReady ( PQ *this ) {
 	return top;
 }
 
+TD *pq_fetchById ( PQ *this, TID tid ) {
+	// Verify td > 0
+	if ( tid < 0 ) {
+		return NEG_TID;
+	}
+	// Verify tid points to a valid td
+	// Verify td is not defunct
+	
+
+	// For now ....
+	return pd->tdArray[tid];
+}
+
 void queue_push ( Queue *q, TD *newTail ) {
 	debug ( "queue_push head=%x, newTail=%x \r\n", *q, newTail );
 	assert ( q != 0 );
