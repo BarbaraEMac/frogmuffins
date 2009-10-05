@@ -27,7 +27,7 @@ void pq_init ( PQ *this ) {
 	this->blocked = 0;
 }
 
-TD * td_create (int priority, Task start, int parentId, PQ *pq) {
+TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 	debug ( "td_create: priority=%d, parent=%d pq=%x\r\n",
 			priority, parentId, pq);
 	
@@ -52,7 +52,7 @@ TD * td_create (int priority, Task start, int parentId, PQ *pq) {
     return newTask;
 }
 
-TD * td_init ( int priority, Task start, int parentId, PQ *pq ) {
+TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	debug ( "td_init: priority=%d, parent=%d pq=%x\r\n",
 			priority, parentId, pq);
     assert ( pq->backPtr < 64 );

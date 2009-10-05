@@ -27,6 +27,9 @@ typedef struct taskdesc TD;
 // At some points, a TD* is a queue.
 typedef TD* Queue;
 
+// TIDs are really ints.
+typedef int TID;
+
 /**
  * A Task Descriptor that the kernel uses to define a user task.
  */
@@ -35,8 +38,8 @@ struct taskdesc {
 	int *sp;			// Stack Pointer
 	int returnValue;	// Value to pass to asm if we need to 
 						// return anything to a syscall
-	int id;			 	// A unique identifying id
-	int parentId;		// The unique id of the parent
+	TID id;			 	// A unique identifying id
+	TID parentId;		// The unique id of the parent
 
 	int priority;		// A priority value (ranges from 0->2)
 						
@@ -59,7 +62,7 @@ typedef struct {
     Queue ready[NUM_PRIORITY]; 	// The ready queue
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
-	int nextId;			// TODO: Should be the same as backPtr (off by 1)
+	TID nextId;			// TODO: Should be the same as backPtr (off by 1)
 
 	Queue blocked;		// A single queue of blocked tasks
 
@@ -82,7 +85,7 @@ void pq_init (PQ *pq);
  * pq - The priority queue manager.
  * RETURN: A pointer to the new TD.
  */
-TD * td_create (int priority, Task start, int parentId, PQ *pq);
+TD * td_create (int priority, Task start, TID parentId, PQ *pq);
 
 /**
  * Initialize a single td.
@@ -92,7 +95,7 @@ TD * td_create (int priority, Task start, int parentId, PQ *pq);
  * pq - The priority queue manager.
  * RETURN: A pointer to the new TD.
  */
-TD * td_init (int priority, Task start, int parentId, PQ *pq);
+TD * td_init (int priority, Task start, TID parentId, PQ *pq);
 
 /**
  * Inserts the TD into an appropriate priority queue.
