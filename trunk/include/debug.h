@@ -8,8 +8,8 @@
  * debug statements are stripped.
  */
 
-#ifndef __ASSERT_H__
-#define __ASSERT_H__
+#ifndef __DEBUG_H__
+#define __DEBUG_H__
 
 #ifdef DEBUG 
 
