@@ -55,7 +55,7 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	debug ( "td_init: priority=%d, parent=%d pq=%x\r\n",
 			priority, parentId, pq);
-    assert ( pq->backPtr < 64 );
+    assert ( pq->backPtr < NUM_TD );
 	assert ( priority >= 0 );
 	assert ( priority < NUM_PRIORITY );
 	assert ( pq != 0 );
