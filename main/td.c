@@ -115,11 +115,6 @@ void pq_insert ( PQ *this, TD *td ) {
 			
 			break;
 
-		case BLOCKED:
-			// Add the TD to the blocked queue.
-			queue_push ( &this->blocked, td );
-			break;
-		
 		case DEFUNCT:
 		default:
 			// Do nothing for defunct tasks for now ...
