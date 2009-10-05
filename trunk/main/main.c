@@ -9,8 +9,10 @@
 #include <ts7200.h>
 
 #include "debug.h"
+#include "error.h"
 #include "requests.h"
 #include "switch.h"
+#include "syscalls.h"
 #include "td.h"
 
 #define FOREVER	 for( ; ; )
@@ -25,10 +27,14 @@ int rev_log2(unsigned char x) {
 	return 9-r; // returns -1 for x==0, floor(log2(x)) otherwise
 }
 
-// zero-fill a char array
 void charset( char*str, int len, char ch=0 ) {
 	while( (--len) >= 0 ) str[len] = ch;
-}*/
+}
+*/
+
+void copyStr ( char *dest, const char *source, int len ) {
+	while( (--len) >= 0 ) dest[len] = source[len];
+}
 
 
 /**
@@ -102,7 +108,6 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	assert ( pq != 0 );
 	
 	TD *child;
-	int retValue;
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -121,16 +126,16 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 
 		case SEND:
-			td->returnValue = send (req->args[0], req->args[1], 
-									req->args[2], req->args[3], req->args[4]);
+			td->returnValue = send (td, pq, req->args[0]);
 			break;
 		
 		case RECEIVE:
-			td->returnValue = receive (req->args[0], req->args[1], req->args[2]);
+			td->returnValue = receive (td, pq, req->args[0]);
 			break;
 
 		case REPLY:
-			td->returnValue = reply (req->args[0], req->args[1], req->args[2]);
+			td->returnValue = reply (td, pq, req->args[0], req->args[1],
+									 req->args[2]);
 			break;
 		
 		case REGISTERAS:

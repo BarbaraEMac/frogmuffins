@@ -7,11 +7,15 @@
 #ifndef __SYSCALLS_H__
 #define __SYSCALLS_H__
 
-int send (int tid, char *msg, int msglen, char *reply, int rpllen);
+#include "td.h"
 
-int receive (int *tid, char *msg, int msglen);
+int send (TD *sender, PQ *pq, TID tid);
 
-int reply (int tid, char *reply, int rpllen);
+int receive (TD *receiver, PQ *pq, TID *tid);
+
+void passMessage (TD *sender, TD *receiver);
+
+int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen);
 
 int registerAs (char *name);
 
