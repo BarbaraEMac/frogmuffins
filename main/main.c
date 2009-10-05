@@ -4,14 +4,14 @@
  * dgoc
  */
 
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
-#include "switch.h"
+#include "debug.h"
 #include "requests.h"
+#include "switch.h"
 #include "td.h"
-#include "assert.h"
 
 #define FOREVER	 for( ; ; )
 #define WAIT	 for( i=0; i<200000; i++) {}
@@ -118,7 +118,19 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case MYPARENTTID:
 			td->returnValue = td->parentId;
 			break;
+
+		case SEND:
+
+
+			break;
 		
+		case RECEIVE:
+
+			break;
+
+		case REPLY:
+
+			break;
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
