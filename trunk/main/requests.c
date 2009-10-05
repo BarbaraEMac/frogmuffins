@@ -34,3 +34,22 @@ void Exit () {
 	//syscall(0, 0, 0, EXIT);
 }
 
+int Send (int tid, char *msg, int msglen, char *reply, int rpllen) {
+	SWI(6);
+}
+
+int Receive (int *tid, char *msg, int msglen) {
+	SWI(7);
+}
+
+int Reply (int tid, char *reply, int rpllen) {
+	SWI(8);
+}
+
+int RegisterAs (char *name) {
+	SWI(9);
+}
+
+int WhoIs (char *name) {
+	SWI(10);
+}

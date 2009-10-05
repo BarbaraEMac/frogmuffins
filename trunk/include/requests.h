@@ -16,6 +16,11 @@ enum RequestCode {
     CREATE = 1,
     MYTID,
     MYPARENTTID,
+	SEND,
+	RECEIVE,
+	REPLY,
+	REGISTERAS,
+	WHOIS,
     PASS,
     EXIT
 };
@@ -44,6 +49,22 @@ int MyTid ();
  */
 int MyParentTid();
 
+
+/**
+ * Send a message to a task.
+ */
+int Send (int tid, char *msg, int msglen, char *reply, int rpllen);
+
+/**
+ * Receive a message.
+ */
+int Receive (int *tid, char *msg, int msglen) <S-Del>;
+
+/**
+ * Reply to a message.
+ */
+int Reply (int tid, char *reply, int rpllen);
+
 /**
  * Cease execution, but stay ready to run.
  */
@@ -53,4 +74,15 @@ void Pass ();
  * Terminate execution forever.
  */
 void Exit ();
+
+/**
+ * Register with the nameserver.
+ */
+int RegisterAs (char *name);
+
+/**
+ * Query the name server.
+ */
+int WhoIs (char *name);
+
 #endif
