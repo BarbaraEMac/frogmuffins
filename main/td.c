@@ -12,6 +12,20 @@
 #include "requests.h"
 #include "switch.h"
 
+void pq_setUsed( PQ *this, int used, unsigned int idx ) {
+	debug( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
+	assert( idx < NUM_TD );
+	debug( "REMOVE THIS, used=%x %x\r\n", this->used[0], this->used[1] );
+	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
+	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
+	if( used ) {
+		this->used[i] |= (1 << s);
+	} else {
+		this->used[i] &= ~(1 << s);
+	}
+	debug( "REMOVE THIS, used=%x %x\r\n", this->used[0], this->used[1] );
+}
+
 void pq_init ( PQ *this ) {
     int i;
     
@@ -20,7 +34,10 @@ void pq_init ( PQ *this ) {
         this->ready[i] = 0;
     }
 
-    this->frontPtr = 0;
+	for ( i = 0; i < NUM_BITFIELD; i++ ) {
+		this->used[i] = 0;
+	}
+
     this->backPtr  = 0;
     this->nextId   = 0;
 	this->highestPriority = NUM_PRIORITY;
@@ -68,7 +85,8 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	td->id = pq->nextId++;
 
     td->spsr = 0x10;	
-	td->sp = (int *) 0x220000 + (0x40000*pq->backPtr) - 0x40; //TODO
+	td->sb = (int *) STACK_BASE + (STACK_BASE * pq->backPtr); //TODO
+	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
 	td->sp[PC_OFFSET] = (int) start;
 	
 	td->parentId = parentId;
@@ -83,6 +101,9 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	// TODO: this is wasting instructions
     td->nextPQ = 0;
     td->prevPQ = 0;
+
+	td->sendQ = 0;
+	td->replyQ = 0;
 
 	return td;
 }
