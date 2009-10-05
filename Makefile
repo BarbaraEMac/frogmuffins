@@ -16,9 +16,9 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
-OBJECTS = main/main.o arch/switch.o main/requests.o main/td.o
+OBJECTS = main/main.o arch/switch.o main/requests.o main/td.o task/task.o
 
-all:  main/main.s main/requests.s arch/switch.S main/td.s main/main.elf 
+all: task/tasck.c main/main.s main/requests.s arch/switch.S main/td.s main/main.elf 
 
 %.s: %.c ../include/%.h
 	$(XCC) -S $(CFLAGS) -o $@ $<
