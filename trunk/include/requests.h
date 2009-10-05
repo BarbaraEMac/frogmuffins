@@ -34,6 +34,10 @@ typedef struct {
 	// and NOT args[4] as would be expected.
 } Request;
 
+//---------------------------------------------------------------------
+//---------------------------Task Calls--------------------------------
+//---------------------------------------------------------------------
+
 /**
  * Create a new task with given priority and start function
  */
@@ -49,6 +53,15 @@ int MyTid ();
  */
 int MyParentTid();
 
+/**
+ * Cease execution, but stay ready to run.
+ */
+void Pass ();
+
+/**
+ * Terminate execution forever.
+ */
+void Exit ();
 
 /**
  * Send a message to a task.
@@ -66,16 +79,6 @@ int Receive (int *tid, char *msg, int msglen);
 int Reply (int tid, char *reply, int rpllen);
 
 /**
- * Cease execution, but stay ready to run.
- */
-void Pass ();
-
-/**
- * Terminate execution forever.
- */
-void Exit ();
-
-/**
  * Register with the nameserver.
  */
 int RegisterAs (char *name);
@@ -84,5 +87,15 @@ int RegisterAs (char *name);
  * Query the name server.
  */
 int WhoIs (char *name);
+
+//---------------------------------------------------------------------
+//-------------------------Kernel Calls--------------------------------
+//---------------------------------------------------------------------
+
+int send (int tid, char *msg, int msglen, char *reply, int rpllen);
+int receive (int *tid, char *msg, int msglen);
+int reply (int tid, char *reply, int rpllen);
+int registerAs (char *name);
+int whoIs (char *name);
 
 #endif

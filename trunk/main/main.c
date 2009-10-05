@@ -102,6 +102,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	assert ( pq != 0 );
 	
 	TD *child;
+	int retValue;
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -120,17 +121,28 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 
 		case SEND:
-
-
+			td->returnValue = send (req->args[0], req->args[1], 
+									req->args[2], req->args[3], req->args[4]);
 			break;
 		
 		case RECEIVE:
-
+			td->returnValue = receive (req->args[0], req->args[1], req->args[2]);
 			break;
 
 		case REPLY:
+			td->returnValue = reply (req->args[0], req->args[1], req->args[2]);
+			break;
+		
+		case REGISTERAS:
+			td->returnValue = registerAs (req->args[0]);
 
 			break;
+
+		case WHOIS:
+			td->returnValue = whoIs (req->args[0]);
+			
+			break;
+		
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
