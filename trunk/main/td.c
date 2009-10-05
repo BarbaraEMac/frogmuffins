@@ -5,12 +5,12 @@
  */
 //#define DEBUG
 #include <bwio.h>
+#include <debug.h>
 #include <ts7200.h>
 
 #include "td.h"
 #include "requests.h"
 #include "switch.h"
-#include "assert.h"
 
 void pq_init ( PQ *this ) {
     int i;
@@ -130,7 +130,7 @@ void pq_insert ( PQ *this, TD *td ) {
 
 TD *pq_popReady ( PQ *this ) {
 	debug("pq_popReady this/pq=%x priority=%d\r\n",
-		   this, p->highestPriority);
+		   this, this->highestPriority);
 	assert ( this != 0 );
 
 	int p = this->highestPriority;
