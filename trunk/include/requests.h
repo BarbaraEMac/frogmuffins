@@ -58,7 +58,7 @@ int Send (int tid, char *msg, int msglen, char *reply, int rpllen);
 /**
  * Receive a message.
  */
-int Receive (int *tid, char *msg, int msglen) <S-Del>;
+int Receive (int *tid, char *msg, int msglen);
 
 /**
  * Reply to a message.
