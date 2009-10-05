@@ -16,9 +16,9 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
-OBJECTS = main/main.o arch/switch.o main/requests.o main/td.o main/assert.o
+OBJECTS = main/main.o arch/switch.o main/requests.o main/td.o
 
-all:  main/main.s main/requests.s arch/switch.S main/td.s main/assert.s main/main.elf 
+all:  main/main.s main/requests.s arch/switch.S main/td.s main/main.elf 
 
 %.s: %.c ../include/%.h
 	$(XCC) -S $(CFLAGS) -o $@ $<
@@ -41,5 +41,4 @@ clean:
 
 
 copy: 
-	cp main/main.elf /u/cs452/tftpboot/ARM/dgoc
-	chmod a+r /u/cs452/tftpboot/ARM/dgoc/*
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a2.elf
