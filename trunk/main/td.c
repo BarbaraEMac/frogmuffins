@@ -30,13 +30,21 @@ void pq_init ( PQ *this ) {
 TD * td_create (int priority, Task start, int parentId, PQ *pq) {
 	debug ( "td_create: priority=%d, parent=%d pq=%x\r\n",
 			priority, parentId, pq);
-	assert ( priority >= 0 );
-	assert ( priority < NUM_PRIORITY );
+	
+	if ( priority < 0 || priority > NUM_PRIORITY ) {
+		return -1;
+	}
+	
 	assert ( pq != 0 );
 
 	// Grab the new task
 	TD *newTask = td_init ( priority, start, parentId, pq );
-	assert (newTask != 0);
+	
+	if ( newTask == 0 ) {
+		return -2;
+	}
+
+	// TODO: Check for valid start function. Return -1
 
 	// Insert into ready queue
     pq_insert (pq, newTask);
