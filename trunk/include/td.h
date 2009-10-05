@@ -17,14 +17,16 @@ typedef void (* Task) ();
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
 	READY,				// Task may be selected to be active
-	BLOCKED,			// Task is waiting for something
+	SEND_BLCK,			// Task is blocked on a send queue
+	RCV_BLCK,			// Task is blocked on a receive queue
+	RPLY_BLCK,			// Task is blocked on a reply queue
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
 
 // We want to call task descriptors TDs for short.
 typedef struct taskdesc TD;
 
-// At some points, a TD* is a queue.
+// At some points, a TD* is really a queue.
 typedef TD* Queue;
 
 // TIDs are really ints.
@@ -47,6 +49,10 @@ struct taskdesc {
 
 	TD *nextPQ; 		// Link to the next TD in the PQ
 	TD *prevPQ; 		// Link to the prev TD in the PQ
+
+	TD *sendQ;			// A circularly linked list of ????
+
+	TD *replyQ;			// A circularly linked list of ????
 };
 
 /**
@@ -69,7 +75,6 @@ typedef struct {
 	Queue defunct;		// TODO: Not currently used
 
 } PQ;
-
 
 /**
  * Initialize the priority queues and TDs in the td array.
