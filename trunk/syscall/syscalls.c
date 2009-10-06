@@ -16,6 +16,17 @@ void byteCopy ( char *dest, const char *source, int len ) {
 	while( (--len) >= 0 ) dest[len] = source[len];
 }
 
+int checkStackAddr ( int *addr, TD *td ) {
+	if ( addr == 0 ) {
+		return NULL_ADDR;
+	}
+
+	if ( (addr >= td->sb) || (addr < td->sb-STACK_SIZE) ) {
+		return OUT_OF_BOUNDS;
+	}
+
+	return NO_ERROR;
+}
 //
 // RETURNS:
 //• The size of the message supplied by the replying task.
@@ -29,17 +40,17 @@ int send (TD *sender, PQ *pq, TID tid) {
 	int ret;
 
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = checkStackAddr(sender->args[0], sender)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *)sender->args[0], sender)) != NO_ERROR ) {
 		return ret;
 	}
-	if ( (ret = checkStackAddr(sender->args[3], sender)) != NO_ERROR ) {
-		return ret;
+	if ( (ret = checkStackAddr((int *)sender->args[3], sender)) != NO_ERROR ) {
+		return ret; // TODO Add a mask here so that we can tell is apart
 	}
 	
 	TD *receiver = pq_fetchById (pq, tid);
 	// pq_fetchById error checks the tid
 	if ( receiver < 0 ) {
-		return receiver;
+		return (int) receiver;
 	}
 	
 	// Copy all arguments to the user space.
@@ -49,11 +60,11 @@ int send (TD *sender, PQ *pq, TID tid) {
 	sender->state = RCV_BLKD;
 
 	// Put yourself on the other task's send queue.
-	queuePush ( receiver->sendQ, sender );
+	queue_push ( &receiver->sendQ, sender );
 
 	// Is the Receiver SEND_BLCKed?
 	if ( receiver->state == SEND_BLKD ) {
-		passMessage ( sender, receiver );
+		passMessage ( sender, receiver, pq );
 	}
 	else {
 		// The receiver is not waiting for the sender yet.
@@ -74,7 +85,7 @@ int receive (TD *receiver, PQ *pq, TID *tid) {
 	int ret;
 
 	// Verify stack addresses are valid
-	if ( (ret = checkStackAddr(receiver->args[0], receiver)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *)receiver->args[0], receiver)) != NO_ERROR ) {
 		return ret;
 	}
 
@@ -82,7 +93,7 @@ int receive (TD *receiver, PQ *pq, TID *tid) {
 	receiver->state = SEND_BLKD;
 
 	// Check your send queue
-	TD *sender = queuePop ( receiver->sendQ );
+	TD *sender = queue_pop ( &receiver->sendQ );
 	
 	// If someone is on it, complete the transaction.
 	if ( sender != 0 ) {
@@ -100,25 +111,25 @@ int receive (TD *receiver, PQ *pq, TID *tid) {
 	return NO_ERROR;
 }
 
-void passMessage ( TD *sender, TD *receiver, PQ *pq ) {
+int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 	// Verify sender and receiver states
 	assert ( sender->state == RCV_BLKD );
 	assert ( receiver->state == SEND_BLKD );
 	int ret;
 	
 	// Get the message buffers and lengths
-	char *sendBuffer = sender->args[0];
+	char *sendBuffer = (char *) sender->args[0];
 	int   sendBufLen = sender->args[1];
 	
-	char *recvBuffer = receiver->args[0];
+	char *recvBuffer = (char *) receiver->args[0];
 	int   recvBufLen = receiver->args[1];
 
 	// TODO: Yes, this is the second time we've checked this.
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = checkStackAddr(sendBuffer, sender)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *) sendBuffer, sender)) != NO_ERROR ) {
 		return ret;
 	}
-	if ( (ret = checkStackAddr(recvBuffer, receiver)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *) recvBuffer, receiver)) != NO_ERROR ) {
 		return ret;
 	}
 
@@ -139,19 +150,9 @@ void passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 
 	// Set up return value
 
+	return 0;
 }
 
-int checkStackAddress ( int addr, TD *td ) {
-	if ( addr == 0 ) {
-		return NULL_ADDR;
-	}
-
-	if ( (addr >= td->sb) || (addr < td->sb-STACK_SIZE) ) {
-		return OUT_OF_BOUNDS;
-	}
-
-	return NO_ERROR;
-}
 
 /*
  * Returns.

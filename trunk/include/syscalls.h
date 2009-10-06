@@ -13,7 +13,7 @@ int send (TD *sender, PQ *pq, TID tid);
 
 int receive (TD *receiver, PQ *pq, TID *tid);
 
-void passMessage (TD *sender, TD *receiver);
+int passMessage (TD *sender, TD *receiver, PQ *pq);
 
 int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen);
 

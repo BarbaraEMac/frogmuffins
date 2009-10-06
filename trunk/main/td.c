@@ -13,6 +13,7 @@
 #include "switch.h"
 #include "td.h"
 
+
 /*
  * HELPER FUNCTIONS
  */
@@ -44,7 +45,6 @@ int pq_getUnused ( PQ *this ) {
 	assert( field != 0 );
 	mask = 0xFFFF;
 	if ( (field & mask) == 0 ) { n += 16; }
-	n += (field & mask) ? 16 : 0;
 	mask = 0xFF << n;
 	if ( (field & mask) == 0 ) { n += 8; }
 	mask = 0xF << n;
@@ -218,8 +218,8 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 	// Verify td is not defunct
 	
 
-	// For now ....
-	return &this->tdArray[tid];
+	// For now .... TODO check this
+	return &this->tdArray[tid & 0x3F];
 }
 
 void queue_push ( Queue *q, TD *newTail ) {
