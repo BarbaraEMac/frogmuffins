@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "error.h"
 #include "syscalls.h"
+#include "td.h"
 
 void byteCopy ( char *dest, const char *source, int len ) {
 	while( (--len) >= 0 ) dest[len] = source[len];

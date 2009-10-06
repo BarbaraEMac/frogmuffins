@@ -21,9 +21,9 @@ typedef void (* Task) ();
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
 	READY,				// Task may be selected to be active
-	SEND_BLCK,			// Task is blocked on a send queue
-	RCV_BLCK,			// Task is blocked on a receive queue
-	RPLY_BLCK,			// Task is blocked on a reply queue
+	SEND_BLKD,			// Task is blocked on a send queue
+	RCV_BLKD,			// Task is blocked on a receive queue
+	RPLY_BLKD,			// Task is blocked on a reply queue
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
 
