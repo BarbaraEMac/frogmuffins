@@ -13,20 +13,54 @@
 #include "switch.h"
 #include "td.h"
 
-void pq_setUsed( PQ *this, int used, unsigned int idx ) {
-	debug( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
-	assert( idx < NUM_TD );
-	debug( "REMOVE THIS, used=%x %x\r\n", this->used[0], this->used[1] );
+/*
+ * HELPER FUNCTIONS
+ */
+void pq_setUsed ( PQ *this, int used, unsigned int idx ) {
+	debug ( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
+	assert ( idx < NUM_TD );
+	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
 	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
-	if( used ) {
-		this->used[i] |= (1 << s);
+	if ( used ) {
+		this->empty[i] |= (1 << s);
 	} else {
-		this->used[i] &= ~(1 << s);
+		this->empty[i] &= ~(1 << s);
 	}
-	debug( "REMOVE THIS, used=%x %x\r\n", this->used[0], this->used[1] );
+	debug( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 }
 
+int pq_getUnused ( PQ *this ) {
+	debug ( "pq_getUnused pq/this=%x\r\n", this );
+	int i;
+	// find the first non-full bitfield
+	for ( i = 0; i < NUM_BITFIELD && this->empty[i]==0; i ++ ) {}
+
+	if ( i >= NUM_BITFIELD ) {	// if everything's full we're screwed
+		return PQ_FULL;
+	}
+	int n = 0;
+	BitField field = this->empty[i], mask;
+	assert( field != 0 );
+	mask = 0xFFFF;
+	if ( (field & mask) == 0 ) { n += 16; }
+	n += (field & mask) ? 16 : 0;
+	mask = 0xFF << n;
+	if ( (field & mask) == 0 ) { n += 8; }
+	mask = 0xF << n;
+	if ( (field & mask) == 0 ) { n += 4; }
+	mask = 0x3 << n;
+	if ( (field & mask) == 0 ) { n += 2; }
+	mask = 0x1 << n;
+	if ( (field & mask) == 0 ) { n += 1; }
+
+	return n + (i * sizeof(BitField));
+}
+
+
+/*
+ * PUBLIC FUNCTIONS
+ */
 void pq_init ( PQ *this ) {
     int i;
     
@@ -36,7 +70,7 @@ void pq_init ( PQ *this ) {
     }
 
 	for ( i = 0; i < NUM_BITFIELD; i++ ) {
-		this->used[i] = 0;
+		this->empty[i] = 0xFFFFFFFF;
 	}
 
     this->backPtr  = 0;

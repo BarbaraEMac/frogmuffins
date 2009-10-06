@@ -43,7 +43,11 @@ typedef int BitField;
  */
 struct taskdesc {
 	int spsr;			// Saved Processor State Register
-	int *sp;			// Stack Pointer
+	union {
+		int *sp;			// Stack Pointer
+		int *args;			// which happens to point to the first argument
+							// notice argumets 5+ start at args[22]
+	};
 	int returnValue;	// Value to pass to asm if we need to 
 						// return anything to a syscall
 	int *sb;			// Stack base
@@ -80,7 +84,7 @@ typedef struct {
 
 	Queue defunct;		// TODO: Not currently used
 
-	BitField used[NUM_BITFIELD];// bitfield mask telling us which td's are used
+	BitField empty[NUM_BITFIELD];// bitfield mask telling us which td's are used
 
 } PQ;
 
