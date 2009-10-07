@@ -86,7 +86,7 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 			priority, parentId, pq);
 	
 	if ( priority < 0 || priority > NUM_PRIORITY ) {
-		return -1;
+		return (int) INVALID_PRIORITY;
 	}
 	
 	assert ( pq != 0 );
@@ -94,11 +94,11 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 	// Grab the new task
 	TD *newTask = td_init ( priority, start, parentId, pq );
 	
-	if ( newTask == 0 ) {
-		return -2;
+	if ( (int)newTask < NO_ERROR ) {
+		return newTask;
 	}
 
-	// TODO: Check for valid start function. Return -1
+	// TODO: Check for valid start function. Return INVALID_START_FCN 
 
 	// Insert into ready queue
     pq_insert (pq, newTask);
@@ -117,6 +117,11 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	// Grab an unused TD from the array.
 	// TODO: Replace this once we have dynamic memory allocation.
 	TD *td = &pq->tdArray[pq->backPtr++];
+	
+	// Signal an error if we are out of unused TDs
+	if (pq->backPtr >= 64 ) {
+		return NO_TDS_LEFT;
+	}
 
 	// TODO: THIS WILL RUN OFF THE END
 	td->id = pq->nextId++;
@@ -215,12 +220,17 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 	if ( tid < 0 ) {
 		return NEG_TID;
 	}
-	// Verify tid points to a valid td
-	// Verify td is not defunct
-	
+	// TODO: Verify tid points to a valid td
 
 	// For now .... TODO check this
-	return &this->tdArray[tid & 0x3F];
+	TD *ret = &this->tdArray[tid & 0x3F];
+
+	// Verify td is not defunct
+	if ( ret->state == DEFUNCT ) {
+		return DEFUNCT_TID;
+	}
+
+	return ret;
 }
 
 void queue_push ( Queue *q, TD *newTail ) {

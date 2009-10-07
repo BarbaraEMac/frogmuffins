@@ -114,7 +114,8 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case CREATE:
 			child = td_create(req->args[0], (Task) req->args[1], td->id, pq);
 			
-			td->returnValue = child->id;
+			// Save an error code if there was one
+			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
 			break;
 		
 		case MYTID:
@@ -195,6 +196,10 @@ int main( int argc, char* argv[] ) {
 
 	// Create the first task and set it as the active one
     active = td_create ( 1, &firstTaskStart, -1, &pq );
+
+	if ( active < NO_ERROR ) {
+		// TODO: WE HAVE A PROBLEM HERE ....
+	}
 
 	FOREVER {	
 		debug ("	Scheduling a new task.\r\n");
