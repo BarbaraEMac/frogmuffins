@@ -39,25 +39,26 @@ typedef int BitField;
  * A Task Descriptor that the kernel uses to define a user task.
  */
 struct taskdesc {
-	int spsr;			// Saved Processor State Register
+	int spsr;				// Saved Processor State Register
 	union {
 		int *sp;			// Stack Pointer
 		ReqArgs *a;			// request arguments in a neatly avaiable union
 	};
-	int returnValue;	// Value to pass to asm if we need to 
-						// return anything to a syscall
-	int *sb;			// Stack base
-	TID id;			 	// A unique identifying id
-	TID parentId;		// The unique id of the parent
+	int returnValue;		// Value to pass to asm if we need to 
+							// return anything to a syscall
+	int *sb;				// Stack base
+	TID id;			 		// A unique identifying id
+	TID parentId;			// The unique id of the parent
 
-	int priority;		// A priority value (ranges from 0->2)
+	int priority;			// A priority value (ranges from 0->2)
 						
 	enum TASK_STATE state;	// State of the task - see enum above
 
-	TD *nextPQ; 		// Link to the next TD in the PQ
-	TD *prevPQ; 		// Link to the prev TD in the PQ
+	TD *nextPQ; 			// Link to the next TD in the PQ
+	TD *prevPQ; 			// Link to the prev TD in the PQ
 
-	Queue sendQ;		// A circularly linked list of TDs that have sent this TD a message
+	Queue sendQ;			// A circularly linked list of TDs that 
+							// have called send() this TD a message
 };
 
 /**
@@ -65,14 +66,14 @@ struct taskdesc {
  */
 typedef struct {
 	
-	TD tdArray[NUM_TDS]; // Use this until we have dynamic memory management
+	TD tdArray[NUM_TDS]; 		// Stores all the TDs
 
     Queue ready[NUM_PRIORITY]; 	// The ready queue
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
-	TID nextId;			// Next available id to use
+	TID lastId;					// Last id to used
 
-	Queue blocked;		// A single queue of blocked tasks
+	Queue blocked;				// A single queue of blocked tasks
 
 	BitField empty[NUM_BITFIELD];// bitfield mask telling us which td's are used
 

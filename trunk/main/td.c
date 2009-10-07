@@ -20,7 +20,6 @@
 void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	debug ( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
 	assert ( idx < NUM_TDS );
-	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
 	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
 	if ( used ) {
@@ -28,7 +27,6 @@ void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	} else {
 		this->empty[i] |= (1 << s);
 	}
-	debug( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 }
 
 int pq_getUnused ( const PQ *this ) {
@@ -54,7 +52,7 @@ int pq_getUnused ( const PQ *this ) {
 	mask = 0x1 << n;
 	if ( (field & mask) == 0 ) { n += 1; }
 
-	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
+	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[1], this->empty[0] );
 	debug ( "REMOVE THIS, n=%d\r\n", n + (i * sizeof(BitField)) );
 	return n + (i * sizeof(BitField));
 }
@@ -75,7 +73,7 @@ void pq_init ( PQ *this ) {
 		this->empty[i] = 0xFFFFFFFF;
 	}
 
-    this->nextId   = 0;
+    this->lastId   = 0;
 	this->highestPriority = NUM_PRIORITY;
 	this->blocked = 0;
 }
@@ -111,7 +109,6 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	assert ( pq != 0 );
 	
 	// Grab an unused TD from the array.
-	// TODO: Replace this once we have dynamic memory allocation.
 	int idx = pq_getUnused ( pq );
 	if ( idx < NO_ERROR ) {
 		return idx;
@@ -126,10 +123,12 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	// Mark the slot as used
 	pq_setUsed( pq, idx, 1 );
 
-	td->id = pq->nextId++;
+	int diff = idx - (pq->lastId % NUM_TDS); 
+	pq->lastId += diff;
+	td->id = pq->lastId;
 
     td->spsr = 0x10;	
-	td->sb = (int *) STACK_BASE + (STACK_BASE * idx); 
+	td->sb = (int *) STACK_BASE + (STACK_SIZE * idx); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
 	td->sp[PC_OFFSET] = (int) start;
 	
@@ -209,7 +208,7 @@ TD *pq_popReady ( PQ *this ) {
 	if ( this->ready[p] == 0 ) {
 		// Find the next highest non-empty slot
 		for ( p += 1; p < NUM_PRIORITY && this->ready[p] == 0 ; p++ ) {;}
-		
+		debug("		updating priority to %d\r\n", p);	
 		this->highestPriority = p;	// This might be off the end by 1
 	}
 
@@ -276,7 +275,7 @@ void queue_push ( Queue *q, TD *newTail ) {
 		tail->nextPQ = newTail;
 	}
 
-	assert ( head != 0 );
+	assert ( *q != 0 );
 }
 
 TD *queue_pop (Queue *head) {
