@@ -14,10 +14,11 @@ enum ERROR {
 	DEFUNCT_TID = -3,
 	OLD_TD = -4, 		// Not from the current generation
 	OUT_OF_BOUNDS = -5,
-	RCV_BUFFER_FULL,
-	PQ_FULL,
-	NULL_ADDR,
-
+	RCV_BUFFER_FULL = -6,
+	RPLY_BUFFER_FULL = -7,
+	PQ_FULL = -8,
+	NULL_ADDR = -9,
+	SNDR_NOT_RPLY_BLKD = -10,
 
 } error;
 
