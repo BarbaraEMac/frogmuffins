@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
@@ -17,16 +17,16 @@
 /*
  * HELPER FUNCTIONS
  */
-void pq_setUsed ( PQ *this, int used, unsigned int idx ) {
+void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	debug ( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
-	assert ( idx < NUM_TD );
+	assert ( idx < NUM_TDS );
 	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
 	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
 	if ( used ) {
-		this->empty[i] |= (1 << s);
-	} else {
 		this->empty[i] &= ~(1 << s);
+	} else {
+		this->empty[i] |= (1 << s);
 	}
 	debug( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 }
@@ -75,7 +75,6 @@ void pq_init ( PQ *this ) {
 		this->empty[i] = 0xFFFFFFFF;
 	}
 
-    this->backPtr  = 0;
     this->nextId   = 0;
 	this->highestPriority = NUM_PRIORITY;
 	this->blocked = 0;
@@ -98,8 +97,6 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 		return newTask;
 	}
 
-	// TODO: Check for valid start function. Return INVALID_START_FCN 
-
 	// Insert into ready queue
     pq_insert (pq, newTask);
 	
@@ -109,25 +106,30 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	debug ( "td_init: priority=%d, parent=%d pq=%x\r\n",
 			priority, parentId, pq);
-    assert ( pq->backPtr < NUM_TD );
 	assert ( priority >= 0 );
 	assert ( priority < NUM_PRIORITY );
 	assert ( pq != 0 );
 	
 	// Grab an unused TD from the array.
 	// TODO: Replace this once we have dynamic memory allocation.
-	TD *td = &pq->tdArray[pq->backPtr++];
+	int idx = pq_getUnused ( pq );
+	if ( idx < NO_ERROR ) {
+		return idx;
+	}
+	TD *td = &pq->tdArray[idx];
 	
 	// Signal an error if we are out of unused TDs
-	if (pq->backPtr >= NUM_TDS ) {
+	if (idx >= NUM_TDS ) {
 		return (TD *) NO_TDS_LEFT;
 	}
 
-	// TODO: THIS WILL RUN OFF THE END
+	// Mark the slot as used
+	pq_setUsed( pq, idx, 1 );
+
 	td->id = pq->nextId++;
 
     td->spsr = 0x10;	
-	td->sb = (int *) STACK_BASE + (STACK_BASE * pq->backPtr); 
+	td->sb = (int *) STACK_BASE + (STACK_BASE * idx); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
 	td->sp[PC_OFFSET] = (int) start;
 	
