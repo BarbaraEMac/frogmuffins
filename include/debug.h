@@ -13,7 +13,7 @@
 
 #ifdef DEBUG 
 
-void __assert ( int test, char *exp, int line, char *file );
+void __assert (int test, const char *exp, int line, const char *file);
 
 /*
  * Assert that the given expression is true.

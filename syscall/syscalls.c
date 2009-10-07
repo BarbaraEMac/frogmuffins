@@ -16,7 +16,7 @@ void byteCopy ( char *dest, const char *source, int len ) {
 	while( (--len) >= 0 ) dest[len] = source[len];
 }
 
-int checkStackAddr ( int *addr, TD *td ) {
+int checkStackAddr ( const int *addr, const TD *td ) {
 	if ( addr == 0 ) {
 		return NULL_ADDR;
 	}
@@ -33,7 +33,7 @@ int checkStackAddr ( int *addr, TD *td ) {
 //• -1 – if the task id is impossible.
 //• -2 – if the task id is not an existing task.
 //• -3 – if the send-receive-reply transaction is incomplete.
-int send (TD *sender, PQ *pq, TID tid) {
+int send (TD *sender, const PQ *pq, TID tid) {
 	// Check all arguments
 	assert ( sender != 0 );
 	assert ( pq != 0 );
@@ -87,10 +87,9 @@ int send (TD *sender, PQ *pq, TID tid) {
 // Returns.
 // • The size of the message sent.
 // • -1 – if the message was truncated.
-int receive (TD *receiver, PQ *pq, TID *tid) {
+int receive (TD *receiver, TID *tid) {
 	// Check all arguments
 	assert ( receiver != 0 );
-	assert ( pq != 0 );
 	int ret;
 
 	// Verify stack addresses are valid
@@ -176,7 +175,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	return NO_ERROR;
 }
 
-int passMessage ( TD *from, TD *to, int *copyLen, int rply ) {
+int passMessage ( const TD *from, const TD *to, int *copyLen, int rply ) {
 	int ret = NO_ERROR;
 	int toArg1 = 0, toArg2 = 1;
 
