@@ -6,15 +6,13 @@
 #define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
+#include <string.h>
 
 #include "debug.h"
 #include "error.h"
 #include "syscalls.h"
 #include "td.h"
 
-void byteCopy ( char *dest, const char *source, int len ) {
-	while( (--len) >= 0 ) dest[len] = source[len];
-}
 
 int checkStackAddr ( const int *addr, const TD *td ) {
 	if ( addr == 0 ) {
@@ -211,7 +209,7 @@ int passMessage ( const TD *from, const TD *to, int *copyLen, int rply ) {
 		ret = rply ? RPLY_BUFFER_FULL : RCV_BUFFER_FULL;
 	}
 	
-	byteCopy ( toBuffer, fromBuffer, *copyLen );
+	memcpy ( toBuffer, fromBuffer, *copyLen );
 
 	return ret;
 }
