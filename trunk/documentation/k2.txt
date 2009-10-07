@@ -1,16 +1,76 @@
-becmacdo	Barbara Macdonald
-dgoc 		Daniel Goc
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
 
-Assignment 2 / Kernel 2
+oooo    oooo                                          oooo       .oooo.   
+`888   .8P'                                           `888     .dP""Y88b  
+ 888  d8'     .ooooo.  oooo d8b ooo. .oo.    .ooooo.   888           ]8P' 
+ 88888[      d88' `88b `888""8P `888P"Y88b  d88' `88b  888         .d8P'  
+ 888`88b.    888ooo888  888      888   888  888ooo888  888       .dP'     
+ 888  `88b.  888    .o  888      888   888  888    .o  888     .oP     .o 
+o888o  o888o `Y8bod8P' d888b    o888o o888o `Y8bod8P' o888o    8888888888 
 
 
 NOTE: THIS FILE CANNOT HAVE WIDTH > 80.
 
 Question 1
 ==========
+	The executable is located at: 
+
+	To operate the program, type 'go' at the RedBoot command prompt.
 
 Question 2 
 ==========
+	
+	Context Switch
+	==============
+	We wrote our context switch handling code to accept 5 arguments for kernel
+	1. Hence, it did not need to be modified for this assignment.
+
+	Send
+	====
+	The pseudo-code for the Send() function is:
+
+	1. Error check all arguments.
+	2. Fetch the receiver task using the supplied task id.
+	3. Set the sender state to RECEIVE_BLOCKED.
+	4. Push the sending task onto the receiving task's send queue.
+	5. If the receiver is SEND_BLOCKED,
+	6.		Copy the message to the receiver's address space.
+	7.		Set the sender's state to REPLY_BLOCKED.
+	8. Otherwise, wait for the receiver.
+	
+	If any errors occur during the execution of Send(), they are caught and
+	returned to the calling code.
+
+	Receive
+	=======
+	The pseudo-code for the Receive() function is:
+
+	1. Error check all arguments.
+	2. Set the receiver's state to SEND_BLOCKED.
+	3. Check if a task is waiting on the send queue.
+	4. If so,
+	5.		Ensure the sender is RECEIVE_BLOCKED.
+	6.		Copy the message to the receiver's address space.
+	7. 		Store the task id of the sender to be returned.
+	8.		Set the sender's state to REPLY_BLOCKED.
+	9. Otherwise, wait for the sender.
+
+	If any errors occur during the execution of Receive(), they are caught and
+	returned to the calling code.
+
+	Reply
+	=====
+	The pseudo-code for the Reply() function is:
+	
+	1. Fetch the sender to reply to.
+	2. Ensure the sender is REPLY_BLOCKED.
+	3. Copy the reply to the sender's address space.
+	4. Set the state of the replier and sender to READY.
+	5. Push the sender and replier on to the ready queues.
+
+	If any errors occur during the execution of Reply(), they are caught and
+	returned to the calling code.
 
 
 	Name Server
@@ -26,12 +86,42 @@ Question 2
 	it returns a NOT_FOUND error code and we let the calling user task handle
 	the error.
 
+	The pseudo-code for the Name Server run() function is:
+
+	1. Initialize the Name Server
+	2. FOREVER {
+	3. 	Receive a request from another user task.
+	4. 	Copy the request into this memory space.
+	5.	switch ( request type ) {
+	6.		case RegisterAs:
+	7.			Store the {name, tid} in the Name Server entries array.
+	8.		case WhoIs:
+	9.			Retrieve the tid from the given task name.
+	10.			If the task has never registered, return an error.
+	11.			Otherwise, return the tid.
+	12.		default:
+	13.			Error since this Name Server cannot handle other requests.
+	14.		}
+	15.	Reply to the other user task appropriately.
+	16.	}
+
 Question 3
 ==========
+	All source code is located in:
+
+	Here are the md5 hashes for each file:
+
+
 
 Question 4
 ==========
+	Here is a listing of all submitted files:
+
 
 Question 5
 ==========
+	Description of priorities for game tasks. 
 
+Question 6 
+==========
+	Output of kernel and reason why it is in the correct order.
