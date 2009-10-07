@@ -13,12 +13,8 @@ int send (TD *sender, PQ *pq, TID tid);
 
 int receive (TD *receiver, PQ *pq, TID *tid);
 
-int passMessage (TD *sender, TD *receiver, PQ *pq);
-
 int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen);
 
-int registerAs (char *name);
-
-int whoIs (char *name);
+int passMessage (TD *sender, TD *receiver, int *a, int reply);
 
 #endif
