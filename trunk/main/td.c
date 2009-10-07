@@ -31,7 +31,7 @@ void pq_setUsed ( PQ *this, int used, unsigned int idx ) {
 	debug( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
 }
 
-int pq_getUnused ( PQ *this ) {
+int pq_getUnused ( const PQ *this ) {
 	debug ( "pq_getUnused pq/this=%x\r\n", this );
 	int i;
 	// find the first non-full bitfield

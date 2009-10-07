@@ -42,8 +42,6 @@ struct taskdesc {
 	int spsr;			// Saved Processor State Register
 	union {
 		int *sp;			// Stack Pointer
-		int *args;			// which happens to point to the first argument
-							// notice argumets 5+ start at args[22]
 		ReqArgs *a;			// request arguments in a neatly avaiable union
 	};
 	int returnValue;	// Value to pass to asm if we need to 
