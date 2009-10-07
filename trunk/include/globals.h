@@ -7,8 +7,6 @@
 #ifndef __GLOBALS_H__
 #define __GLOBALS_H__
 
-#define NUM_TDS	 64
-
 // TIDs are really ints.
 typedef int TID;
 

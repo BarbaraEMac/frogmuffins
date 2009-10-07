@@ -10,7 +10,6 @@
 
 #include "debug.h"
 #include "error.h"
-#include "globals.h"
 #include "requests.h"
 #include "switch.h"
 #include "syscalls.h"

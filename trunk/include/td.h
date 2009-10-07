@@ -12,8 +12,8 @@
 #define NUM_PRIORITY 	3	// For now, we will use 3 priorities [0,2]
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
-#define NUM_TD			64
-#define NUM_BITFIELD	NUM_TD/32
+#define NUM_TDS	 		64
+#define NUM_BITFIELD	NUM_TDS/32
 #define	STACK_SIZE		0x40000
 #define STACK_BASE		0x260000
 
@@ -65,7 +65,7 @@ struct taskdesc {
  */
 typedef struct {
 	
-	TD tdArray[NUM_TD]; // Use this until we have dynamic memory management
+	TD tdArray[NUM_TDS]; // Use this until we have dynamic memory management
 
 	int backPtr;		// Points to the next unused TD in the array
 			
