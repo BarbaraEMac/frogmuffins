@@ -67,16 +67,14 @@ typedef struct {
 	
 	TD tdArray[NUM_TDS]; // Use this until we have dynamic memory management
 
-	int backPtr;		// Points to the next unused TD in the array
+	int backPtr;		// Points to the next unused TD in the array TODO remove
 			
     Queue ready[NUM_PRIORITY]; 	// The ready queue
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
-	TID nextId;			// TODO: Should be the same as backPtr (off by 1)
+	TID nextId;			// Next available id to use
 
 	Queue blocked;		// A single queue of blocked tasks
-
-	Queue defunct;		// TODO: Not currently used
 
 	BitField empty[NUM_BITFIELD];// bitfield mask telling us which td's are used
 
