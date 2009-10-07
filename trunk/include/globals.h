@@ -7,6 +7,8 @@
 #ifndef __GLOBALS_H__
 #define __GLOBALS_H__
 
+#define FOREVER	 for( ; ; )
+
 // TIDs are really ints.
 typedef int TID;
 
