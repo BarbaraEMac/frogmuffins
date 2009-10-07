@@ -23,7 +23,7 @@ enum TASK_STATE {
 	READY,				// Task may be selected to be active
 	SEND_BLKD,			// Task is blocked on a send queue
 	RCV_BLKD,			// Task is blocked on a receive queue
-	RPLY_BLKD,			// Task is blocked on a reply queue
+	RPLY_BLKD,			// Task is blocked waiting for a reply - It is not on a queue
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
 
@@ -61,9 +61,7 @@ struct taskdesc {
 	TD *nextPQ; 		// Link to the next TD in the PQ
 	TD *prevPQ; 		// Link to the prev TD in the PQ
 
-	TD *sendQ;			// A circularly linked list of ????
-
-	TD *replyQ;			// A circularly linked list of ????
+	Queue *sendQ;		// A circularly linked list of TDs that have sent this TD a message
 };
 
 /**
