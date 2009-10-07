@@ -11,7 +11,7 @@ enum ERROR {
 	NO_ERROR = 0,
 	NEG_TID = -10000,
 	DEFUNCT_TID,
-	OLD_TD, 		// Not from the current generation
+	OLD_TID, 		// Not from the current generation
 	OUT_OF_BOUNDS,
 	RCV_BUFFER_FULL,
 	RPLY_BUFFER_FULL,

@@ -17,12 +17,12 @@ int Create (int priority, Task code ) {
 	//return syscall(priority, (int) code, 0, CREATE);
 }
 
-int MyTid () {
+TID MyTid () {
 	SWI(2);
 //	return syscall(0, 0, 0, MYTID);
 }
 
-int MyParentTid() {
+TID MyParentTid() {
 	SWI(3);
 	//return syscall(0, 0, 0, MYPARENTTID);
 }
@@ -38,17 +38,17 @@ void Exit () {
 }
 
 // This is what a task calls.
-int Send (int tid, char *msg, int msglen, char *reply, int rpllen) {
+int Send (TID tid, char *msg, size_t msglen, char *reply, size_t rpllen) {
 	SWI(6);
 }
 
 
-int Receive (int *tid, char *msg, int msglen) {
+int Receive (TID *tid, char *msg, size_t msglen) {
 	SWI(7);
 }
 
 
-int Reply (int tid, char *reply, int rpllen) {
+int Reply (TID tid, char *reply, size_t rpllen) {
 	SWI(8);
 }
 
@@ -62,11 +62,11 @@ int Reply (int tid, char *reply, int rpllen) {
  */
 int RegisterAs (char *name) {
 	NSRequest req;
-	int tid;
+	int ret;
 	req.type = REGISTERAS;
 	strncpy( req.name, name, sizeof(req.name));
-	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &tid, sizeof(int) );
-	return tid;
+	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &ret, sizeof(int) );
+	return ret;
 }
 
 /*
@@ -77,7 +77,7 @@ Returns.
     nameserver.
 */
 
-int WhoIs (char *name) {
+TID WhoIs (char *name) {
 	NSRequest req;
 	int tid;
 	req.type = WHOIS;
