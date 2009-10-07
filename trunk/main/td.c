@@ -86,7 +86,7 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 			priority, parentId, pq);
 	
 	if ( priority < 0 || priority > NUM_PRIORITY ) {
-		return (int) INVALID_PRIORITY;
+		return (TD *) INVALID_PRIORITY;
 	}
 	
 	assert ( pq != 0 );
@@ -94,7 +94,7 @@ TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
 	// Grab the new task
 	TD *newTask = td_init ( priority, start, parentId, pq );
 	
-	if ( (int)newTask < NO_ERROR ) {
+	if ( (int) newTask < NO_ERROR ) {
 		return newTask;
 	}
 
@@ -120,14 +120,14 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	
 	// Signal an error if we are out of unused TDs
 	if (pq->backPtr >= NUM_TDS ) {
-		return NO_TDS_LEFT;
+		return (TD *) NO_TDS_LEFT;
 	}
 
 	// TODO: THIS WILL RUN OFF THE END
 	td->id = pq->nextId++;
 
     td->spsr = 0x10;	
-	td->sb = (int *) STACK_BASE + (STACK_BASE * pq->backPtr); //TODO
+	td->sb = (int *) STACK_BASE + (STACK_BASE * pq->backPtr); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
 	td->sp[PC_OFFSET] = (int) start;
 	
@@ -218,16 +218,27 @@ TD *pq_popReady ( PQ *this ) {
 TD *pq_fetchById ( PQ *this, TID tid ) {
 	// Verify td > 0
 	if ( tid < 0 ) {
-		return NEG_TID;
+		return (TD *) NEG_TID;
 	}
-	// TODO: Verify tid points to a valid td
 
-	// For now .... TODO check this
-	TD *ret = &this->tdArray[tid & 0x3F];
+	int idx= tid & 0x3F;
+	
+	// TODO check if TD is in use
+	//	if (pq_getUsed( this, idx) != 1 ) {
+	//		return (TD *) INVALID_TID;
+	//	}
+
+	// Fetch the appropriante TD
+	TD *ret = &this->tdArray[idx];
+	
+	// Verify tid points to a valid td
+	if ( ret->id >= tid ) {
+		return (TD *) OLD_TID;
+	}
 
 	// Verify td is not defunct
 	if ( ret->state == DEFUNCT ) {
-		return DEFUNCT_TID;
+		return (TD *) DEFUNCT_TID;
 	}
 
 	return ret;

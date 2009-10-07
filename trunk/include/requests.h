@@ -9,6 +9,7 @@
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
+#include <string.h>
 #include "globals.h"
 
 #define NS_TID 		1
@@ -57,12 +58,12 @@ int Create (int priority, Task code);
 /**
  * Return the task id
  */
-int MyTid ();
+TID MyTid ();
 
 /**
  * Return the task id of the parent task.
  */
-int MyParentTid();
+TID MyParentTid();
 
 /**
  * Cease execution, but stay ready to run.
@@ -77,17 +78,17 @@ void Exit ();
 /**
  * Send a message to a task.
  */
-int Send (int tid, char *msg, int msglen, char *reply, int rpllen);
+int Send (TID tid, char *msg, size_t msglen, char *reply, size_t rpllen);
 
 /**
  * Receive a message.
  */
-int Receive (int *tid, char *msg, int msglen);
+int Receive (TID *tid, char *msg, size_t msglen);
 
 /**
  * Reply to a message.
  */
-int Reply (int tid, char *reply, int rpllen);
+int Reply (TID tid, char *reply, size_t rpllen);
 
 /**
  * Register with the nameserver.
@@ -97,6 +98,6 @@ int RegisterAs (char *name);
 /**
  * Query the name server.
  */
-int WhoIs (char *name);
+TID WhoIs (char *name);
 
 #endif
