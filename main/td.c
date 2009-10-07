@@ -140,7 +140,6 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
     td->prevPQ = 0;
 
 	td->sendQ = 0;
-	td->replyQ = 0;
 
 	return td;
 }
