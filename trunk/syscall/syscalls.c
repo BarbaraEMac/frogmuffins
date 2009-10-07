@@ -37,7 +37,6 @@ int send (TD *sender, PQ *pq, TID tid) {
 	assert ( pq != 0 );
 	int ret = NO_ERROR;
 
-	// TODO: REmove this since we check in passMessage?
 	// Verify the pointers point to valid memory addresses
 	if ( (ret = checkStackAddr((int *)sender->a->send.msg, sender)) != NO_ERROR ) {
 		return ret;
