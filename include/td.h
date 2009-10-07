@@ -8,6 +8,7 @@
 #define __TD_H__
 
 #include "globals.h"
+#include "requests.h"
 
 #define NUM_PRIORITY 	3	// For now, we will use 3 priorities [0,2]
 #define USER_START 		0x00044f88
@@ -43,6 +44,7 @@ struct taskdesc {
 		int *sp;			// Stack Pointer
 		int *args;			// which happens to point to the first argument
 							// notice argumets 5+ start at args[22]
+		ReqArgs *a;			// request arguments in a neatly avaiable union
 	};
 	int returnValue;	// Value to pass to asm if we need to 
 						// return anything to a syscall
