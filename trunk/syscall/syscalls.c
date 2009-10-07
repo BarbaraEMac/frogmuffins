@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -35,7 +35,7 @@ int checkStackAddr ( int *addr, TD *td ) {
 //• -3 – if the send-receive-reply transaction is incomplete.
 int send (TD *sender, PQ *pq, TID tid) {
 	// Check all arguments
-	assert ( td != 0 );
+	assert ( sender != 0 );
 	assert ( pq != 0 );
 	int ret;
 
@@ -80,16 +80,16 @@ int send (TD *sender, PQ *pq, TID tid) {
 // • -1 – if the message was truncated.
 int receive (TD *receiver, PQ *pq, TID *tid) {
 	// Check all arguments
-	assert ( td != 0 );
+	assert ( receiver != 0 );
 	assert ( pq != 0 );
 	int ret;
 
 	// Verify stack addresses are valid
-	if ( (ret = checkStackAddr((int *)receiver->args[0], receiver)) != NO_ERROR ) {
+	if ((ret = checkStackAddr((int *)receiver->args[0], receiver)) != NO_ERROR){
 		return ret;
 	}
 
-	// Change the state to SEND_BLCK
+	// Change the state to SEND_BLKD
 	receiver->state = SEND_BLKD;
 
 	// Check your send queue
@@ -136,11 +136,8 @@ int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 	// Copy the message over to this task 
 	// TODO: Copy as much as we can and return the copied amount
 	// User tasks should be able to handle this
-	if ( sendBufLen > recvBufLen ) {
-		return RCV_BUFFER_FULL;
-	} else {
-		byteCopy ( recvBuffer, sendBuffer, sendBufLen );
-	}
+	int len = ( sendBufLen > recvBufLen ) recvBufLen : sendBufLen;
+	byteCopy ( len, sendBuffer, sendBufLen );
 
 	// Change the receiver state to READY
 	receiver->state = READY;
@@ -148,15 +145,14 @@ int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 	// Put the receiver on ready queue
 	pq_insert (pq, receiver);
 
-	// Set up return value
-
-	return 0;
+	// Return the number of bytes copied
+	return len;
 }
 
 
 /*
  * Returns.
-  • 0 – if the reply succeeds.
+  •  0 – if the reply succeeds.
   • -1 – if the task id is not a possible task id.
   • -2 – if the task id is not an existing task.
   • -3 – if the task is not reply blocked.
@@ -173,24 +169,3 @@ int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen) {
 	// Unblock receiver second
 }
 
-/*
- * Returns.
- • 0 – success.
- • -1 – if the nameserver task id inside the wrapper is invalid.
- • -2 – if the nameserver task id inside the wrapper is not the name
-    server.
- */
-int registerAs (char *name) {
-
-}
-
-/*
-Returns.
- • tid – the task id of the registered task.
- • -1 – if the nameserver task id inside the wrapper is invalid.
- • -2 – if the nameserver task id inside the wrapper is not the
-    nameserver.
-*/
-int whoIs (char *name) {
-
-}
