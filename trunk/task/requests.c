@@ -9,10 +9,6 @@
 
 #define SWI(n) asm("swi #" #n)
 
-typedef struct {
-	enum NSRequestCode type;
-	char name[12];
-} NSRequest;
 
 // TODO move this function into string.h
 typedef int size_t;
