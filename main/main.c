@@ -15,7 +15,6 @@
 #include "syscalls.h"
 #include "td.h"
 
-#define FOREVER	 for( ; ; )
 #define WAIT	 for( i=0; i<200000; i++) {}
 
 /*
