@@ -42,3 +42,4 @@ clean:
 
 copy: 
 	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a2.elf
+	cp main/main.elf /u/cs452/tftpboot/ARM/dgoc/main.elf
