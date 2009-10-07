@@ -138,16 +138,6 @@ void service ( TD *td, Request *req, PQ *pq ) {
 									 req->args[2]);
 			break;
 		
-		case REGISTERAS:
-			td->returnValue = registerAs (req->args[0]);
-
-			break;
-
-		case WHOIS:
-			td->returnValue = whoIs (req->args[0]);
-			
-			break;
-		
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
