@@ -7,6 +7,8 @@
 #ifndef __TD_H__
 #define __TD_H__
 
+#include "globals.h"
+
 #define NUM_PRIORITY 	3	// For now, we will use 3 priorities [0,2]
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
@@ -14,9 +16,6 @@
 #define NUM_BITFIELD	NUM_TD/32
 #define	STACK_SIZE		0x40000
 #define STACK_BASE		0x260000
-
-// Pointer the beginning of task execution
-typedef void (* Task) ();
 
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
@@ -32,9 +31,6 @@ typedef struct taskdesc TD;
 
 // At some points, a TD* is really a queue.
 typedef TD* Queue;
-
-// TIDs are really ints.
-typedef int TID;
 
 // Bitfield is also just an int
 typedef int BitField;

@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "error.h"
+#include "globals.h"
 #include "requests.h"
 #include "switch.h"
 #include "syscalls.h"
@@ -17,7 +18,6 @@
 
 #define FOREVER	 for( ; ; )
 #define WAIT	 for( i=0; i<200000; i++) {}
-#define NUM_TDs	 64
 
 /*
 // the following funciton was copied and modified from wikipedia

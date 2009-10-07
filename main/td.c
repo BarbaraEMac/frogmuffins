@@ -119,7 +119,7 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	TD *td = &pq->tdArray[pq->backPtr++];
 	
 	// Signal an error if we are out of unused TDs
-	if (pq->backPtr >= 64 ) {
+	if (pq->backPtr >= NUM_TDS ) {
 		return NO_TDS_LEFT;
 	}
 

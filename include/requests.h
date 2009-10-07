@@ -9,7 +9,7 @@
 #ifndef __REQUESTS_H__
 #define __REQUESTS_H__
 
-#include "td.h"
+#include "globals.h"
 
 #define NS_TID 		1
 
@@ -17,6 +17,11 @@ enum NSRequestCode {
 	REGISTERAS = 1,
 	WHOIS
 };
+
+typedef struct {
+	enum NSRequestCode type;
+	char name[12];
+} NSRequest;
 
 // More to be added later
 enum RequestCode {
@@ -46,7 +51,7 @@ typedef struct {
 /**
  * Create a new task with given priority and start function
  */
-int Create (int priority, Task code );
+int Create (int priority, Task code);
 
 /**
  * Return the task id
