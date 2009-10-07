@@ -1,0 +1,37 @@
+becmacdo	Barbara Macdonald
+dgoc 		Daniel Goc
+
+Assignment 2 / Kernel 2
+
+
+NOTE: THIS FILE CANNOT HAVE WIDTH > 80.
+
+Question 1
+==========
+
+Question 2 
+==========
+
+
+	Name Server
+	==========
+	The name server is an array of {char name[], int tid} structs. There is
+	nothing fancy about the array. To register a new name and tid, we traverse
+	the array looking for an identical string. If one is found, the tid is 
+	updated. Otherwise, the new entry is appended to the end of the array.
+
+	To look up an item by name, the array is linearly traversed until a
+	matching string is found OR the end of the elements has been reached.
+	If a name is not in the array, the WhoIs() call does not block. Instead,
+	it returns a NOT_FOUND error code and we let the calling user task handle
+	the error.
+
+Question 3
+==========
+
+Question 4
+==========
+
+Question 5
+==========
+
