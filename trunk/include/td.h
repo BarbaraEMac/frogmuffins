@@ -61,7 +61,7 @@ struct taskdesc {
 	TD *nextPQ; 		// Link to the next TD in the PQ
 	TD *prevPQ; 		// Link to the prev TD in the PQ
 
-	Queue *sendQ;		// A circularly linked list of TDs that have sent this TD a message
+	Queue sendQ;		// A circularly linked list of TDs that have sent this TD a message
 };
 
 /**
