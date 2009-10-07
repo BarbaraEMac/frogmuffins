@@ -22,10 +22,10 @@ enum ERROR {
 	INVALID_PRIORITY,
 	NO_TDS_LEFT,
 	INVALID_START_FCN,
+	NAME_NOT_REGISTERED,
+	NOT_FOUND,
 	
 
 } error;
-
-#define printErrorType (e) { bwprintf (COM2, "\r\nError: %s.", #e); }
 
 #endif
