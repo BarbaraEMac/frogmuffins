@@ -131,7 +131,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 		
 		case RECEIVE:
-			td->returnValue = receive (td, pq, req->args[0]);
+			td->returnValue = receive (td, req->args[0]);
 			break;
 
 		case REPLY:

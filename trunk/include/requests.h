@@ -17,6 +17,7 @@ enum NSRequestCode {
 	REGISTERAS = 1,
 	WHOIS
 };
+
 // More to be added later
 enum RequestCode {
     CREATE = 1,
