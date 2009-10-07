@@ -9,7 +9,7 @@
 
 #include "td.h"
 
-int send (TD *sender, const PQ *pq, TID tid);
+int send (TD *sender, PQ *pq, TID tid);
 
 int receive (TD *receiver, TID *tid);
 

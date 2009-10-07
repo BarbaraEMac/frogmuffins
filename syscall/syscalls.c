@@ -31,7 +31,7 @@ int checkStackAddr ( const int *addr, const TD *td ) {
 //• -1 – if the task id is impossible.
 //• -2 – if the task id is not an existing task.
 //• -3 – if the send-receive-reply transaction is incomplete.
-int send (TD *sender, const PQ *pq, TID tid) {
+int send (TD *sender, PQ *pq, TID tid) {
 	// Check all arguments
 	assert ( sender != 0 );
 	assert ( pq != 0 );
@@ -39,10 +39,10 @@ int send (TD *sender, const PQ *pq, TID tid) {
 
 	// TODO: REmove this since we check in passMessage?
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = checkStackAddr((int *)sender->args[0], sender)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *)sender->a->send.msg, sender)) != NO_ERROR ) {
 		return ret;
 	}
-	if ( (ret = checkStackAddr((int *)sender->args[3], sender)) != NO_ERROR ) {
+	if ( (ret = checkStackAddr((int *)sender->a->send.reply, sender)) != NO_ERROR ) {
 		return ret; // TODO Add a mask here so that we can tell is apart
 	}
 	
@@ -92,7 +92,7 @@ int receive (TD *receiver, TID *tid) {
 
 	// Verify stack addresses are valid
 	// TODO: REmove this since we check in passMessage?
-	if ((ret = checkStackAddr((int *)receiver->args[0], receiver)) != NO_ERROR){
+	if ((ret = checkStackAddr((int *)receiver->a->receive.msg, receiver)) != NO_ERROR){
 		return ret;
 	}
 
@@ -175,20 +175,19 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 
 int passMessage ( const TD *from, const TD *to, int *copyLen, int rply ) {
 	int ret = NO_ERROR;
-	int toArg1 = 0, toArg2 = 1;
+
+	// Get the message buffers and lengths
+	char  *fromBuffer = from->a->send.msg;
+	size_t fromBufLen = from->a->send.msglen;
+	
+	char  *toBuffer = to->a->receive.msg;
+	size_t toBufLen = to->a->receive.msglen;
 
 	// If we are doing a reply, fetch the buffers from a different location.
 	if ( rply == 1 ) {
-		toArg1 = 3;
-		toArg2 = 22;
+		toBuffer = to->a->reply.reply;
+		toBufLen = to->a->reply.rpllen;
 	}
-
-	// Get the message buffers and lengths
-	char *fromBuffer = (char *) from->args[0];
-	int   fromBufLen = from->args[1];
-	
-	char *toBuffer = (char *) to->args[toArg1];
-	int   toBufLen = to->args[toArg2];
 
 	// TODO: Yes, this is the second time we've checked this.
 	// Verify the pointers point to valid memory addresses
