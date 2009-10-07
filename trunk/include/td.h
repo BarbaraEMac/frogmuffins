@@ -67,8 +67,6 @@ typedef struct {
 	
 	TD tdArray[NUM_TDS]; // Use this until we have dynamic memory management
 
-	int backPtr;		// Points to the next unused TD in the array TODO remove
-			
     Queue ready[NUM_PRIORITY]; 	// The ready queue
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
