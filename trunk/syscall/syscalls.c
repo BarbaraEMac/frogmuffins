@@ -97,10 +97,14 @@ int receive (TD *receiver, PQ *pq, TID *tid) {
 	
 	// If someone is on it, complete the transaction.
 	if ( sender != 0 ) {
-		passMessage ( sender, receiver, pq );
+		int ret = passMessage ( sender, receiver, pq );
 		
 		// Set the tid of the sender
 		*tid = sender->id;
+
+		if ( ret < 0 ) {
+			return ret;
+		}
 	}
 	else {
 		// The sender has not sent our data yet.
@@ -115,7 +119,7 @@ int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 	// Verify sender and receiver states
 	assert ( sender->state == RCV_BLKD );
 	assert ( receiver->state == SEND_BLKD );
-	int ret;
+	int ret = NO_ERROR;
 	
 	// Get the message buffers and lengths
 	char *sendBuffer = (char *) sender->args[0];
@@ -134,19 +138,16 @@ int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
 	}
 
 	// Copy the message over to this task 
-	// TODO: Copy as much as we can and return the copied amount
+	// Copy as much as we can and return the copied amount
 	// User tasks should be able to handle this
 	int len = ( sendBufLen > recvBufLen ) recvBufLen : sendBufLen;
 	byteCopy ( len, sendBuffer, sendBufLen );
 
-	// Change the receiver state to READY
-	receiver->state = READY;
+	// Set up the receiver
+	receiver->returnValue = len;
+	receiver->state = RPLY_BLKD;
 
-	// Put the receiver on ready queue
-	pq_insert (pq, receiver);
-
-	// Return the number of bytes copied
-	return len;
+	return ret;
 }
 
 
@@ -158,14 +159,41 @@ int passMessage ( TD *sender, TD *receiver, PQ *pq ) {
   • -3 – if the task is not reply blocked.
   • -4 – if there was insufficient space for the entire reply in the sender’s reply buffer.
 */
-int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen) {
+int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
+	// FROM is really the receiver OR replier if a worker task was spawned
+	// TO is really the sender that we are acking
 
 	// Update the TD states
-	//
+	TD *to = pq_fetchById ( tid );
+	// pq_fetchById error checks the tid
+	if ( to < 0 ) {
+		return (int) to;
+	}
+	
+	// If the sender is not reply blocked, we should error.
+	if ( to->state != RPLY_BLKD ) {
+		return SNDR_NOT_RPLY_BLKD;
+	}
 
-	// Unblock sender first
+	// Copy the data to the "sender"
+	int copyLen = (to->args[22] < rpllen) ? to->args[22] : rpllen; 
+	byteCopy ( to->args[3], reply, copyLen );
 
+	if ( to->args[22] < rpllen ) {
+		return RPLY_BUFFER_FULL;
+	}
 
-	// Unblock receiver second
+	// Set up the return value
+	to->returnValue = copyLen;
+
+	// Set the state
+	from->state = READY;
+	to->state   = READY;
+
+	// Make the tasks ready by putting them on the ready queues
+	pq_insert ( pq, to );
+	pq_insert ( pq, from );
+
+	return 0;
 }
 
