@@ -44,6 +44,14 @@ char * strncpy ( char *destination, const char * source, size_t num ) ;
  */
 char * memcpy ( char * destination, const char * source, size_t num ) ;
 
-
+/**
+ * Compare two strings
+ *
+ * Compares the C string str1 to the C string str2.
+ * This function starts comparing the first character of each string.
+ * If they are equal to each other, it continues with the following pairs 
+ * until the characters differ or until a terminanting null-character is reached.
+ */
+int strcmp (const char *str1, const char *str2) {
 
 #endif
