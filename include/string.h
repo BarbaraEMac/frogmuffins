@@ -52,6 +52,6 @@ char * memcpy ( char * destination, const char * source, size_t num ) ;
  * If they are equal to each other, it continues with the following pairs 
  * until the characters differ or until a terminanting null-character is reached.
  */
-int strcmp (const char *str1, const char *str2) {
+int strcmp (const char *str1, const char *str2);
 
 #endif
