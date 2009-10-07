@@ -36,4 +36,6 @@ void __assert (int test, const char *exp, int line, const char *file);
 
 #endif
 
+#define error (code, msg) bwprintf (COM2, "ERROR: %d %s on line %d in file %s.\r\n", (10000-code), msg, __LINE__, __FILE__);
+
 #endif

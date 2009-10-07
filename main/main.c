@@ -197,7 +197,7 @@ int main( int argc, char* argv[] ) {
     active = td_create ( 1, &firstTaskStart, -1, &pq );
 
 	if ( active < NO_ERROR ) {
-		// TODO: WE HAVE A PROBLEM HERE ....
+		error ( (int) active, "Initializing the first task");
 	}
 
 	FOREVER {	
