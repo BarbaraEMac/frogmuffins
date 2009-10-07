@@ -67,15 +67,13 @@ typedef union {
 	struct {
 		char *name;
 	} whoIs;
-} Args;
+} ReqArgs;
 
 typedef struct {
 	enum RequestCode type; 	// The type of the request 
 							// Includes the number of arguments.
-	int const * const args;	// Place in user memory where arguments are stored.
+	ReqArgs *a;				// Place in user memory where arguments are stored.
 	
-	// NOTE: The 5th argument is in args[22] 
-	// and NOT args[4] as would be expected.
 } Request;
 
 //---------------------------------------------------------------------

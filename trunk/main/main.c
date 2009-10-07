@@ -91,8 +91,8 @@ void getNextRequest ( TD *td, Request *req ) {
 			td->sp[PC_OFFSET] );
 	
 	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
-			req->args[0], req->args[1], req->args[2], req->args[3],
-			req->args[22] );
+			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
+			req->a->send.reply,req->a->send.rpllen );
 }
 
 /**
@@ -111,7 +111,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = td_create(req->args[0], (Task) req->args[1], td->id, pq);
+			child = td_create(req->a->create.priority, (Task) req->a->create.code, td->id, pq);
 			
 			// Save an error code if there was one
 			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
@@ -126,16 +126,16 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 
 		case SEND:
-			td->returnValue = send (td, pq, req->args[0]);
+			td->returnValue = send (td, pq, req->a->send.tid);
 			break;
 		
 		case RECEIVE:
-			td->returnValue = receive (td, req->args[0]);
+			td->returnValue = receive (td, req->a->receive.tid);
 			break;
 
 		case REPLY:
-			td->returnValue = reply (td, pq, req->args[0], req->args[1],
-									 req->args[2]);
+			td->returnValue = reply (td, pq, req->a->reply.tid, 
+						req->a->reply.reply, req->a->reply.rpllen);
 			break;
 		
 		case EXIT:
