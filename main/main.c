@@ -110,7 +110,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = td_create(req->a->create.priority, (Task) req->a->create.code, td->id, pq);
+			child = td_create(req->a->create.priority, req->a->create.code, td->id, pq);
 			
 			// Save an error code if there was one
 			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
@@ -140,6 +140,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
+			debug( "Exiting task,\r\n");
 			break;
 
 		case PASS:

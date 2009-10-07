@@ -29,6 +29,13 @@ void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	}
 }
 
+int pq_getUsed ( PQ *this, unsigned int idx ) {
+	debug ( "pq_getUsed pq/this=%x, idx=%d\r\n", this, idx );
+	assert ( idx < NUM_TDS );
+	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
+	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
+	return !( this->empty[i] & (1 << s) );
+}
 int pq_getUnused ( const PQ *this ) {
 	debug ( "pq_getUnused pq/this=%x\r\n", this );
 	int i;
@@ -141,7 +148,6 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	td->state = READY;
 
     // Temporary until we insert into PQ
-	// TODO: this is wasting instructions
     td->nextPQ = 0;
     td->prevPQ = 0;
 
@@ -151,8 +157,8 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 }
 
 void pq_insert ( PQ *this, TD *td ) {
-	debug ("pq_insert this/pq=%x td=%x priority=%d.\r\n",
-			this, td, td->priority);
+	debug ("pq_insert this/pq=%x td=%x priority=%d state=%d.\r\n",
+			this, td, td->priority, td->state);
 	assert ( this != 0 );
 	assert ( td != 0 );
 
@@ -224,10 +230,10 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 
 	int idx= tid & 0x3F;
 	
-	// TODO check if TD is in use
-	//	if (pq_getUsed( this, idx) != 1 ) {
-	//		return (TD *) INVALID_TID;
-	//	}
+	// Check if TD is in use
+	if (pq_getUsed( this, idx) != 0 ) {
+		return (TD *) INVALID_TID;
+	}
 
 	// Fetch the appropriante TD
 	TD *ret = &this->tdArray[idx];

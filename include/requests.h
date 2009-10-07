@@ -30,11 +30,11 @@ enum RequestCode {
     CREATE = 1,
     MYTID,
     MYPARENTTID,
+    PASS,
+    EXIT,
 	SEND,
 	RECEIVE,
-	REPLY,
-    PASS,
-    EXIT
+	REPLY
 };
 
 // A Neat holder that lets us reference arguments based on the syscall
