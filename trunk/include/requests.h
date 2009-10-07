@@ -11,6 +11,12 @@
 
 #include "td.h"
 
+#define NS_TID 		1
+
+enum NSRequestCode {
+	REGISTERAS = 1,
+	WHOIS
+};
 // More to be added later
 enum RequestCode {
     CREATE = 1,
@@ -19,8 +25,6 @@ enum RequestCode {
 	SEND,
 	RECEIVE,
 	REPLY,
-	REGISTERAS,
-	WHOIS,
     PASS,
     EXIT
 };

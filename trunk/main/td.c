@@ -54,6 +54,8 @@ int pq_getUnused ( PQ *this ) {
 	mask = 0x1 << n;
 	if ( (field & mask) == 0 ) { n += 1; }
 
+	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[0], this->empty[1] );
+	debug ( "REMOVE THIS, n=%d\r\n", n + (i * sizeof(BitField)) );
 	return n + (i * sizeof(BitField));
 }
 
