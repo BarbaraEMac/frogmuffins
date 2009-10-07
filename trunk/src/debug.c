@@ -13,6 +13,5 @@ void __assert ( int test, char *exp, int line, char *file ) {
 	
 	if ( !test ) {
 		bwprintf (COM2, "Assert Failure: %s at line #%d in file %s.\n\r", exp, line, file );
-		// TODO: Stack trace would be nice ...
 	}
 }
