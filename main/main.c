@@ -187,7 +187,7 @@ int main( int argc, char* argv[] ) {
 	
 	// Set up the Software interrupt for context switches
 	bwputstr( COM2, "Initializing interrupt handler.\r\n" );
-	int *swi = (int *) 0x28;
+	volatile int *swi = (int *) 0x28;
 	*swi = (int) &kernelEnter;
 	
 	// Initialize the priority queues

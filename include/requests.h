@@ -37,6 +37,38 @@ enum RequestCode {
     EXIT
 };
 
+// A Neat holder that lets us reference arguments based on the syscall
+typedef union {
+	struct {
+		int priority;
+		Task code;
+	} create;
+	struct {
+		TID tid;
+		char *msg;
+		size_t msglen;
+		char *reply;
+		int dummy[18]; // this is a filler since we use the previous stack addr
+		size_t rpllen;
+	} send;
+	struct {
+		TID *tid;
+		char *msg;
+		size_t msglen;
+	} receive;
+	struct {
+		TID tid;
+		char *reply;
+		size_t rpllen;
+	} reply;
+	struct {
+		char *name;
+	} registerAs;
+	struct {
+		char *name;
+	} whoIs;
+} Args;
+
 typedef struct {
 	enum RequestCode type; 	// The type of the request 
 							// Includes the number of arguments.
