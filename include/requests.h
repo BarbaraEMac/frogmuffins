@@ -12,6 +12,7 @@
 #include "globals.h"
 
 #define NS_TID 		1
+#define NAME_LEN	12
 
 enum NSRequestCode {
 	REGISTERAS = 1,
@@ -20,7 +21,7 @@ enum NSRequestCode {
 
 typedef struct {
 	enum NSRequestCode type;
-	char name[12];
+	char name[NAME_LEN];
 } NSRequest;
 
 // More to be added later
