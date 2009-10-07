@@ -4,33 +4,12 @@
  * dgoc
  */
 
+#include <string.h>
 #include "requests.h"
 #include "switch.h"
 
 #define SWI(n) asm("swi #" #n)
 
-
-// TODO move this function into string.h
-typedef int size_t;
-/*
- * Copy characters from string
- *
- * Copies the first num characters of source to destination. 
- * If the end of the source C string (which is signaled by a null-character) 
- * is found before num characters have been copied, 
- * destination is padded with zeros until a total of num characters 
- * have been written to it.
- */
-char * strncpy ( char *destination, const char * source, size_t num ) {
-	int i;
-	for ( i=0; (i < num) && source[i]; i++ ) {
-		destination[i] = source[i];
-	}
-	for ( ; i < num; i++ ) {
-		destination[i] = '\0';
-	}
-	return destination;
-}
 
 
 int Create (int priority, Task code ) {

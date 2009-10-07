@@ -7,8 +7,12 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
+// ***********************************************************
+// * NOTE: descriptions copied from the standard c libraries *
+// ***********************************************************
 
 typedef int size_t;
+
 
 /*
  * Copy characters from string
@@ -19,16 +23,27 @@ typedef int size_t;
  * destination is padded with zeros until a total of num characters 
  * have been written to it.
  */
-char * strncpy ( char *destination, const char * source, size_t num ) {
-	// TODO copy this to string.c
-	int i;
-	for ( i=0; (i < num) && source[i]; i++ ) {
-		destination[i] = source[i];
-	}
-	for ( ; i < num; i++ ) {
-		destination[i] = '\0';
-	}
-	return destination;
-}
+char * strncpy ( char *destination, const char * source, size_t num ) ;
+	
+/*
+ * Copy block of memory
+ *
+ * Copies the values of num bytes from the location pointed by source
+ * directly to the memory block pointed by destination.
+ * 
+ * The underlying type of the objects pointed by both the source 
+ * and destination pointers are irrelevant for this function; 
+ * The result is a binary copy of the data.
+ *
+ * The function does not check for any terminating null character in source 
+ * - it always copies exactly num bytes.
+ *
+ * To avoid overflows, the size of the arrays pointed by both the destination
+ * and source parameters, shall be at least num bytes, and should not overlap 
+ * (for overlapping memory blocks, memmove is a safer approach).
+ */
+char * memcpy ( char * destination, const char * source, size_t num ) ;
+
+
 
 #endif
