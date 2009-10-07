@@ -90,7 +90,6 @@ int receive (TD *receiver, TID *tid) {
 	int ret;
 
 	// Verify stack addresses are valid
-	// TODO: REmove this since we check in passMessage?
 	if ((ret = checkStackAddr((int *)receiver->a->receive.msg, receiver)) != NO_ERROR){
 		return ret;
 	}
@@ -157,7 +156,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	int ret = passMessage ( to, from, &to->returnValue, 1 /*reply*/ );
 
 	// TODO: If something in passMessage failed, still take off queues!? Probably ....
-	if ( ret < 0 ) {
+	if ( ret < NO_ERROR ) {
 		return ret;
 	}
 
@@ -166,6 +165,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	to->state   = READY;
 
 	// Make the tasks ready by putting them on the ready queues
+	// TODO: Cannot duplicate a task on a ready queue by adding it here and in schedule
 	pq_insert ( pq, to );
 	pq_insert ( pq, from );
 
