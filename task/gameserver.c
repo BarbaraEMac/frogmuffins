@@ -15,6 +15,7 @@
 #include "debug.h"
 #include "globals.h"
 #include "requests.h"
+#include "gameplayer.h"
 #include "gameserver.h"
 
 void rps_run () {
@@ -23,7 +24,7 @@ void rps_run () {
 	char msgBuffer[MSG_LEN];
 	PlayerRequest req;
 	Player tmpPlayer;
-	RPSserver server;
+	GameServer server;
 	
 	
 	// Initialize the Rock, Paper, Scissors Server
@@ -65,7 +66,7 @@ void rps_run () {
 
 }
 
-void rps_init (RPSserver *server) {
+void rps_init (GameServer *server) {
 	server->players = 0;
 }
 
