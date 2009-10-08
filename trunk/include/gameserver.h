@@ -6,7 +6,6 @@
  * A Rock, Paper, Scissors Server
  */
 
-
 typedef enum {
 	SIGNUP = 0,
 	PLAY,
@@ -22,10 +21,10 @@ typedef struct {
 
 } Player;
 
-typedef Player *Queue;
+typedef Player *playerQueue;
 
 typedef struct {
-	Queue players;
+	playerQueue players;
 } RPSserver;
 
 typedef struct {
@@ -33,6 +32,11 @@ typedef struct {
 	const char *name;
 	char 		move;		// R, P, S
 } PlayerRequest;
+
+typedef struct {
+	char result;
+	char *opponent;
+} ServerReply;
 
 void rps_init (RPSserver *s);
 
