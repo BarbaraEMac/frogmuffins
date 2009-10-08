@@ -34,6 +34,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	// Register with the name server
 	bwprintf (COM2, "Player: Registering as \"%s\"(%d).\r\n", name, myTid);
 	RegisterAs (name);
+	assert ( WhoIs(name) == MyTid() );
 
 	// Sign up for a game
 	bwprintf (COM2, "Player %s (%d): Signing up for a game.\r\n", name, myTid);
