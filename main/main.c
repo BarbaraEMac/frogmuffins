@@ -13,6 +13,7 @@
 #include "requests.h"
 #include "switch.h"
 #include "syscalls.h"
+#include "task.h"
 #include "td.h"
 
 #define WAIT	 for( i=0; i<200000; i++) {}
@@ -29,70 +30,6 @@ void charset( char*str, int len, char ch=0 ) {
 	while( (--len) >= 0 ) str[len] = ch;
 }
 */
-
-
-/**
- * After the first user task, all following tasks run this function.
- */
-void userTaskStart ( ) {
-    
-	// Print your information
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
-
-	// Let someone else run
-    Pass();
-    
-	// Print your information again
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
-
-    Exit();
-}
-
-/*
- * The first user task runs this function.
- */
-void firstTaskStart () {
-	debug( "First task started. \r\n");
-
-    // Create low priority
-    bwprintf (COM2, "Created: %d.\r\n", Create (2, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\r\n", Create (2, &userTaskStart)); 
-    
-	// Create high priority
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &userTaskStart)); 
-
-	// Exit
-    bwputstr (COM2, "First: exiting.\r\n");
-    Exit();
-}
-
-void senderTask () {
-
-    bwputstr (COM2, "Sender: starting.\r\n");
-	char msg[] = "I CAN HAS", reply[12];
-	int len;
-	len = Send(0, msg, sizeof(msg), reply, sizeof(reply));
-	bwprintf (COM2, "Received reply: '%s' of length: %d.\r\n", reply, len);
-
-    bwputstr (COM2, "Sender: exiting.\r\n");
-    Exit();
-
-}
-
-void receiverTask () {
-    bwputstr (COM2, "Receiver: starting.\r\n");
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &senderTask)); 
-	char msg[12], reply[]="KTHXBAI";
-	int len, tid;
-    bwputstr (COM2, "Receiver: listening.\r\n");
-	len = Receive(&tid, msg, sizeof(msg));
-	bwprintf (COM2, "Received msg: '%s' of length: %d from tid: %d.\r\n", msg, len, tid);
-	len = Reply(tid, reply, sizeof(reply));
-
-    bwprintf (COM2, "Receiver: reply to tid: %d with result %d, exiting.\r\n", tid, len);
-    Exit();
-}
 
 /**
  * Perform a context switch.
@@ -220,8 +157,8 @@ int main( int argc, char* argv[] ) {
 	pq_init ( &pq );
 
 	// Create the first task and set it as the active one
-   // active = td_create ( 1, &firstTaskStart, -1, &pq );
-    active = td_create ( 1, &receiverTask, -1, &pq );
+    //active = td_create ( 1, &receiverTask, -1, &pq );
+    active = td_create ( 1, &k2_firstUserTask, -1, &pq );
 
 	if ( active < NO_ERROR ) {
 		error ( (int) active, "Initializing the first task");
