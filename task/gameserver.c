@@ -16,7 +16,7 @@
 #include "gameplayer.h"
 #include "gameserver.h"
 
-void server_run () {
+void gameserver_run () {
 
 	int 			numNewPlayers = 0;
 	int 			senderTid;
@@ -28,7 +28,7 @@ void server_run () {
 	GameServer 		server;
 	
 	// Initialize the Rock, Paper, Scissors Server
-	server_init (&server);
+	gameserver_init (&server);
 	assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
@@ -47,7 +47,7 @@ void server_run () {
 				newPlayer.move = 0;
 
 				// Add to a match
-				server_addPlayer ( &server, &newPlayer );
+				gameserver_addPlayer ( &server, &newPlayer );
 				
 				// If 2 players, start them playing by replying to each
 				if ( ++numNewPlayers == 2 ) {
@@ -71,7 +71,7 @@ void server_run () {
 			
 			case PLAY:
 				// Store the move
-				match = server_findMatchUp (&server, senderTid);
+				match = gameserver_findMatchUp (&server, senderTid);
 				
 				// TODO: What is match is 0? We should error
 				match->moves += 1;
@@ -128,7 +128,7 @@ void server_run () {
 			
 			case QUIT:
 				// Locate the match
-				match = server_findMatchUp (&server, senderTid);
+				match = gameserver_findMatchUp (&server, senderTid);
 				
 				// Remove the player from the match.
 				match_getPlayers (match, senderTid, tmpPlayer, opponent);
@@ -151,7 +151,7 @@ void server_run () {
 	}
 }
 
-void server_init (GameServer *server) {
+void gameserver_init (GameServer *server) {
 
 	// Register with the Name Server
 	RegisterAs ("GameServer");
@@ -164,7 +164,7 @@ void server_init (GameServer *server) {
 	}
 }
 
-void server_addPlayer (GameServer *s, Player *p) {
+void gameserver_addPlayer (GameServer *s, Player *p) {
 	MatchUp *m = &s->matches[s->ptr];
 
 	if ( m->a == 0 ) {
@@ -176,7 +176,7 @@ void server_addPlayer (GameServer *s, Player *p) {
 	}
 }
 
-MatchUp *server_findMatchUp (GameServer *s, TID tid) {
+MatchUp *gameserver_findMatchUp (GameServer *s, TID tid) {
 	int i;
 	int totalMatchUpes = s->ptr;
 	MatchUp *m;
