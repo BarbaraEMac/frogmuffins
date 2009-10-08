@@ -70,6 +70,9 @@ int send (TD *sender, PQ *pq, TID tid) {
 		
 		// Pass the sender tid to the receiver
 		*receiver->a->receive.tid = sender->id;
+
+		// Unblock the receiver
+		pq_insert(pq, receiver);
 	}
 	return ret;
 }
@@ -147,7 +150,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	}
 
 	// Copy the data over
-	ret = passMessage ( to, from, REPLY_2_SEND );
+	ret = passMessage ( from, to, REPLY_2_SEND );
 	// Even if PassMessage failed keep going
 
 	// Make the tasks ready by putting them on the ready queues
@@ -179,8 +182,8 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 
 	// If we are doing a reply, fetch the buffers from a different location.
 	if ( type == REPLY_2_SEND ) {
-		dest = to->a->reply.reply;
-		destLen = to->a->reply.rpllen;
+		dest = to->a->send.reply;
+		destLen = to->a->send.rpllen;
 	}
 
 	// Verify the pointers point to valid memory addresses

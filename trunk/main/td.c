@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
@@ -18,7 +18,7 @@
  * HELPER FUNCTIONS
  */
 void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
-	debug ( "pq_setUsed pq/this=%x used=%d, idx=%d\r\n", this, used, idx );
+	debug ( "\tpq_setUsed this=%x used=%d, idx=%d\r\n", this, used, idx );
 	assert ( idx < NUM_TDS );
 	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
 	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
@@ -29,15 +29,18 @@ void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	}
 }
 
-int pq_getUsed ( PQ *this, unsigned int idx ) {
-	debug ( "pq_getUsed pq/this=%x, idx=%d\r\n", this, idx );
+int pq_isEmpty ( PQ *this, unsigned int idx ) {
+	debug ( "\tpq_isEmpty this=%x, idx=%d\r\n", this, idx );
 	assert ( idx < NUM_TDS );
 	unsigned int i = idx / sizeof(BitField);// the index of the bitfield
 	unsigned int s = idx % sizeof(BitField);// the position inside the bitfield
-	return !( this->empty[i] & (1 << s) );
+//debug ( "\tREMOVE THIS, empty=%x %x\r\n", this->empty[1], this->empty[0] );
+	int ans =  ( this->empty[i] & (1 << s) ); 
+	debug ( "\tpq_isEmpty return=%d\r\n", ans );
+	return ans;
 }
 int pq_getUnused ( const PQ *this ) {
-	debug ( "pq_getUnused pq/this=%x\r\n", this );
+	debug ( "\tpq_getUnused this=%x\r\n", this );
 	int i;
 	// find the first non-full bitfield
 	for ( i = 0; i < NUM_BITFIELD && this->empty[i]==0; i ++ ) {}
@@ -59,8 +62,7 @@ int pq_getUnused ( const PQ *this ) {
 	mask = 0x1 << n;
 	if ( (field & mask) == 0 ) { n += 1; }
 
-	debug ( "REMOVE THIS, empty=%x %x\r\n", this->empty[1], this->empty[0] );
-	debug ( "REMOVE THIS, n=%d\r\n", n + (i * sizeof(BitField)) );
+	debug ( "\tpq_getUnused n=%d\r\n", n + (i * sizeof(BitField)) );
 	return n + (i * sizeof(BitField));
 }
 
@@ -159,7 +161,7 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 }
 
 void pq_insert ( PQ *this, TD *td ) {
-	debug ("pq_insert this/pq=%x td=%x priority=%d state=%d.\r\n",
+	debug ("pq_insert this=%x td=%x priority=%d state=%d.\r\n",
 			this, td, td->priority, td->state);
 	assert ( this != 0 );
 	assert ( td != 0 );
@@ -195,8 +197,7 @@ void pq_insert ( PQ *this, TD *td ) {
 }
 
 TD *pq_popReady ( PQ *this ) {
-	debug("pq_popReady this/pq=%x priority=%d\r\n",
-		   this, this->highestPriority);
+	debug("pq_popReady this=%x priority=%d\r\n", this, this->highestPriority);
 	assert ( this != 0 );
 
 	int p = this->highestPriority;
@@ -225,6 +226,7 @@ TD *pq_popReady ( PQ *this ) {
 }
 
 TD *pq_fetchById ( PQ *this, TID tid ) {
+	debug("pq_fetchById this=%x tid=%d\r\n", this, tid);
 	// Verify td > 0
 	if ( tid < 0 ) {
 		return (TD *) NEG_TID;
@@ -233,7 +235,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 	int idx= tid & 0x3F;
 	
 	// Check if TD is in use
-	if (pq_getUsed( this, idx) != 0 ) {
+	if ( pq_isEmpty( this, idx) ) {
 		return (TD *) INVALID_TID;
 	}
 
@@ -241,7 +243,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 	TD *ret = &this->tdArray[idx];
 	
 	// Verify tid points to a valid td
-	if ( ret->id >= tid ) {
+	if ( ret->id > tid ) {
 		return (TD *) OLD_TID;
 	}
 
@@ -250,6 +252,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 		return (TD *) DEFUNCT_TID;
 	}
 
+	debug("pq_fetchById TD=%x \r\n", ret);
 	return ret;
 }
 
