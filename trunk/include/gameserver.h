@@ -37,13 +37,13 @@ typedef struct {
 } GameServer;
 
 
-void server_init (GameServer *s);
+void gameserver_init (GameServer *s);
 
-void server_run ();
+void gameserver_run ();
 
-void server_addPlayer (GameServer *s, Player *p);
+void gameserver_addPlayer (GameServer *s, Player *p);
 
-MatchUp *server_findMatchUp (GameServer *s, TID tid);
+MatchUp *gameserver_findMatchUp (GameServer *s, TID tid);
 
 void match_init (MatchUp *m);
 
