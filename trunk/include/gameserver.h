@@ -11,7 +11,7 @@ typedef enum {
 	SIGNUP = 0,
 	PLAY,
 	QUIT
-} Type;
+} RPSReqType;
 
 typedef struct {
 	int tid;
@@ -29,7 +29,7 @@ typedef struct {
 } RPSserver;
 
 typedef struct {
-	Type type;
+	RPSReqType type;
 	const char *name;
 	char 		move;		// R, P, S
 } PlayerRequest;

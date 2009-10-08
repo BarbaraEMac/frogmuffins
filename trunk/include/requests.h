@@ -38,7 +38,7 @@ enum RequestCode {
 };
 
 // A Neat holder that lets us reference arguments based on the syscall
-typedef union {
+typedef volatile const union {
 	struct {
 		int priority;
 		Task code;
@@ -70,9 +70,9 @@ typedef union {
 } ReqArgs;
 
 typedef struct {
-	enum RequestCode type; 	// The type of the request 
+	enum RequestCode volatile type; 	// The type of the request 
 							// Includes the number of arguments.
-	ReqArgs *a;				// Place in user memory where arguments are stored.
+	ReqArgs * volatile a;				// Place in user memory where arguments are stored.
 	
 } Request;
 

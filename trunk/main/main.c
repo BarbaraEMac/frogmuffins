@@ -56,6 +56,7 @@ void userTaskStart ( ) {
  * The first user task runs this function.
  */
 void firstTaskStart () {
+	debug( "First task started. \r\n");
 
     // Create low priority
     bwprintf (COM2, "Created: %d.\r\n", Create (2, &userTaskStart)); 
@@ -182,13 +183,15 @@ int main( int argc, char* argv[] ) {
 	Request  nextRequest;	// The next request to service
 
 	// Initialize the printing connection
-	bwputstr( COM2, "Initializing serial port connection.\r\n" );
 	bwsetfifo( COM2, OFF );
+	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
-	bwputstr( COM2, "Initializing interrupt handler.\r\n" );
-	volatile int *swi = (int *) 0x28;
+	asm("#; start looking here");
+	int volatile * swi = (int *) 0x28;
 	*swi = (int) &kernelEnter;
+	asm("#; stop looking here");
+	bwprintf( COM2, "Initialized interrupt handler at addr %x. \r\n", *swi );
 	
 	// Initialize the priority queues
 	pq_init ( &pq );

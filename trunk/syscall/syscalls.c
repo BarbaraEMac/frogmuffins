@@ -14,18 +14,21 @@
 #include "td.h"
 
 
-int checkStackAddr ( const int *addr, const TD *td ) {
+int isValidMem ( const char *addr, const TD *td ) {
 	if ( addr == 0 ) {
 		return NULL_ADDR;
 	}
 
-	if ( (addr >= td->sb) || (addr < td->sb-STACK_SIZE) ) {
+	if ( ((int *) addr >= td->sb) || ((int*) addr < td->sb-STACK_SIZE) ) {
 		return OUT_OF_BOUNDS;
 	}
 
 	return NO_ERROR;
 }
-//
+
+//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
+// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
+//     |  |                    /                 
 // RETURNS:
 //• The size of the message supplied by the replying task.
 //• -1 – if the task id is impossible.
@@ -38,92 +41,78 @@ int send (TD *sender, PQ *pq, TID tid) {
 	int ret = NO_ERROR;
 
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = checkStackAddr((int *)sender->a->send.msg, sender)) != NO_ERROR ) {
+	if ( (ret = isValidMem(sender->a->send.msg, sender)) != NO_ERROR ) {
 		return ret;
 	}
-	if ( (ret = checkStackAddr((int *)sender->a->send.reply, sender)) != NO_ERROR ) {
+	if ( (ret = isValidMem(sender->a->send.reply, sender)) != NO_ERROR ) {
 		return ret; // TODO Add a mask here so that we can tell is apart
 	}
 	
 	TD *receiver = pq_fetchById (pq, tid);
 	// pq_fetchById error checks the tid
-	if ( receiver < 0 ) {
+	if ( receiver < NO_ERROR ) {
 		return (int) receiver;
 	}
 	
-	// Copy all arguments to the user space.
-	// Apparently this has already been done in the context switch ....
-
 	// Set state to RCV_BLCK
 	sender->state = RCV_BLKD;
 
 	// Put yourself on the other task's send queue.
 	queue_push ( &receiver->sendQ, sender );
 
-	// Is the Receiver SEND_BLCKed?
+	// Is the Receiver SEND_BLKD?
 	if ( receiver->state == SEND_BLKD ) {
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
 		assert ( receiver->state == SEND_BLKD );
 		
-		ret = passMessage ( sender, receiver, &receiver->returnValue, 
-							0 /*not a reply*/ );
+		ret = passMessage ( sender, receiver, SEND_2_RCV );
 		
-		// Cause the sender to wait for a reply
-		sender->state = RPLY_BLKD;
+		// Pass the sender tid to the receiver
+		*receiver->a->receive.tid = sender->id;
 	}
-	else {
-		// The receiver is not waiting for the sender yet.
-		// Let's just wait on their send queue.
-		;
-	}
-
 	return ret;
 }
 
+//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
+// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
+//     |  |                    /                 
 // Returns.
 // • The size of the message sent.
 // • -1 – if the message was truncated.
 int receive (TD *receiver, TID *tid) {
 	// Check all arguments
 	assert ( receiver != 0 );
-	int ret;
+	int ret = NO_ERROR;
 
 	// Verify stack addresses are valid
-	if ((ret = checkStackAddr((int *)receiver->a->receive.msg, receiver)) != NO_ERROR){
+	if ((ret = isValidMem(receiver->a->receive.msg, receiver)) != NO_ERROR ){
 		return ret;
 	}
 
 	// Change the state to SEND_BLKD
 	receiver->state = SEND_BLKD;
 
-	// Check your send queue
-	TD *sender = queue_pop ( &receiver->sendQ );
-	
-	// If someone is on it, complete the transaction.
-	if ( sender != 0 ) {
+	// If someone is on the send queue, complete the transaction.
+	if ( receiver->sendQ != 0 ) {
+		TD *sender = queue_pop ( &receiver->sendQ );
+
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
 		assert ( receiver->state == SEND_BLKD );
 		
-		ret = passMessage ( sender, receiver, &receiver->returnValue, 
-							0/*not a reply*/ );
+		ret = passMessage ( sender, receiver, SEND_2_RCV );
 		
 		// Set the tid of the sender
 		*tid = sender->id;
-		
-		// Cause the sender to wait for a reply
-		sender->state = RPLY_BLKD;
-	}
-	else {
-		// The sender has not sent our data yet.
-		// Let's just wait.
-		;
 	}
 
 	return ret;
 }
 
+//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
+// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
+//     |  |                    /                 
 /*
  * Returns.
   •  0 – if the reply succeeds.
@@ -135,7 +124,7 @@ int receive (TD *receiver, TID *tid) {
 int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	assert ( from != 0 );
 	assert ( pq != 0 );
-	assert ( from->state == SEND_BLKD );
+	int ret = NO_ERROR;
 
 	// FROM is really the receiver OR replier if a worker task was spawned
 	// TO is really the sender that we are acking
@@ -143,7 +132,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	// Update the TD states
 	TD *to = pq_fetchById ( pq, tid );
 	// pq_fetchById error checks the tid
-	if ( to < 0 ) {
+	if ( to < NO_ERROR ) {
 		return (int) to;
 	}
 	
@@ -152,62 +141,80 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 		return SNDR_NOT_RPLY_BLKD;
 	}
 	
-	// Copy the data over
-	int ret = passMessage ( to, from, &to->returnValue, 1 /*reply*/ );
-
-	// TODO: If something in passMessage failed, still take off queues!? Probably ....
-	if ( ret < NO_ERROR ) {
+	// Check the msg pointer
+	if ((ret = isValidMem(from->a->reply.reply, from)) != NO_ERROR ){
 		return ret;
 	}
 
-	// Set the state
-	from->state = READY;
-	to->state   = READY;
+	// Copy the data over
+	ret = passMessage ( to, from, REPLY_2_SEND );
+	// Even if PassMessage failed keep going
 
 	// Make the tasks ready by putting them on the ready queues
-	// TODO: Cannot duplicate a task on a ready queue by adding it here and in schedule
+	// NOTE: 'from' will be put on queue automatically by scheduler
 	pq_insert ( pq, to );
-	pq_insert ( pq, from );
 
-	return NO_ERROR;
+	return ret;
 }
 
-int passMessage ( const TD *from, const TD *to, int *copyLen, int rply ) {
+                                  
+//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
+// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
+//     |  |                    /                 
+/*
+ * The arguments passed in should already be checked
+ * this method will return BUFFER_FULL errors if the source buffer
+ * lenght is longer than the destination
+ * Updates the states of the tasks
+ */
+int passMessage ( TD *from, TD *to, MsgType type ) {
 	int ret = NO_ERROR;
 
 	// Get the message buffers and lengths
-	char  *fromBuffer = from->a->send.msg;
-	size_t fromBufLen = from->a->send.msglen;
+	char  *source = from->a->send.msg;
+	size_t sourceLen = from->a->send.msglen;
 	
-	char  *toBuffer = to->a->receive.msg;
-	size_t toBufLen = to->a->receive.msglen;
+	char  *dest = to->a->receive.msg;
+	size_t destLen = to->a->receive.msglen;
 
 	// If we are doing a reply, fetch the buffers from a different location.
-	if ( rply == 1 ) {
-		toBuffer = to->a->reply.reply;
-		toBufLen = to->a->reply.rpllen;
+	if ( type == REPLY_2_SEND ) {
+		dest = to->a->reply.reply;
+		destLen = to->a->reply.rpllen;
 	}
 
-	// TODO: Yes, this is the second time we've checked this.
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = checkStackAddr((int *) fromBuffer, from)) != NO_ERROR ) {
-		return ret;
-	}
-	if ( (ret = checkStackAddr((int *) toBuffer, to)) != NO_ERROR ) {
-		return ret;
-	}
+	assert( isValidMem(source, from) == NO_ERROR );
+	assert( isValidMem(dest, to) == NO_ERROR );
 
 	// Copy the message over to this task 
 	// Copy as much as we can and return the copied amount
 	// User tasks should be able to handle this
-	*copyLen = fromBufLen;
+	int len = sourceLen;
 	
-	if ( toBufLen < fromBufLen ) {
-		*copyLen = toBufLen;
-		ret = rply ? RPLY_BUFFER_FULL : RCV_BUFFER_FULL;
+	if ( destLen < sourceLen ) {
+		len = destLen;
+		ret = (type == REPLY_2_SEND) ? RPLY_BUFFER_FULL : RCV_BUFFER_FULL;
 	}
 	
-	memcpy ( toBuffer, fromBuffer, *copyLen );
+	// Do the actual copy
+	memcpy ( dest, source, len );
+
+	// Save the size of message copied, and state
+	to->returnValue = len;
+	to->state   = READY;
+
+	switch( type ) {
+		case SEND_2_RCV:
+			// Cause the sender to wait for a reply
+			from->state = RPLY_BLKD;
+			break;
+		case REPLY_2_SEND:
+			// The receiver can continue operation
+			from->state = READY;
+			break;
+	}
+
 
 	return ret;
 }
