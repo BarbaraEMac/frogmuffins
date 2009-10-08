@@ -17,16 +17,16 @@
 #include "requests.h"
 
 #include "gameplayer.h"
-#include "gameserver.h"
 
 #define BUFFER_LEN		1024
 
-void genericPlayer (char *name, char move, int timesToPlay) {
+void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	int i;
 	int myTid = MyTid();
 	char rplyBuffer[1024];
 	int gameServer = WhoIs ("GameServer");
 	ServerReply reply;
+	// Initialize this player's request to be sent to the game server
 	PlayerRequest req;
 	req.name = name;
 	req.move = move;
@@ -38,49 +38,61 @@ void genericPlayer (char *name, char move, int timesToPlay) {
 	// Sign up for a game
 	bwprintf (COM2, "Player %s (%d): Signing up for a game.\r\n", name, myTid);
 	req.type = SIGNUP;
-	Send ( gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
+	Send (gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
 	
 	// Play the game
 	req.type = PLAY;
 	for ( i = 0; i < timesToPlay; i ++ ) {
 		bwprintf (COM2, "Player %s (%d): Playing %c.\r\n", name, myTid, move);
-		Send ( gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
+		Send (gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
 
 		// Process the server's reply
 		memcpy ( (char*)&reply, rplyBuffer, sizeof(ServerReply) );
-		if ( reply.result == 'W' ) {
-			bwprintf (COM2, "Player %s (%d): Won against %s (%d)!\r\n", name, myTid, 
-					  reply.opponent, WhoIs(reply.opponent));
-		}
-		else {
-			bwprintf (COM2, "Player %s (%d): Lost to %s (%d) :\(.\r\n", name, myTid, 
-					  reply.opponent, WhoIs(reply.opponent));
+		// Print the appropriate message.
+		switch ( reply.result ) {
+			case WIN:
+				bwprintf (COM2, "Player %s (%d): Won against %s (%d)!\r\n", 
+						  name, myTid, reply.opponent, WhoIs(reply.opponent));
+				break;
+			
+			case LOSE:
+				bwprintf (COM2, "Player %s (%d): Lost to %s (%d) :\(.\r\n", 
+						  name, myTid, reply.opponent, WhoIs(reply.opponent));
+				break;
+			
+			case TIE:
+				bwprintf (COM2, "Player %s (%d): Tied with %s (%d).\r\n", 
+						  name, myTid, reply.opponent, WhoIs(reply.opponent));
+				break;
+
+			default:
+				break;
 		}
 	}
 
 	// This player is bored. Quit playing.
 	bwprintf (COM2, "Player %s (%d): Quitting.r\n", name, myTid);
 	req.type = QUIT;
-	Send ( gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
+	Send (gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
 }
 
 // Only plays rock
 void rockPlayer () {
 	char *name = "Rocky";
 	
-	genericPlayer (name, 'R', 3);
+	genericPlayer (name, ROCK, 3);
 }
 
 // Only plays scissors
 void scissorsPlayer () {
 	char *name = "Edward Scis";
 
-	genericPlayer (name, 'S', 3);
+	genericPlayer (name, SCISSORS, 3);
 }
 
 // Only plays paper
 void paperPlayer () {
 	char *name = "Paper Clip";
 	
-	genericPlayer (name, 'P', 3);
+	genericPlayer (name, PAPER, 3);
 }

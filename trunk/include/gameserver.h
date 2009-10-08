@@ -6,41 +6,37 @@
  * A Rock, Paper, Scissors Server
  */
 
-typedef enum {
-	SIGNUP = 0,
-	PLAY,
-	QUIT
-} RPSReqType;
+#ifndef __GAME_SERVER_H__
+#define __GAME_SERVER_H__
 
+/**
+ * Keeps track of a player instance who has registered with the game server.
+ */
 typedef struct {
-	int tid;
-	char *name;
-
-	int nextPlayer;
-	int prevPlayer;
+	int tid;		// The task id of the player
+	char *name;		// The name of the player
+	
+	int nextPlayer;	// Pointer to the next player in the circular queue
+	int prevPlayer;	// Pointer to the previous player in the circular queue
 
 } Player;
 
 typedef Player *playerQueue;
 
+/**
+ * A Game Server
+ */
 typedef struct {
-	playerQueue players;
-} RPSserver;
+	playerQueue players; // A queue of the players as they have signed up
+} GameServer;
 
-typedef struct {
-	RPSReqType type;
-	const char *name;
-	char 		move;		// R, P, S
-} PlayerRequest;
 
-typedef struct {
-	char result;
-	char *opponent;
-} ServerReply;
 
-void rps_init (RPSserver *s);
+
+void rps_init (GameServer *s);
 
 void rps_run ();
 
 void rps_signup (Player *p);
 
+#endif
