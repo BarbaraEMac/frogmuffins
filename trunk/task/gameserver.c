@@ -32,7 +32,7 @@ void server_run () {
 	assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
-		Player 		newPlayer;
+		Player newPlayer; // since we can't make this in the switch statement .... C .... :(
 		
 		// Receive a message from a player!
 		Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
@@ -79,17 +79,51 @@ void server_run () {
 				tmpPlayer->move = req.move;
 
 				// If both players have played, determine a winner.
+				// TODO: UUUUGGGGGLLLLLYYYYY
 				if ( match->moves == 2 ) {
 					switch(match_play(match)) {
 						case 0 /*TIE*/:
 							reply.result = TIE;
-
+							reply.opponent = match->b->name;
+							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
+							reply.opponent = match->a->name;
+							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
+							break;
 						
+						case 1 /*a won*/:
+							reply.result = WIN;
+							reply.opponent = match->b->name;
+							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
+							
+							reply.result = LOSE;
+							reply.opponent = match->a->name;
+							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
+							break;
 
+						case -1 /*b won*/:
+							reply.result = WIN;
+							reply.opponent = match->a->name;
+							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
+							
+							reply.result = LOSE;
+							reply.opponent = match->a->name;
+							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
+							
+							break;
+						case -2 /*Opponent Quit*/:
+							reply.result = OPP_QUIT;
+							reply.opponent = opponent->name;
+							Reply (tmpPlayer->tid, (char*)&reply, sizeof(ServerReply));
+							break;
+						default:
+							assert (1 == 0); // TODO: THis should never happen
+							break;
 					}
 				}
-				// Else,
+				else {
 					// Wait for opponent to make their move (do nthing)
+					;
+				}
 				break;
 			
 			case QUIT:
@@ -103,6 +137,7 @@ void server_run () {
 
 				// Reply to the player.
 				reply.result = YOU_QUIT;
+				reply.opponent = opponent->name;
 				Reply (tmpPlayer->tid, (char*)&reply, sizeof(ServerReply));
 				
 				// Increment the total number of moves for this match.
@@ -128,7 +163,6 @@ void server_init (GameServer *server) {
 		match_init ( &server->matches[i] );
 	}
 }
-
 
 void server_addPlayer (GameServer *s, Player *p) {
 	MatchUp *m = &s->matches[s->ptr];

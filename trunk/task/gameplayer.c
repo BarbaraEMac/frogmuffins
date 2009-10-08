@@ -82,7 +82,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 
 // Only plays rock
 void rockPlayer () {
-	char *name = "Rocky";
+	char *name = "Dwayne J.";
 	
 	genericPlayer (name, ROCK, 3);
 
@@ -91,7 +91,7 @@ void rockPlayer () {
 
 // Only plays scissors
 void scissorsPlayer () {
-	char *name = "Edward Scis";
+	char *name = "Edward S.";
 
 	genericPlayer (name, SCISSORS, 3);
 
