@@ -54,13 +54,13 @@ int send (TD *sender, PQ *pq, TID tid) {
 		return (int) receiver;
 	}
 	
-	// Set state to RCV_BLCK
+	// Set state to receive blocked
 	sender->state = RCV_BLKD;
 
 	// Put yourself on the other task's send queue.
 	queue_push ( &receiver->sendQ, sender );
 
-	// Is the Receiver SEND_BLKD?
+	// Is the receiver send blocked?
 	if ( receiver->state == SEND_BLKD ) {
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
@@ -202,7 +202,7 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 
 	// Save the size of message copied, and state
 	to->returnValue = len;
-	to->state   = READY;
+	to->state       = READY;
 
 	switch( type ) {
 		case SEND_2_RCV:
@@ -214,7 +214,5 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 			from->state = READY;
 			break;
 	}
-
-
 	return ret;
 }
