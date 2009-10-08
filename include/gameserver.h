@@ -9,27 +9,31 @@
 #ifndef __GAME_SERVER_H__
 #define __GAME_SERVER_H__
 
+#define NUM_MATCHES			64
+
+#include "globals.h"
+
 /**
  * Keeps track of a player instance who has registered with the game server.
  */
 typedef struct {
 	TID tid;		// The task id of the player
 	char *name;		// The name of the player
-	
-	int nextPlayer;	// Pointer to the next player in the circular queue
-	int prevPlayer;	// Pointer to the previous player in the circular queue
-
+	GameMove move;	// The player's move
 } Player;
 
-typedef Player *PlayerQueue;
+typedef struct {
+	Player *a;
+	Player *b;
+	int moves;
+} MatchUp;
 
 /**
  * A Game Server
  */
 typedef struct {
-	PlayerQueue players; // A queue of the players as they have signed up
-
-	int numPlayers;
+	MatchUp matches[NUM_MATCHES];
+	int ptr;
 } GameServer;
 
 
@@ -39,7 +43,11 @@ void server_run ();
 
 void server_addPlayer (GameServer *s, Player *p);
 
-void server_removePlayer (GameServer *s, const char *name);
+MatchUp *server_findMatchUp (GameServer *s, TID tid);
 
-void player_init (Player *p, const char *n, TID tid);
+void match_init (MatchUp *m);
+
+void match_getPlayers (MatchUp *m, TID tid, Player *a, Player *b);
+
+int match_play (MatchUp *m);
 #endif

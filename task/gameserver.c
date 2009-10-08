@@ -7,76 +7,108 @@
  */
 
 #define DEBUG
-#define	MSG_LEN		1024
 
 #include <bwio.h>
 #include <ts7200.h>
 
 #include "debug.h"
-#include "globals.h"
 #include "requests.h"
 #include "gameplayer.h"
 #include "gameserver.h"
 
 void server_run () {
 
-	int senderTid;
-	char msgBuffer[MSG_LEN];
-	PlayerRequest req;
-	Player tmpPlayer;
-	GameServer server;
-	ServerReply reply;
-
-
-	int numNewPlayers = 0;
-	
+	int 			numNewPlayers = 0;
+	int 			senderTid;
+	MatchUp 	   *match;
+	Player 		   *tmpPlayer;
+	Player 		   *opponent;
+	PlayerRequest   req;
+	ServerReply 	reply;
+	GameServer 		server;
 	
 	// Initialize the Rock, Paper, Scissors Server
 	server_init (&server);
+	assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
+		Player 		newPlayer;
+		
+		// Receive a message from a player!
 		Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
+
+		assert ( WhoIs(req.name) == senderTid );
 
 		switch(req.type) {
 			case SIGNUP:
-				numNewPlayers += 1;
-
 				// Create a Player instance
-				player_init ( &tmpPlayer, senderTid, req.name );
+				newPlayer.name = req.name;
+				newPlayer.tid  = senderTid;
+				newPlayer.move = 0;
 
-				// Add to the players queue
-				server_addPlayer ( server, tmpPlayer );
+				// Add to a match
+				server_addPlayer ( &server, &newPlayer );
 				
 				// If 2 players, start them playing by replying to each
-				// Otherwise, do nothing
-				if ( numNewPlayers == 2 ) {
+				if ( ++numNewPlayers == 2 ) {
 					numNewPlayers = 0;
 					
-					reply.result = START;
-					tmpPlayer = server->players->prevPlayer; // tail
+					// Get the brand new match
+					*match = server.matches[ server.ptr-1 ];
 
-					Reply (tmpPlayer.tid, 
+					// Create the reply
+					reply.result   = START;
+					reply.opponent = match->b->name;
 
+					// Send the replies
+					Reply (match->a->tid, (char *)&reply, sizeof(ServerReply));
+
+					reply.opponent = match->a->name;
+					Reply (match->b->tid, (char *)&reply, sizeof(ServerReply));
 				}
+				// Otherwise, do nothing
 				break;
 			
 			case PLAY:
 				// Store the move
-				// If opponent has played, determine the winner
-					// Reply to both
+				match = server_findMatchUp (&server, senderTid);
+				
+				// TODO: What is match is 0? We should error
+				match->moves += 1;
+				match_getPlayers (match, senderTid, tmpPlayer, opponent);
+				tmpPlayer->move = req.move;
+
+				// If both players have played, determine a winner.
+				if ( match->moves == 2 ) {
+					switch(match_play(match)) {
+						case 0 /*TIE*/:
+							reply.result = TIE;
+
+						
+
+					}
+				}
 				// Else,
 					// Wait for opponent to make their move (do nthing)
 				break;
 			
-			
-			
 			case QUIT:
-				// Stop accepting calls from this player
-				// On the next PLAY call from their opponent, send that this
-				// one quit.
+				// Locate the match
+				match = server_findMatchUp (&server, senderTid);
+				
+				// Remove the player from the match.
+				match_getPlayers (match, senderTid, tmpPlayer, opponent);
+				if (match->a == tmpPlayer) match->a = 0;
+				else match->b = 0;
+
+				// Reply to the player.
+				reply.result = YOU_QUIT;
+				Reply (tmpPlayer->tid, (char*)&reply, sizeof(ServerReply));
+				
+				// Increment the total number of moves for this match.
+				match->moves += 1;
 				break;
-		
-			
+
 			default:
 				error (1, "Invalid RPS type.");
 				break;
@@ -85,48 +117,99 @@ void server_run () {
 }
 
 void server_init (GameServer *server) {
-	server->players = 0;
-	server->numPlayers = 0;
+
+	// Register with the Name Server
+	RegisterAs ("GameServer");
+	
+	server->ptr = 0;
+	
+	int i;
+	for ( i = 0; i < NUM_MATCHES; i ++ ) {
+		match_init ( &server->matches[i] );
+	}
 }
 
-// Kick me if you want, but I wanted a linked list and 
-// do not want to share kernel and user task code.
-void addPlayer (GameServer *s, Player *p) {
-	assert ( s != 0 );
-	assert ( p != 0 );
-	
-	Player *head = s->players;
 
-	if ( head == 0 ) {
-		p->nextPlayer = p;
-		p->prevPlayer = p;
+void server_addPlayer (GameServer *s, Player *p) {
+	MatchUp *m = &s->matches[s->ptr];
 
-		s->players = p;
+	if ( m->a == 0 ) {
+		m->a = p;
 	}
 	else {
-		Player *tail = head->prevPlayer;
-		assert ( tail != 0 );
-		assert ( tail->nextPlayer != 0 );
-		assert ( tail->prevPlayer != 0 );
-
-		p->nextPlayer = head;
-		p->prevPlayer = tail;
-
-		head->prevPlayer = p;
-		tail->nextPlayer = p;
+		m->b = p;
+		s->ptr += 1;
 	}
-
-	// Increment the counter
-	s->numPlayers += 1;
-
-	assert ( s->players != 0 );
 }
 
-void server_removePlayer ( GameServer *s, const char *name ) {
+MatchUp *server_findMatchUp (GameServer *s, TID tid) {
+	int i;
+	int totalMatchUpes = s->ptr;
+	MatchUp *m;
 	
+	for ( i = 0; i < totalMatchUpes; i ++ ) {
+		m = &s->matches[i];
 
-	// Reduce the counter
-	s->numPlayers -= 1;
+		if ( (m->a->tid == tid) || (m->b->tid == tid) ) {
+			return m;
+		}
+	}
 
+	return 0;
+}
 
+void match_init (MatchUp *m) {
+	m->a     = 0;
+	m->b     = 0;
+	m->moves = 0;
+}
+
+void match_getPlayers (MatchUp *m, TID tid, Player *p, Player *o) {
+	*p = ( m->a->tid == tid ) ? *m->a : *m->b;
+	*o = ( m->a->tid != tid ) ? *m->a : *m->b;
+}
+
+int match_play (MatchUp *m) {
+	Player *a = m->a;
+	Player *b = m->b;
+	
+	// If an opponent quit, let the player know.
+	if ( (a == 0) || (b == 0) ) {
+		
+		int replyTid;	
+		ServerReply reply;
+		reply.result = OPP_QUIT;
+		
+		if ( a == 0 ) {
+			replyTid = b->tid;
+			reply.opponent = a->name;
+		}
+		else {
+			replyTid = a->tid;
+			reply.opponent = b->name;
+		}
+		
+		Reply ( replyTid, (char *)&reply, sizeof(ServerReply) );
+		return -2;
+	}
+	
+	// Determine a winner!
+	GameMove aMove = a->move;
+	GameMove bMove = b->move;
+	
+	// Reset the moves.
+	a->move = 0;
+	b->move = 0;
+
+	if ( aMove == bMove ) {
+		return 0;
+	}
+	else if ( (aMove == ROCK     && bMove == SCISSORS)|| 
+			  (aMove == PAPER    && bMove == ROCK)    || 
+			  (aMove == SCISSORS && bMove == PAPER) ) {
+		return -1;
+	}
+	else {
+		return 1;
+	}
 }

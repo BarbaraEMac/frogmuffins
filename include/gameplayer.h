@@ -15,14 +15,17 @@
 typedef enum {
 	WIN = 0,
 	LOSE,
-	TIE
+	TIE, 
+	START,
+	YOU_QUIT,
+	OPP_QUIT
 } GameResult;
 
 /**
  * The moves a player can make in the game RPS.
  */
 typedef enum {
-	ROCK = 0,
+	ROCK = 1,
 	PAPER,
 	SCISSORS
 } GameMove;
@@ -40,7 +43,7 @@ typedef enum {
  * Any message from a player will have this form.
  */
 typedef struct {
-	const char *name;	// Player's name
+	char *name;			// Player's name
 	RequestType type;	// Request type
 	GameMove 	move;	// RPS move
 } PlayerRequest;
