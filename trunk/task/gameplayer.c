@@ -46,8 +46,10 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 		bwprintf (COM2, "Player %s (%d): Playing %c.\r\n", name, myTid, move);
 		Send (gameServer, (char*)&req, sizeof(PlayerRequest), rplyBuffer, BUFFER_LEN);
 
+		// TODO: Remove this? Copy straight into this?
 		// Process the server's reply
 		memcpy ( (char*)&reply, rplyBuffer, sizeof(ServerReply) );
+		
 		// Print the appropriate message.
 		switch ( reply.result ) {
 			case WIN:
@@ -66,6 +68,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 				break;
 
 			default:
+				assert ( 1 == 0 ); // You should NEVER get here
 				break;
 		}
 	}
@@ -81,6 +84,8 @@ void rockPlayer () {
 	char *name = "Rocky";
 	
 	genericPlayer (name, ROCK, 3);
+
+	Exit();
 }
 
 // Only plays scissors
@@ -88,6 +93,8 @@ void scissorsPlayer () {
 	char *name = "Edward Scis";
 
 	genericPlayer (name, SCISSORS, 3);
+
+	Exit();
 }
 
 // Only plays paper
@@ -95,4 +102,6 @@ void paperPlayer () {
 	char *name = "Paper Clip";
 	
 	genericPlayer (name, PAPER, 3);
+
+	Exit();
 }

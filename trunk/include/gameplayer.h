@@ -54,10 +54,6 @@ typedef struct {
 } ServerReply;
 
 
-
-
-
-
 void genericPlayer (char *name, GameMove move, int timesToPlay);
 
 void rockPlayer();

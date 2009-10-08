@@ -13,7 +13,7 @@
  * Keeps track of a player instance who has registered with the game server.
  */
 typedef struct {
-	int tid;		// The task id of the player
+	TID tid;		// The task id of the player
 	char *name;		// The name of the player
 	
 	int nextPlayer;	// Pointer to the next player in the circular queue
@@ -21,22 +21,25 @@ typedef struct {
 
 } Player;
 
-typedef Player *playerQueue;
+typedef Player *PlayerQueue;
 
 /**
  * A Game Server
  */
 typedef struct {
-	playerQueue players; // A queue of the players as they have signed up
+	PlayerQueue players; // A queue of the players as they have signed up
+
+	int numPlayers;
 } GameServer;
 
 
+void server_init (GameServer *s);
 
+void server_run ();
 
-void rps_init (GameServer *s);
+void server_addPlayer (GameServer *s, Player *p);
 
-void rps_run ();
+void server_removePlayer (GameServer *s, const char *name);
 
-void rps_signup (Player *p);
-
+void player_init (Player *p, const char *n, TID tid);
 #endif
