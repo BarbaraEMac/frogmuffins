@@ -35,8 +35,10 @@ int isValidMem ( const char *addr, const TD *td ) {
 //• -2 – if the task id is not an existing task.
 //• -3 – if the send-receive-reply transaction is incomplete.
 int send (TD *sender, PQ *pq, TID tid) {
+	debug ("send: from=%x, to=%x (%d)\r\n", sender, pq_fetchById(pq, tid), tid);
 	// Check all arguments
 	assert ( sender != 0 );
+	assert ( sender->state == ACTIVE );
 	assert ( pq != 0 );
 	int ret = NO_ERROR;
 
@@ -57,9 +59,6 @@ int send (TD *sender, PQ *pq, TID tid) {
 	// Set state to receive blocked
 	sender->state = RCV_BLKD;
 
-	// Put yourself on the other task's send queue.
-	queue_push ( &receiver->sendQ, sender );
-
 	// Is the receiver send blocked?
 	if ( receiver->state == SEND_BLKD ) {
 		// Verify sender and receiver states
@@ -67,13 +66,20 @@ int send (TD *sender, PQ *pq, TID tid) {
 		assert ( receiver->state == SEND_BLKD );
 		
 		ret = passMessage ( sender, receiver, SEND_2_RCV );
-		
+		assert (sender->state == RPLY_BLKD);
+
 		// Pass the sender tid to the receiver
 		*receiver->a->receive.tid = sender->id;
 
 		// Unblock the receiver
 		pq_insert(pq, receiver);
 	}
+	else {
+		// Put yourself on the other task's send queue.
+		debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
+		queue_push ( &receiver->sendQ, sender );
+	}
+
 	return ret;
 }
 
@@ -84,6 +90,8 @@ int send (TD *sender, PQ *pq, TID tid) {
 // • The size of the message sent.
 // • -1 – if the message was truncated.
 int receive (TD *receiver, TID *tid) {
+	debug ("rcv : rcvr=%x (%d)\r\n", receiver, receiver->id);
+
 	// Check all arguments
 	assert ( receiver != 0 );
 	int ret = NO_ERROR;
@@ -99,13 +107,15 @@ int receive (TD *receiver, TID *tid) {
 	// If someone is on the send queue, complete the transaction.
 	if ( receiver->sendQ != 0 ) {
 		TD *sender = queue_pop ( &receiver->sendQ );
+		debug ("POPPING %x OFF A SEND Q st=%d\r\n", sender, sender->state);
 
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
 		assert ( receiver->state == SEND_BLKD );
 		
 		ret = passMessage ( sender, receiver, SEND_2_RCV );
-		
+		assert (receiver->state == READY);
+
 		// Set the tid of the sender
 		*tid = sender->id;
 	}
@@ -125,6 +135,7 @@ int receive (TD *receiver, TID *tid) {
   • -4 – if there was insufficient space for the entire reply in the sender’s reply buffer.
 */
 int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
+	debug ("rply: from=%x to=%x (%d) \r\n", from, pq_fetchById(pq, tid), tid);
 	assert ( from != 0 );
 	assert ( pq != 0 );
 	int ret = NO_ERROR;
@@ -140,6 +151,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	}
 	
 	// If the sender is not reply blocked, we should error.
+	assert (to->state == RPLY_BLKD);
 	if ( to->state != RPLY_BLKD ) {
 		return SNDR_NOT_RPLY_BLKD;
 	}
@@ -152,6 +164,8 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	// Copy the data over
 	ret = passMessage ( from, to, REPLY_2_SEND );
 	// Even if PassMessage failed keep going
+	assert (to->state == READY);
+	assert (from->state == READY);
 
 	// Make the tasks ready by putting them on the ready queues
 	// NOTE: 'from' will be put on queue automatically by scheduler
