@@ -39,10 +39,10 @@ typedef int BitField;
  * A Task Descriptor that the kernel uses to define a user task.
  */
 struct taskdesc {
-	int spsr;				// Saved Processor State Register
+	volatile int spsr;				// Saved Processor State Register
 	union {
-		int *sp;			// Stack Pointer
-		ReqArgs *a;			// request arguments in a neatly avaiable union
+		int volatile * volatile sp;			// Stack Pointer
+		ReqArgs * volatile a;			// request arguments in a neatly avaiable union
 	};
 	int returnValue;		// Value to pass to asm if we need to 
 							// return anything to a syscall

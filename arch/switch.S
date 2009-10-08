@@ -51,6 +51,10 @@ kernelExit:
 	msr 	CPSR_c, #0xDF
 	#; restore the active task NOTE: r0 is skipped
 	add 	sp,	r3, #4
+	#;ldmfd	sp, {r1-r12, lr}
+	#; mov		r0, #1
+	#; mrs		r1, SPSR
+	#; bl		bwputr(PLT)
 	ldmfd	sp!, {r1-r12, lr}
 	#; switch to supervisor mode
 	msr 	CPSR_c, #0xD3

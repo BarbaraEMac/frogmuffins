@@ -118,7 +118,7 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	// Grab an unused TD from the array.
 	int idx = pq_getUnused ( pq );
 	if ( idx < NO_ERROR ) {
-		return idx;
+		return (TD *) idx;
 	}
 	TD *td = &pq->tdArray[idx];
 	
@@ -137,7 +137,9 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
     td->spsr = 0x10;	
 	td->sb = (int *) STACK_BASE + (STACK_SIZE * idx); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
+	asm( "#; look after this");
 	td->sp[PC_OFFSET] = (int) start;
+	asm( "#; but before this");
 	
 	td->parentId = parentId;
 	

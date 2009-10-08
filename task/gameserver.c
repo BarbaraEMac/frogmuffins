@@ -30,9 +30,7 @@ void rps_run () {
 	rps_init (&server);
 
 	FOREVER {
-		Receive ( &senderTid, msgBuffer, MSG_LEN );
-
-		memcpy((char*)&req, msgBuffer, sizeof(PlayerRequest));
+		Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
 
 		switch(req.type) {
 			case SIGNUP:

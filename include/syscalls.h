@@ -9,12 +9,18 @@
 
 #include "td.h"
 
+typedef enum messageType {
+	SEND_2_RCV =1,
+	REPLY_2_SEND
+} MsgType;
+
+
 int send (TD *sender, PQ *pq, TID tid);
 
 int receive (TD *receiver, TID *tid);
 
 int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen);
 
-int passMessage (const TD *sender, const TD *receiver, int *copyLen, int reply);
+int passMessage (TD *sender, TD *receiver, MsgType reply);
 
 #endif
