@@ -188,6 +188,15 @@ void pq_insert ( PQ *this, TD *td ) {
 			
 			break;
 
+		case SEND_BLKD:
+			debug ("%x is SEND_BLKD \r\n", td);
+			break;
+		case RCV_BLKD:
+			debug ("%x is RCV_BLKD \r\n", td);
+			break;
+		case RPLY_BLKD:
+			debug ("%x is RPLY_BLKD \r\n", td);
+			break;
 		case DEFUNCT:
 		default:
 			// Do nothing for defunct tasks for now ...
