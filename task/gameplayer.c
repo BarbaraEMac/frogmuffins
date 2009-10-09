@@ -82,6 +82,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 
 // Only plays rock
 void rockPlayer () {
+	debug ("Rock player is starting. \r\n");
 	char *name = "Dwayne J.";
 	
 	genericPlayer (name, ROCK, 3);
@@ -91,6 +92,7 @@ void rockPlayer () {
 
 // Only plays scissors
 void scissorsPlayer () {
+	debug ("Scissors player is starting. \r\n");
 	char *name = "Edward S.";
 
 	genericPlayer (name, SCISSORS, 3);
@@ -100,7 +102,8 @@ void scissorsPlayer () {
 
 // Only plays paper
 void paperPlayer () {
-	char *name = "Paper Clip";
+	debug ("Paper player is starting. \r\n");
+	char *name = "Paper Mario";
 	
 	genericPlayer (name, PAPER, 3);
 
