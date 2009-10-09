@@ -26,9 +26,6 @@ int isValidMem ( const char *addr, const TD *td ) {
 	return NO_ERROR;
 }
 
-//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
-// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
-//     |  |                    /                 
 // RETURNS:
 //• The size of the message supplied by the replying task.
 //• -1 – if the task id is impossible.
@@ -83,9 +80,6 @@ int send (TD *sender, PQ *pq, TID tid) {
 	return ret;
 }
 
-//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
-// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
-//     |  |                    /                 
 // Returns.
 // • The size of the message sent.
 // • -1 – if the message was truncated.
@@ -123,9 +117,6 @@ int receive (TD *receiver, TID *tid) {
 	return ret;
 }
 
-//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
-// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
-//     |  |                    /                 
 /*
  * Returns.
   •  0 – if the reply succeeds.
@@ -174,10 +165,6 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	return ret;
 }
 
-                                  
-//  /\  _  _  _ _    _  _|  |_      _| _  _ . _ |
-// /~~\|_)|_)| (_)\/(/_(_|  |_)\/  (_|(_|| ||(/_|
-//     |  |                    /                 
 /*
  * The arguments passed in should already be checked
  * this method will return BUFFER_FULL errors if the source buffer
