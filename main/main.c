@@ -158,16 +158,24 @@ int main( int argc, char* argv[] ) {
 
 	// Create the first task and set it as the active one
     //active = td_create ( 1, &receiverTask, -1, &pq );
-    active = td_create ( 1, &k2_firstUserTask, -1, &pq );
+    // Set priority = 0 to ensure that this task completes
+	active = td_create ( 0, &k2_firstUserTask, -1, &pq );
 
 	if ( active < NO_ERROR ) {
 		error ( (int) active, "Initializing the first task");
 	}
 
+	TD *tmp;
+
 	FOREVER {	
 		debug ("	Scheduling a new task.\r\n");
-		active = schedule (active, &pq);
+		tmp = schedule (active, &pq);
 		
+		if ( tmp != active ) {
+			bwprintf (COM2, "--------Scheduled %x (%d) --------------\r\n", tmp, tmp->id);
+			active = tmp;
+		}
+
 		// Run out of tasks to run
 		if ( active == 0 ) {
 			break;
