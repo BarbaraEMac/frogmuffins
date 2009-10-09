@@ -20,19 +20,62 @@
 //-------------------------------------------------------------------------
 //---------------------------Kernel 2--------------------------------------
 //-------------------------------------------------------------------------
+
 void k2_firstUserTask () {
-	debug ("First task started> \r\n");
+	debug ("First task started. \r\n");
 
 	// Create the name server
+	debug ("Creating the name server. \r\n");
 	Create (1, &ns_run);
 
 	// Create the game server for Rock Paper Scissors
+	debug ("Creating the Rock Paper Scissors server. \r\n");
 	Create (1, &gameserver_run);
-
+/*
 	// Create players for the game server
+	debug ("Creating 2 players. \r\n");
 	Create (2, &rockPlayer);
 	Create (2, &paperPlayer);
+*/
+	// Quit since our work is done.
+	debug ("First user task exiting. Enjoy the games!\r\n");
+	Exit();
+}
 
+void k2_registerTask1 () {
+	debug ("First task started. \r\n");
+
+	// Create the name server
+	debug ("Creating the name server. \r\n");
+	Create (1, &ns_run);
+	Create (2, &k2_registerTask2);
+	Create (1, &k2_registerTask2);
+
+	RegisterAs ("A");
+	assert ( WhoIs ("A") == MyTid() );
+	RegisterAs ("B");
+	assert ( WhoIs ("B") == MyTid() );
+	RegisterAs ("C");
+	assert ( WhoIs ("C") == MyTid() );
+	RegisterAs ("D");
+	assert ( WhoIs ("D") == MyTid() );
+	RegisterAs ("D");
+	assert ( WhoIs ("D") == MyTid() );
+	RegisterAs ("E");
+	assert ( WhoIs ("E") == MyTid() );
+
+	Create (0, &k2_registerTask2);
+	debug ("First task is exiting.\r\n");
+	Exit();
+}
+
+void k2_registerTask2 () {
+	RegisterAs ("Barbara");
+	assert ( WhoIs ("Barbara") == MyTid() );
+	
+	RegisterAs ("Macdonald");
+	assert ( WhoIs ("Macdonald") == MyTid() );
+	
 	Exit();
 }
 
