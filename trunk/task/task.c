@@ -31,12 +31,12 @@ void k2_firstUserTask () {
 	// Create the game server for Rock Paper Scissors
 	debug ("Creating the Rock Paper Scissors server. \r\n");
 	Create (1, &gameserver_run);
-/*
+
 	// Create players for the game server
 	debug ("Creating 2 players. \r\n");
 	Create (2, &rockPlayer);
 	Create (2, &paperPlayer);
-*/
+
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");
 	Exit();
