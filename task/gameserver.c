@@ -17,12 +17,15 @@
 #include "gameserver.h"
 
 void gameserver_run () {
+	debug ("Game Server is starting up. \r\n");
 
 	int 			numNewPlayers = 0;
 	int 			senderTid;
 	MatchUp 	   *match;
 	Player 		   *tmpPlayer;
 	Player 		   *opponent;
+	Player			newPlayers[NUM_MATCHES*2];
+	int 			ptr = 0;
 	PlayerRequest   req;
 	ServerReply 	reply;
 	GameServer 		server;
@@ -32,38 +35,48 @@ void gameserver_run () {
 	assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
-		Player newPlayer; // since we can't make this in the switch statement .... C .... :(
-		
 		// Receive a message from a player!
+		debug ("game server: Calling Receive. \r\n");
 		Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
+		debug ("game server: Returned from Receive. \r\n");
 
 		assert ( WhoIs(req.name) == senderTid );
 
 		switch(req.type) {
 			case SIGNUP:
 				// Create a Player instance
-				newPlayer.name = req.name;
-				newPlayer.tid  = senderTid;
-				newPlayer.move = 0;
+				newPlayers[ptr].name = req.name;
+				newPlayers[ptr].tid  = senderTid;
+				newPlayers[ptr].move = 0;
 
 				// Add to a match
-				gameserver_addPlayer ( &server, &newPlayer );
+				gameserver_addPlayer ( &server, &newPlayers[ptr] );
 				
+				ptr += 1;
+				assert ( ptr < NUM_MATCHES*2 );
+
 				// If 2 players, start them playing by replying to each
 				if ( ++numNewPlayers == 2 ) {
+					debug ("game server: We have a match up!\r\n");
 					numNewPlayers = 0;
 					
 					// Get the brand new match
 					*match = server.matches[ server.ptr-1 ];
+
+					assert ( match->a != match->b );
+					assert ( match->a->tid != match->b->tid );
+					assert ( strcmp(match->a->name, match->b->name) != 0 );
 
 					// Create the reply
 					reply.result   = START;
 					reply.opponent = match->b->name;
 
 					// Send the replies
+					debug("game server: 1Replying to the new players %d & %d\r\n", match->a->tid, match->b->tid);
 					Reply (match->a->tid, (char *)&reply, sizeof(ServerReply));
 
 					reply.opponent = match->a->name;
+					debug("game server: 2Replying to the new players %d & %d\r\n", match->a->tid, match->b->tid);
 					Reply (match->b->tid, (char *)&reply, sizeof(ServerReply));
 				}
 				// Otherwise, do nothing
@@ -152,9 +165,11 @@ void gameserver_run () {
 }
 
 void gameserver_init (GameServer *server) {
+	debug ("gameserver_init: s: %x \r\n", server);
 
 	// Register with the Name Server
 	RegisterAs ("GameServer");
+	debug ("    GAME SERVER HAS REGISTERED AS. \r\n");
 	
 	server->ptr = 0;
 	
@@ -165,12 +180,15 @@ void gameserver_init (GameServer *server) {
 }
 
 void gameserver_addPlayer (GameServer *s, Player *p) {
+	debug ("gameserver_addPlayer: server: %x player: %x\r\n", s, p);
 	MatchUp *m = &s->matches[s->ptr];
 
 	if ( m->a == 0 ) {
+		debug("game server: Adding as A\r\n");
 		m->a = p;
 	}
 	else {
+		debug("game server: Adding as B\r\n");
 		m->b = p;
 		s->ptr += 1;
 	}
