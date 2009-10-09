@@ -24,7 +24,7 @@ char * memcpy ( char * destination, const char * source, size_t num ) {
 }
 
 int strcmp (const char *str1, const char *str2) {
-	while ( *str1 == *str2++ && *(str1++) != 0 && *(str2++) != 0 ) {}
+	while ( *str1 == *str2 && *(str1++) != 0 && *(str2++) != 0 ) {}
 	
 	if ( *str1 == 0 && *str2 == 0 ) {
 		return 0;
