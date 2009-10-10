@@ -28,7 +28,7 @@ typedef struct {
  */
 typedef struct {
 	NSEntry entries[NUM_NS_ENTRIES]; // The entries for the Name Server
-	int 	ptr;			// A pointer to the next empty NS entry
+	int 	nextEmpty;			// A pointer to the next empty NS entry
 } NameServer;
 
 /**
@@ -56,6 +56,6 @@ void ns_insert (NameServer *ns, const char *name, int tid);
  * name - The name for the tid
  * RETURN: The corresponding tid
  */
-int ns_lookup (NameServer *ns, const char *name);
+NSEntry * ns_lookup (NameServer *ns, const char *name);
 
 #endif
