@@ -70,8 +70,7 @@ int send (TD *sender, PQ *pq, TID tid) {
 
 		// Unblock the receiver
 		pq_insert(pq, receiver);
-	}
-	else {
+	} else {
 		// Put yourself on the other task's send queue.
 		debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
 		queue_push ( &receiver->sendQ, sender );
@@ -172,14 +171,14 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
  * Updates the states of the tasks
  */
 int passMessage ( TD *from, TD *to, MsgType type ) {
-	int ret = NO_ERROR;
-
 	// Get the message buffers and lengths
 	char  *source = from->a->send.msg;
 	size_t sourceLen = from->a->send.msglen;
 	
 	char  *dest = to->a->receive.msg;
 	size_t destLen = to->a->receive.msglen;
+
+	debug("passMessage: from (%d) [%d]bytes to (%d) [%d]bytes\r\n", from->id, sourceLen, to->id, destLen);
 
 	// If we are doing a reply, fetch the buffers from a different location.
 	if ( type == REPLY_2_SEND ) {
@@ -195,7 +194,8 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	// Copy as much as we can and return the copied amount
 	// User tasks should be able to handle this
 	int len = sourceLen;
-	
+	int ret = len;
+
 	if ( destLen < sourceLen ) {
 		len = destLen;
 		ret = (type == REPLY_2_SEND) ? RPLY_BUFFER_FULL : RCV_BUFFER_FULL;
