@@ -18,10 +18,13 @@ LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-
 
 OBJECTS = main/main.o arch/switch.o task/requests.o main/td.o task/task.o syscall/syscalls.o server/nameserver.o task/gameserver.o task/gameplayer.o
 
+HEADERS = include/*.h
+
 all: main/main.elf 
 
 .PRECIOUS: %.s
-%.s: %.c $(wildcard ../include/*.h)
+# the following line assumes that each .c file depends on all the header files
+%.s: %.c $(HEADERS)
 	$(XCC) -S $(CFLAGS) -o $@ $<
 
 %.o: %.c
