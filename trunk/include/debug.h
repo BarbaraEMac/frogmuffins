@@ -24,12 +24,12 @@ void __assert (int test, const char *exp, int line, const char *file);
 /**
  * Print the string to standard output.
  */
-#define debug(args...) bwprintf( COM2, args )
+#define debug(args...) bwputstr( COM2, "\033[32m\t"); bwprintf( COM2, args ); bwputstr( COM2, "\033[37m")
 
 #else
 
 // GCC strips out do while's that do nothing
-#define assert(exp) do {} while (0)
+#define assert(exp)
 
 // GCC strips out do while's that do nothing
 #define debug(args...) do {} while(0)
