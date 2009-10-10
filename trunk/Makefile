@@ -21,7 +21,7 @@ OBJECTS = main/main.o arch/switch.o task/requests.o main/td.o task/task.o syscal
 all: main/main.elf 
 
 .PRECIOUS: %.s
-%.s: %.c ../include/%.h
+%.s: %.c $(wildcard ../include/*.h)
 	$(XCC) -S $(CFLAGS) -o $@ $<
 
 %.o: %.c
