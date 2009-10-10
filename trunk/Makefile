@@ -20,6 +20,7 @@ OBJECTS = main/main.o arch/switch.o task/requests.o main/td.o task/task.o syscal
 
 all: main/main.elf 
 
+.PRECIOUS: %.s
 %.s: %.c ../include/%.h
 	$(XCC) -S $(CFLAGS) -o $@ $<
 
@@ -40,7 +41,7 @@ clean:
 	find . -name '*~' -print | xargs rm -f
 
 
-cpy: 
+upload: 
 	cp main/main.elf /u/cs452/tftpboot/ARM/dgoc/main.elf
 	chmod a+rx -R /u/cs452/tftpboot/ARM/dgoc
 
