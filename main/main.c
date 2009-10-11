@@ -159,7 +159,7 @@ int main( int argc, char* argv[] ) {
 		tmp = schedule (active, &pq);
 		
 		if ( tmp != active ) {
-			bwprintf (COM2, "Scheduled %x (%d)\r\n", tmp, tmp->id);
+			//bwprintf (COM2, "Scheduled %x (%d)\r\n", tmp, tmp->id);
 			active = tmp;
 		}
 
