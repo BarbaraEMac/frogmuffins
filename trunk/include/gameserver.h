@@ -12,19 +12,62 @@
 #define NUM_MATCHES			64
 
 #include "globals.h"
+#include "requests.h"
+/**
+ * The result for a single game of RPS.
+ */
+typedef enum {
+	WIN = 0,
+	LOSE,
+	TIE, 
+	START,
+	YOU_QUIT,
+	OPP_QUIT
+} GameResult;
+
+/**
+ * The moves a player can make in the game RPS.
+ */
+typedef enum {
+	ROCK = 1,
+	PAPER,
+	SCISSORS
+} GameMove;
+
+/**
+ * The type of request a player can make to the server.
+ */
+typedef enum {
+	SIGNUP = 0,
+	PLAY,
+	QUIT
+} RequestType;
+
+/**
+ * Any message from a player will have this form.
+ */
+typedef struct {
+	TaskName 	name;			// Player's name
+	union {
+		RequestType	type;			// Request type
+		TID			tid;			// The task id of the player
+	};
+	GameMove 	move;			// RPS move
+} PlayerRequest;
 
 /**
  * Keeps track of a player instance who has registered with the game server.
  */
-typedef struct {
-	TID tid;		// The task id of the player
-	char *name;		// The name of the player
-	GameMove move;	// The player's move
-} Player;
+typedef PlayerRequest Player;
 
 typedef struct {
-	Player *a;
-	Player *b;
+	union {
+		struct {
+			Player *a;
+			Player *b;
+		};
+		Player player[2];
+	};
 	int moves;
 } MatchUp;
 
@@ -32,22 +75,24 @@ typedef struct {
  * A Game Server
  */
 typedef struct {
+	Player	players[NUM_MATCHES*2];
+	int 	playerCount;
 	MatchUp matches[NUM_MATCHES];
-	int ptr;
+	int 	matchCount;
 } GameServer;
 
 
-void gameserver_init (GameServer *s);
+void gs_init (GameServer *s);
 
-void gameserver_run ();
+void gs_run ();
 
-void gameserver_addPlayer (GameServer *s, Player *p);
+MatchUp *gs_addPlayer (GameServer *s, Player *p);
 
-MatchUp *gameserver_findMatchUp (GameServer *s, TID tid);
+MatchUp *gs_findMatchUp (GameServer *s, TID tid);
 
 void match_init (MatchUp *m);
 
-void match_getPlayers (MatchUp *m, TID tid, Player *a, Player *b);
+void match_getPlayers (MatchUp *m, TID tid, Player **a, Player **b);
 
-int match_play (MatchUp *m);
+GameResult match_play (Player *player, Player *other);
 #endif

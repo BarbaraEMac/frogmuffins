@@ -9,51 +9,15 @@
 #ifndef __GAME_PLAYER_H__
 #define __GAME_PLAYER_H__
 
-/**
- * The result for a single game of RPS.
- */
-typedef enum {
-	WIN = 0,
-	LOSE,
-	TIE, 
-	START,
-	YOU_QUIT,
-	OPP_QUIT
-} GameResult;
+#include "gameserver.h"
 
-/**
- * The moves a player can make in the game RPS.
- */
-typedef enum {
-	ROCK = 1,
-	PAPER,
-	SCISSORS
-} GameMove;
-
-/**
- * The type of request a player can make to the server.
- */
-typedef enum {
-	SIGNUP = 0,
-	PLAY,
-	QUIT
-} RequestType;
-
-/**
- * Any message from a player will have this form.
- */
-typedef struct {
-	char *name;			// Player's name
-	RequestType type;	// Request type
-	GameMove 	move;	// RPS move
-} PlayerRequest;
 
 /**
  * The Game Server's Reply to a player will have this form.
  */
 typedef struct {
-	GameResult result;	// Result of the game
-	char *opponent;		// The player's opponent's name
+	GameResult 	result;			// Result of the game
+	Player 		opponent;		// The player's opponent's name
 } ServerReply;
 
 

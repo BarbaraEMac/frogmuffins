@@ -18,19 +18,6 @@
 
 #define WAIT	 for( i=0; i<200000; i++) {}
 
-/*
-// the following funciton was copied and modified from wikipedia
-int rev_log2(unsigned char x) {
-	int r = 0;
-	while ((x >> r) != 0) { r++; }
-	return 9-r; // returns -1 for x==0, floor(log2(x)) otherwise
-}
-
-void charset( char*str, int len, char ch=0 ) {
-	while( (--len) >= 0 ) str[len] = ch;
-}
-*/
-
 /**
  * Perform a context switch.
  * Gets the request from a user task.
@@ -147,10 +134,10 @@ int main( int argc, char* argv[] ) {
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
-	asm("#; start looking here");
+	asm("#; start setting up swi handler");
 	int volatile * swi = (int *) 0x28;
 	*swi = (int) &kernelEnter;
-	asm("#; stop looking here");
+	asm("#; done setting up the handler");
 	bwprintf( COM2, "Initialized interrupt handler at addr %x. \r\n", *swi );
 	
 	// Initialize the priority queues
@@ -172,7 +159,7 @@ int main( int argc, char* argv[] ) {
 		tmp = schedule (active, &pq);
 		
 		if ( tmp != active ) {
-			bwprintf (COM2, "--------Scheduled %x (%d) --------------\r\n", tmp, tmp->id);
+			bwprintf (COM2, "Scheduled %x (%d)\r\n", tmp, tmp->id);
 			active = tmp;
 		}
 
@@ -182,6 +169,8 @@ int main( int argc, char* argv[] ) {
 		}
 
 		debug ("	Getting the next request.\r\n");
+		//TODO remove following line
+	//	bwprintf( COM2, "returning value %d\r\n", active->returnValue );
 		getNextRequest (active, &nextRequest);
 		debug ("	Got a new request successfully.\r\n");
 		

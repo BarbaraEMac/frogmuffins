@@ -159,7 +159,7 @@ void reset( char*str, int len ) {
     while( (--len) >= 0 ) str[len] = 0;
 }
 
-int main( int argc, char* argv[] ) {
+int trainTask( ) {
 //	char str[] = "Hello\n\r";
     // Initialize variables
     char *input, history[INPUT_HIST][INPUT_LEN];
