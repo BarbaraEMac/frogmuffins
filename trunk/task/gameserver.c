@@ -35,14 +35,14 @@ void gs_run () {
 	
 	// Initialize the Rock, Paper, Scissors Server
 	gs_init (&server);
-	assert ( WhoIs ("GameServer") == MyTid() );
+	//assert ( WhoIs ("GameServer") == MyTid() );
 
 
 	FOREVER {
 		// Receive a message from a player!
 		debug ("game server: Calling Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
-		assert( len = sizeof(PlayerRequest) );
+		assert( len == sizeof(PlayerRequest) );
 		debug ("game server: Returned from Receive. reqtype=%d\r\n", req.type);
 
 //		assert ( WhoIs(req.name) == senderTid );
@@ -63,7 +63,7 @@ void gs_run () {
 					
 					assert ( match->a != match->b );
 					assert ( match->a->tid != match->b->tid );
-					assert ( strcmp(match->a->name, match->b->name) != 0 );
+					//assert ( strcmp(match->a->name, match->b->name) != 0 );
 
 					// Create the reply
 					reply.result   = START;
@@ -86,10 +86,12 @@ void gs_run () {
 				// TODO: What is match is 0? We should error
 				match->moves++;
 				match_getPlayers (match, senderTid, &player, &opponent);
+				debug("game server: recording move %c to player '%s' \r\n", req.move, player->name);
 				player->move = req.move;
 
 				// If both players have played, determine a winner.
 				if ( match->moves == 2 ) {
+					match->moves = 0;
 					reply.opponent = *opponent;
 					reply.result = match_play( player, opponent );
 					Reply (player->tid, (char*)&reply, sizeof(ServerReply));
@@ -106,18 +108,12 @@ void gs_run () {
 				// Locate the match
 				match = gs_findMatchUp (&server, senderTid);
 				
-				// Remove the player from the match.
+				// Prepare to remove the player from the match.
 				match_getPlayers (match, senderTid, &player, &opponent);
-				if (match->a == player) match->a = 0;
-				else match->b = 0;
-
-				// Reply to the player.
-				reply.result = YOU_QUIT;
-				reply.opponent = *opponent;
-				Reply (player->tid, (char*)&reply, sizeof(ServerReply));
+				player->move = QUIT;
 				
 				// Increment the total number of moves for this match.
-				match->moves += 1;
+				match->moves ++;
 				break;
 
 			default:
@@ -136,6 +132,7 @@ void gs_init (GameServer *server) {
 	debug ("    GAME SERVER HAS REGISTERED. \r\n");
 	
 	server->matchCount = 0;
+	server->playerCount = 0;
 	
 	int i;
 	for ( i = 0; i < NUM_MATCHES; i ++ ) {
@@ -192,28 +189,23 @@ void match_getPlayers (MatchUp *m, TID tid, Player **p, Player **o) {
 	*o = ( m->a->tid != tid ) ? m->a : m->b;
 }
 
-GameResult match_play (Player *player, Player *opponent) {
-	debug ("match_play: player='%s' opponent='%s'\r\n", player->name, opponent->name);
+GameResult match_play (Player *p, Player *o) {
+	debug ("match_play: p='%s' %c o='%s' %c\r\n", p->name, p->move, o->name, o->move);
 	// If an opponent quit, let the player know.
-	if ( opponent == 0 ) {
-		return OPP_QUIT;
-	}
+	if ( o->move == QUIT ) return OPP_QUIT;
+	if ( p->move == QUIT ) return YOU_QUIT;  
 	
 	// Determine a winner!
-	GameMove aMove = player->move;
-	GameMove bMove = player->move;
-	
-	// Reset the moves.
-	player->move = 0;
-	opponent->move = 0;
-
-	if ( aMove == bMove ) {
+	if ( p->move == o->move ) {
+		debug ("\tmatch_play: result TIE \r\n");
 		return TIE;
-	} else if (	(aMove == ROCK     && bMove == SCISSORS) || 
-			  	(aMove == PAPER    && bMove == ROCK)     || 
-			  	(aMove == SCISSORS && bMove == PAPER) ) {
+	} else if (	(p->move == ROCK     && o->move == SCISSORS) || 
+			  	(p->move == PAPER    && o->move == ROCK)     || 
+			  	(p->move == SCISSORS && o->move == PAPER) ) {
+		debug ("\tmatch_play: result LOSE \r\n");
 		return  LOSE;
 	} else {
+		debug ("\tmatch_play: result WIN \r\n");
 		return WIN;
 	}
 }

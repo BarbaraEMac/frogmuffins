@@ -33,9 +33,10 @@ void k2_firstUserTask () {
 	Create (1, &gs_run);
 
 	// Create players for the game server
-	debug ("Creating 2 players. \r\n");
+	debug ("Creating 3 players. \r\n");
 	Create (2, &rockPlayer);
 	Create (2, &paperPlayer);
+	Create (2, &scissorsPlayer);
 
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");

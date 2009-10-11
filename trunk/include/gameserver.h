@@ -29,9 +29,9 @@ typedef enum {
  * The moves a player can make in the game RPS.
  */
 typedef enum {
-	ROCK = 1,
-	PAPER,
-	SCISSORS
+	ROCK = 'R',
+	PAPER = 'P',
+	SCISSORS = 'S'
 } GameMove;
 
 /**
@@ -40,7 +40,7 @@ typedef enum {
 typedef enum {
 	SIGNUP = 0,
 	PLAY,
-	QUIT
+	QUIT = 'Q'
 } RequestType;
 
 /**

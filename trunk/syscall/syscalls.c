@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
@@ -125,7 +125,7 @@ int receive (TD *receiver, TID *tid) {
   • -4 – if there was insufficient space for the entire reply in the sender’s reply buffer.
 */
 int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
-	debug ("rply: from=%x to=%x (%d) \r\n", from, pq_fetchById(pq, tid), tid);
+	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, pq_fetchById(pq, tid), tid);
 	assert ( from != 0 );
 	assert ( pq != 0 );
 	int ret = NO_ERROR;
@@ -178,13 +178,13 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	char  *dest = to->a->receive.msg;
 	size_t destLen = to->a->receive.msglen;
 
-	debug("passMessage: from (%d) [%d]bytes to (%d) [%d]bytes\r\n", from->id, sourceLen, to->id, destLen);
 
 	// If we are doing a reply, fetch the buffers from a different location.
 	if ( type == REPLY_2_SEND ) {
 		dest = to->a->send.reply;
 		destLen = to->a->send.rpllen;
 	}
+	debug("passMessage: from (%d) [%d]bytes to (%d) [%d]bytes\r\n", from->id, sourceLen, to->id, destLen);
 
 	// Verify the pointers point to valid memory addresses
 	assert( isValidMem(source, from) == NO_ERROR );
