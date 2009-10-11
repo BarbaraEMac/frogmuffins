@@ -159,6 +159,7 @@ int main( int argc, char* argv[] ) {
 		tmp = schedule (active, &pq);
 		
 		if ( tmp != active ) {
+			bwgetc( COM2 );
 			//bwprintf (COM2, "Scheduled %x (%d)\r\n", tmp, tmp->id);
 			active = tmp;
 		}
@@ -169,8 +170,6 @@ int main( int argc, char* argv[] ) {
 		}
 
 		debug ("	Getting the next request.\r\n");
-		//TODO remove following line
-	//	bwprintf( COM2, "returning value %d\r\n", active->returnValue );
 		getNextRequest (active, &nextRequest);
 		debug ("	Got a new request successfully.\r\n");
 		
