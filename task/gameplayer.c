@@ -7,7 +7,6 @@
  */
 
 #define DEBUG
-#define	MSG_LEN		1024
 
 #include <bwio.h>
 #include <ts7200.h>
@@ -50,17 +49,17 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 		// Print the appropriate message.
 		switch ( reply.result ) {
 			case WIN:
-				bwprintf (COM2, "Player %s (%d): Won against %s (%d)!\r\n", 
+				bwprintf (COM2, "Player: %s (%d): Won against %s (%d)!\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent.tid);
 				break;
 			
 			case LOSE:
-				bwprintf (COM2, "Player %s (%d): Lost to %s (%d) :\(.\r\n", 
+				bwprintf (COM2, "Player: %s (%d): Lost to %s (%d) :\(.\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent.tid);
 				break;
 			
 			case TIE:
-				bwprintf (COM2, "Player %s (%d): Tied with %s (%d).\r\n", 
+				bwprintf (COM2, "Player: %s (%d): Tied with %s (%d).\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent);
 				break;
 
@@ -71,9 +70,12 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	}
 
 	// This player is bored. Quit playing.
-	bwprintf (COM2, "Player %s (%d): Quitting.r\n", name, myTid);
+	bwprintf (COM2, "Player: %s (%d): Quitting.\r\n", name, myTid);
 	req.type = QUIT;
 	Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
+
+	// Exit the player
+	Exit();
 }
 
 // Only plays rock
@@ -82,18 +84,13 @@ void rockPlayer () {
 	char *name = "Dwayne J.";
 	
 	genericPlayer (name, ROCK, 3);
-
-	Exit();
 }
-
 // Only plays scissors
 void scissorsPlayer () {
 	debug ("Scissors player is starting. \r\n");
 	char *name = "Edward S.";
 
 	genericPlayer (name, SCISSORS, 3);
-
-	Exit();
 }
 
 // Only plays paper
@@ -102,6 +99,4 @@ void paperPlayer () {
 	char *name = "Paper Mario";
 	
 	genericPlayer (name, PAPER, 3);
-
-	Exit();
 }
