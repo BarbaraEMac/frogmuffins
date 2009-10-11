@@ -79,9 +79,9 @@ Returns.
 
 TID WhoIs (char *name) {
 	NSRequest req;
-	int tid;
+	TID tid;
 	req.type = WHOIS;
 	strncpy( req.name, name, sizeof(req.name));
-	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &tid, sizeof(int) );
+	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &tid, sizeof(TID) );
 	return tid;
 }

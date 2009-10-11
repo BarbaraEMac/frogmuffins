@@ -10,73 +10,70 @@
 
 #include <bwio.h>
 #include <ts7200.h>
+#include <string.h>
 
 #include "debug.h"
 #include "requests.h"
 #include "gameplayer.h"
 #include "gameserver.h"
 
-void gameserver_run () {
+typedef union {
+	char name[NAME_LEN];
+} nem;
+
+
+void gs_run () {
 	debug ("Game Server is starting up. \r\n");
 
-	int 			numNewPlayers = 0;
-	int 			senderTid;
+	int 			senderTid, len;
 	MatchUp 	   *match;
-	Player 		   *tmpPlayer;
-	Player 		   *opponent;
-	Player			newPlayers[NUM_MATCHES*2];
-	int 			ptr = 0;
+	Player 		   *player, *opponent;
+
 	PlayerRequest   req;
 	ServerReply 	reply;
 	GameServer 		server;
 	
 	// Initialize the Rock, Paper, Scissors Server
-	gameserver_init (&server);
+	gs_init (&server);
 	assert ( WhoIs ("GameServer") == MyTid() );
+
 
 	FOREVER {
 		// Receive a message from a player!
 		debug ("game server: Calling Receive. \r\n");
-		Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
-		debug ("game server: Returned from Receive. \r\n");
+		len = Receive ( &senderTid, (char *) &req, sizeof(PlayerRequest));
+		assert( len = sizeof(PlayerRequest) );
+		debug ("game server: Returned from Receive. reqtype=%d\r\n", req.type);
 
-		assert ( WhoIs(req.name) == senderTid );
+//		assert ( WhoIs(req.name) == senderTid );
+
 
 		switch(req.type) {
 			case SIGNUP:
 				// Create a Player instance
-				newPlayers[ptr].name = req.name;
-				newPlayers[ptr].tid  = senderTid;
-				newPlayers[ptr].move = 0;
+				player = &req;
+				player->tid  = senderTid;			// NOTE: this overwrites req.typ
 
 				// Add to a match
-				gameserver_addPlayer ( &server, &newPlayers[ptr] );
-				
-				ptr += 1;
-				assert ( ptr < NUM_MATCHES*2 );
+				match = gs_addPlayer ( &server, player );
 
 				// If 2 players, start them playing by replying to each
-				if ( ++numNewPlayers == 2 ) {
+				if ( match != 0 ) {
 					debug ("game server: We have a match up!\r\n");
-					numNewPlayers = 0;
 					
-					// Get the brand new match
-					*match = server.matches[ server.ptr-1 ];
-
 					assert ( match->a != match->b );
 					assert ( match->a->tid != match->b->tid );
 					assert ( strcmp(match->a->name, match->b->name) != 0 );
 
 					// Create the reply
 					reply.result   = START;
-					reply.opponent = match->b->name;
 
 					// Send the replies
-					debug("game server: 1Replying to the new players %d & %d\r\n", match->a->tid, match->b->tid);
+					reply.opponent = *match->b;
+					debug("game server: Replying to player A %d \r\n", match->a->tid);
 					Reply (match->a->tid, (char *)&reply, sizeof(ServerReply));
-
-					reply.opponent = match->a->name;
-					debug("game server: 2Replying to the new players %d & %d\r\n", match->a->tid, match->b->tid);
+					reply.opponent = *match->a;
+					debug("game server: Replying to player B %d \r\n", match->b->tid);
 					Reply (match->b->tid, (char *)&reply, sizeof(ServerReply));
 				}
 				// Otherwise, do nothing
@@ -84,74 +81,40 @@ void gameserver_run () {
 			
 			case PLAY:
 				// Store the move
-				match = gameserver_findMatchUp (&server, senderTid);
+				match = gs_findMatchUp (&server, senderTid);
 				
 				// TODO: What is match is 0? We should error
-				match->moves += 1;
-				match_getPlayers (match, senderTid, tmpPlayer, opponent);
-				tmpPlayer->move = req.move;
+				match->moves++;
+				match_getPlayers (match, senderTid, &player, &opponent);
+				player->move = req.move;
 
 				// If both players have played, determine a winner.
-				// TODO: UUUUGGGGGLLLLLYYYYY
 				if ( match->moves == 2 ) {
-					switch(match_play(match)) {
-						case 0 /*TIE*/:
-							reply.result = TIE;
-							reply.opponent = match->b->name;
-							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
-							reply.opponent = match->a->name;
-							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
-							break;
-						
-						case 1 /*a won*/:
-							reply.result = WIN;
-							reply.opponent = match->b->name;
-							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
-							
-							reply.result = LOSE;
-							reply.opponent = match->a->name;
-							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
-							break;
+					reply.opponent = *opponent;
+					reply.result = match_play( player, opponent );
+					Reply (player->tid, (char*)&reply, sizeof(ServerReply));
 
-						case -1 /*b won*/:
-							reply.result = WIN;
-							reply.opponent = match->a->name;
-							Reply (match->b->tid, (char*)&reply, sizeof(ServerReply));
-							
-							reply.result = LOSE;
-							reply.opponent = match->a->name;
-							Reply (match->a->tid, (char*)&reply, sizeof(ServerReply));
-							
-							break;
-						case -2 /*Opponent Quit*/:
-							reply.result = OPP_QUIT;
-							reply.opponent = opponent->name;
-							Reply (tmpPlayer->tid, (char*)&reply, sizeof(ServerReply));
-							break;
-						default:
-							assert (1 == 0); // TODO: THis should never happen
-							break;
-					}
-				}
-				else {
-					// Wait for opponent to make their move (do nthing)
-					;
+					reply.opponent = *player;
+					reply.result = match_play( opponent, player );
+					Reply (opponent->tid, (char*)&reply, sizeof(ServerReply));
+				} else {
+					// Wait for opponent to make their move (do nothing)
 				}
 				break;
 			
 			case QUIT:
 				// Locate the match
-				match = gameserver_findMatchUp (&server, senderTid);
+				match = gs_findMatchUp (&server, senderTid);
 				
 				// Remove the player from the match.
-				match_getPlayers (match, senderTid, tmpPlayer, opponent);
-				if (match->a == tmpPlayer) match->a = 0;
+				match_getPlayers (match, senderTid, &player, &opponent);
+				if (match->a == player) match->a = 0;
 				else match->b = 0;
 
 				// Reply to the player.
 				reply.result = YOU_QUIT;
-				reply.opponent = opponent->name;
-				Reply (tmpPlayer->tid, (char*)&reply, sizeof(ServerReply));
+				reply.opponent = *opponent;
+				Reply (player->tid, (char*)&reply, sizeof(ServerReply));
 				
 				// Increment the total number of moves for this match.
 				match->moves += 1;
@@ -159,19 +122,20 @@ void gameserver_run () {
 
 			default:
 				error (1, "Invalid RPS type.");
+				Exit();
 				break;
 		}
 	}
 }
 
-void gameserver_init (GameServer *server) {
-	debug ("gameserver_init: s: %x \r\n", server);
+void gs_init (GameServer *server) {
+	debug ("gs_init: s: %x \r\n", server);
 
 	// Register with the Name Server
 	RegisterAs ("GameServer");
-	debug ("    GAME SERVER HAS REGISTERED AS. \r\n");
+	debug ("    GAME SERVER HAS REGISTERED. \r\n");
 	
-	server->ptr = 0;
+	server->matchCount = 0;
 	
 	int i;
 	for ( i = 0; i < NUM_MATCHES; i ++ ) {
@@ -179,30 +143,36 @@ void gameserver_init (GameServer *server) {
 	}
 }
 
-void gameserver_addPlayer (GameServer *s, Player *p) {
-	debug ("gameserver_addPlayer: server: %x player: %x\r\n", s, p);
-	MatchUp *m = &s->matches[s->ptr];
+MatchUp *gs_addPlayer (GameServer *s, Player *p) {
+	debug ("gs_addPlayer: server: %x player: '%s'\r\n", s, p->name);
+	assert ( s->playerCount < NUM_MATCHES*2 );
 
+	MatchUp *m = &s->matches[s->matchCount];
+	s->players[s->playerCount] = *p;	// this deep copies the name by MAGIC
+	p = &s->players[s->playerCount++];
+	
 	if ( m->a == 0 ) {
-		debug("game server: Adding as A\r\n");
+		debug("\tgs_AddPlayer: Adding as A\r\n");
 		m->a = p;
-	}
-	else {
-		debug("game server: Adding as B\r\n");
+		return 0;
+	} else {
+		debug("\tgs_AddPlayer: Adding as B\r\n");
 		m->b = p;
-		s->ptr += 1;
+		s->matchCount++;
+		return m;
 	}
 }
 
-MatchUp *gameserver_findMatchUp (GameServer *s, TID tid) {
+MatchUp *gs_findMatchUp (GameServer *s, TID tid) {
+	debug ("gs_findMatchUp: server: %x tid: (%d)\r\n", s, tid);
 	int i;
-	int totalMatchUpes = s->ptr;
 	MatchUp *m;
 	
-	for ( i = 0; i < totalMatchUpes; i ++ ) {
+	for ( i = 0; i < s->matchCount ; i ++ ) {
 		m = &s->matches[i];
 
 		if ( (m->a->tid == tid) || (m->b->tid == tid) ) {
+			debug ("\tgs_findMatchUp: found A='%s' B='%s'\r\n", m->a->name, m->b->name);
 			return m;
 		}
 	}
@@ -216,52 +186,34 @@ void match_init (MatchUp *m) {
 	m->moves = 0;
 }
 
-void match_getPlayers (MatchUp *m, TID tid, Player *p, Player *o) {
-	*p = ( m->a->tid == tid ) ? *m->a : *m->b;
-	*o = ( m->a->tid != tid ) ? *m->a : *m->b;
+void match_getPlayers (MatchUp *m, TID tid, Player **p, Player **o) {
+	debug("match_getPlayers: m=%x, tid=%d \r\n", m, tid);
+	*p = ( m->a->tid == tid ) ? m->a : m->b;
+	*o = ( m->a->tid != tid ) ? m->a : m->b;
 }
 
-int match_play (MatchUp *m) {
-	Player *a = m->a;
-	Player *b = m->b;
-	
+GameResult match_play (Player *player, Player *opponent) {
+	debug ("match_play: player='%s' opponent='%s'\r\n", player->name, opponent->name);
 	// If an opponent quit, let the player know.
-	if ( (a == 0) || (b == 0) ) {
-		
-		int replyTid;	
-		ServerReply reply;
-		reply.result = OPP_QUIT;
-		
-		if ( a == 0 ) {
-			replyTid = b->tid;
-			reply.opponent = a->name;
-		}
-		else {
-			replyTid = a->tid;
-			reply.opponent = b->name;
-		}
-		
-		Reply ( replyTid, (char *)&reply, sizeof(ServerReply) );
-		return -2;
+	if ( opponent == 0 ) {
+		return OPP_QUIT;
 	}
 	
 	// Determine a winner!
-	GameMove aMove = a->move;
-	GameMove bMove = b->move;
+	GameMove aMove = player->move;
+	GameMove bMove = player->move;
 	
 	// Reset the moves.
-	a->move = 0;
-	b->move = 0;
+	player->move = 0;
+	opponent->move = 0;
 
 	if ( aMove == bMove ) {
-		return 0;
-	}
-	else if ( (aMove == ROCK     && bMove == SCISSORS)|| 
-			  (aMove == PAPER    && bMove == ROCK)    || 
-			  (aMove == SCISSORS && bMove == PAPER) ) {
-		return -1;
-	}
-	else {
-		return 1;
+		return TIE;
+	} else if (	(aMove == ROCK     && bMove == SCISSORS) || 
+			  	(aMove == PAPER    && bMove == ROCK)     || 
+			  	(aMove == SCISSORS && bMove == PAPER) ) {
+		return  LOSE;
+	} else {
+		return WIN;
 	}
 }

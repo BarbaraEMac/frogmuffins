@@ -9,7 +9,7 @@
 
 #include "requests.h"
 
-#define NUM_NS_ENTRIES	1024
+#define NUM_NS_ENTRIES	256
 
 /**
  * A Name Server Entry

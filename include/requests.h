@@ -20,10 +20,13 @@ enum NSRequestCode {
 	WHOIS
 };
 
+typedef char TaskName[NAME_LEN];
+
 typedef struct {
-	enum NSRequestCode type;
-	char name[NAME_LEN];
+	enum NSRequestCode 	type;
+	TaskName 			name;
 } NSRequest;
+
 
 // More to be added later
 enum RequestCode {
