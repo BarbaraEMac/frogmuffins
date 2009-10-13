@@ -32,4 +32,6 @@ void scissorsPlayer();
 
 void clonePlayer();
 
+void robinPlayer();
+
 #endif
