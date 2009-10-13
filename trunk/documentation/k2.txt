@@ -218,8 +218,22 @@ Question 5
 	For the same reason as above, the Game Server is also created at the second
 	highest priority (1).
 
-	Players .....
-	
+	All player tasks are created at priorities equal to or lower than 1
+	(ie. 2 -> 9). We've increased the number of priorities for this assignment
+	so that we can better test it. 
+
+	4 players are created at priority 2 to ensure that the correct players play
+	against each other at the same priority.
+
+	2 players are created at priority 1 to verify that we can have players
+	at the same priority as the servers.
+
+	1 player is created at priority 3 and 1 at priority 4 to ensure that players
+	with different priorities can still play an entire match together.
+
+	Finally, we create 60 players at varying priorities above 5. These players
+	will all run once the first 8 have finished. These players test the system to
+	ensure that a high number of players can play together at different priorities.
 
 Question 6 
 ==========
@@ -234,4 +248,38 @@ Question 6
 
 
 	Here is a description of why this output is correct:
+	
+	Player Moves
+	============
+	Our game has 3 player types: stubborn, clone, and round robin players.
+	Dwayne J. always plays Rock, Edward S. always plays Scissors, and Paper
+	Mario always plays Paper. The EvilClones look at the previous match and
+	play the move that would win if their opponent plays the same move as in the
+	previous match. Therefore, the EvilClones will always win against these 3
+	players after the first match. RobinHood players start by playing Scissors
+	and play Rock and Paper in that order and keep cycling.
+	
+	In the beginning, the first 4 players play in round robin order. The first
+	task makes their move, the second task makes their move, then the third,
+	and finally the fourth are scheduled since they are all at the same priority.
+	Hence, the output cycles between each of the first four players. They will 
+	each make their moves, the server determines the winner and losers, and the
+	results are output. Each player plays three times. Due to the logic above,
+	the stubborn players will probably win during the first round, but will 
+	lose for all of the rest since they are each playing against a clone.
+
+	The second round is a sanity test that players can be at the same priority
+	as the name and game servers. The scissors player will win the first match and
+	the clone will win for the remaining 2 matches.
+
+	After this, the next 2 players will be scheduled. They are both clone players 
+	and both start by playing scissors. Then, they will switch and each play rock.
+	Then, they will both play paper. Thus, both players will tie for every match
+	until they exit.
+
+	Finally, the last 60 players are scheduled to run.
+
+
+	..... explanation of output ....
+
 
