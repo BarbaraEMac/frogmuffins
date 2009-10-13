@@ -153,8 +153,6 @@ int main( int argc, char* argv[] ) {
 		error ( (int) active, "Initializing the first task");
 	}
 
-	TD *tmp;
-
 	FOREVER {	
 		debug ("	Scheduling a new task.\r\n");
 		active = schedule (active, &pq);
