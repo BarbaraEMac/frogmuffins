@@ -78,7 +78,8 @@ void gs_run () {
 				// Store the move
 				match = gs_findMatchUp (&server, senderTid);
 				
-				// TODO: What is match is 0? We should error
+				assert ( match != 0 );
+
 				match->moves++;
 				match_getPlayers (match, senderTid, &player, &opponent);
 				debug("game server: recording move %c to player '%s' \r\n", req.move, player->name);
@@ -109,8 +110,10 @@ void gs_run () {
 				
 				// Increment the total number of moves for this match.
 				match->moves ++;
-
-				// TODO: Why is the Reply removed? This player will remain blocked forever ..
+	
+				// This player will be unblocked when their opponent plays.
+				// The opponent will know they quit and this player will know it quit and 
+				// will call Exit().
 				break;
 
 			default:
