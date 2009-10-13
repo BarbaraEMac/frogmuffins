@@ -89,9 +89,11 @@ void gs_run () {
 					reply.result = match_play( player, opponent );
 					Reply (player->tid, (char*)&reply, sizeof(ServerReply));
 
-					reply.opponent = *player;
-					reply.result = match_play( opponent, player );
-					Reply (opponent->tid, (char*)&reply, sizeof(ServerReply));
+					if( opponent->move != QUIT ) {
+						reply.opponent = *player;
+						reply.result = match_play( opponent, player );
+						Reply (opponent->tid, (char*)&reply, sizeof(ServerReply));
+					}
 				} else {
 					// Wait for opponent to make their move (do nothing)
 				}
@@ -109,8 +111,11 @@ void gs_run () {
 				match->moves ++;
 	
 				// This player will be unblocked when their opponent plays.
-				// The opponent will know they quit and this player will know it quit and 
-				// will call Exit().
+				// The opponent will know they quit and this player will 
+				// know it quit and will call Exit().
+				reply.opponent = *opponent;
+				reply.result = match_play( player, opponent );
+				Reply (player->tid, (char*)&reply, sizeof(ServerReply));
 				break;
 
 			default:

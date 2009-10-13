@@ -75,6 +75,7 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 	req.type = QUIT;
 	Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 
+	bwprintf (COM2, "Player: %s (%d): Quit.\r\n", name, myTid);
 	// Exit the player
 	Exit();
 }
