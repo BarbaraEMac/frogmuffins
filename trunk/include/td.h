@@ -41,7 +41,7 @@ typedef int BitField;
 struct taskdesc {
 	volatile int spsr;				// Saved Processor State Register
 	union {
-		int volatile * volatile sp;			// Stack Pointer
+		int volatile * volatile sp;		// Stack Pointer
 		ReqArgs * volatile a;			// request arguments in a neatly avaiable union
 	};
 	int returnValue;		// Value to pass to asm if we need to 
