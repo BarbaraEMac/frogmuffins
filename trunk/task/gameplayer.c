@@ -99,6 +99,9 @@ GameMove predict( GameMove mine, GameMove theirs ) {
 	}
 }
 
+GameMove robin( GameMove mine, GameMove theirs ) {
+	return predict( mine, mine );
+}
 // Only plays rock
 void rockPlayer () {
 	debug ("Rock player is starting. \r\n");
@@ -126,9 +129,20 @@ void clonePlayer () {
 	TID id = MyTid();
 	char name[] = "EvilClone  ";
 	// copy the id into the name
-	itoa( id, &name[9] );
+	itoa( id , &name[9] );
 
 	debug("%s (%d) is starting. \r\n", name, id);
 
 	genericPlayer (name, PAPER, &predict, 3);
+}
+
+void robinPlayer () {
+	TID id = MyTid();
+	char name[] = "RobinHood  ";
+	// copy the id into the name
+	itoa( id % 64, &name[9] );
+
+	debug("%s (%d) is starting. \r\n", name, id);
+
+	genericPlayer (name, SCISSORS, &robin, 3);
 }
