@@ -162,6 +162,17 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	return td;
 }
 
+void td_destroy (TD *td, PQ *pq) {
+	assert( td->state == DEFUNCT );
+	int idx = (td->id) % NUM_TDS; 
+
+	// Mark the td as unused
+	pq_setUsed( pq, idx, 0 );
+	/*bwprintf( COM2, "empty=%08x %08x \r\n", pq->empty[1], pq->empty[0] );
+	bwprintf( COM2, "destroying TD at idx:%d\r\n", idx);
+	bwgetc(COM2);*/
+}
+
 void pq_insert ( PQ *this, TD *td ) {
 	debug ("pq_insert this=%x td=%x priority=%d state=%d.\r\n",
 			this, td, td->priority, td->state);
@@ -243,7 +254,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 		return (TD *) NEG_TID;
 	}
 
-	int idx= tid & 0x3F;
+	int idx= tid % NUM_TDS;
 	
 	// Check if TD is in use
 	if ( pq_isEmpty( this, idx) ) {

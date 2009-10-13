@@ -96,6 +96,13 @@ void pq_init (PQ *pq);
 TD * td_create (int priority, Task start, TID parentId, PQ *pq);
 
 /**
+ * Recycle the space associated witht a TD
+ * td - the task descriptor that has exited
+ * pq - The prority queue manager
+ */
+void td_destroy (TD *td, PQ *pq);
+
+/**
  * Initialize a single td.
  * priority - The priority for the new TD.
  * start - The user task function.

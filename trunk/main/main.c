@@ -88,6 +88,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
+			td_destroy( td, pq );
 			debug( "Exiting task,\r\n");
 			break;
 
