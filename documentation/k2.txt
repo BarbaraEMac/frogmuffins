@@ -183,7 +183,7 @@ Question 4
 	error.h  globals.h     requests.h    switch.h  td.h
 
 	lib:
-	libbwio.a  libdebug.a  libstring.a
+	libbwio.a  libdebug.a  libstring.a	libclock.a
 
 	main:
 	main.c  orex.ld  td.c
