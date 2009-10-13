@@ -45,8 +45,6 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 		bwprintf (COM2, "Player: %s (%d): Playing %c.\r\n", name, myTid, req.move);
 		Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 
-		bwgetc(COM2);
-
 		// Process the server's reply
 		// Print the appropriate message.
 		switch ( reply.result ) {
