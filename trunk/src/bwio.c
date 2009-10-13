@@ -5,8 +5,9 @@
  *
  */
 
-#include <ts7200.h>
 #include <bwio.h>
+#include <clock.h>
+#include <ts7200.h>
 
 /*
  * The UARTs are initialized by RedBoot to the following state
@@ -115,8 +116,8 @@ int bwputc( int channel, char c ) {
 int bwputx( int channel, char c ) {
 	char chh, chl;
 
-	chh = c2x( c / 16 );
-	chl = c2x( c % 16 );
+	chh = ctox( c / 16 );
+	chl = ctox( c % 16 );
 	bwputc( channel, chh );
 	return bwputc( channel, chl );
 }
