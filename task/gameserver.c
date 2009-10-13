@@ -30,7 +30,7 @@ void gs_run () {
 	
 	// Initialize the Rock, Paper, Scissors Server
 	gs_init (&server);
-	 assert ( WhoIs ("GameServer") == MyTid() );
+	assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
 		// Receive a message from a player!
