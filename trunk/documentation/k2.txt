@@ -179,7 +179,7 @@ Question 4
 
 	include:
 	bwio.h   gameplayer.h  main.h        shell.h   syscalls.h  ts7200.h
-	debug.h  gameserver.h  nameserver.h  string.h  task.h
+	debug.h  gameserver.h  nameserver.h  string.h  task.h	   clock.h
 	error.h  globals.h     requests.h    switch.h  td.h
 
 	lib:
@@ -192,7 +192,7 @@ Question 4
 	nameserver.c
 
 	src:
-	bwio.c  debug.c  Makefile  string.c
+	bwio.c  debug.c  Makefile  string.c	clock.c
 
 	syscall:
 	syscalls.c
@@ -231,7 +231,7 @@ Question 5
 	1 player is created at priority 3 and 1 at priority 4 to ensure that players
 	with different priorities can still play an entire match together.
 
-	Finally, we create 60 players at varying priorities above 5. These players
+	Finally, we create 50 players at varying priorities above 5. These players
 	will all run once the first 8 have finished. These players test the system to
 	ensure that a high number of players can play together at different priorities.
 
@@ -277,7 +277,7 @@ Question 6
 	Then, they will both play paper. Thus, both players will tie for every match
 	until they exit.
 
-	Finally, the last 60 players are scheduled to run.
+	Finally, the last 50 players are scheduled to run.
 
 
 	..... explanation of output ....
