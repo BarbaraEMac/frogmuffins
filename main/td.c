@@ -35,11 +35,12 @@ int pq_isEmpty ( PQ *this, unsigned int idx ) {
 	assert ( idx < NUM_TDS );
 	unsigned int i = idx / (BITFIELD_WIDTH);// the index of the bitfield
 	unsigned int s = idx % (BITFIELD_WIDTH);// the position in the bitfield
-//debug ( "\tREMOVE THIS, empty=%x %x\r\n", this->empty[1], this->empty[0] );
+	
 	int ans =  ( this->empty[i] & (1 << s) ); 
 	debug ( "\tpq_isEmpty return=%d\r\n", ans );
 	return ans;
 }
+
 int pq_getUnused ( const PQ *this ) {
 	debug ( "\tpq_getUnused this=%x\r\n", this );
 	int i;
