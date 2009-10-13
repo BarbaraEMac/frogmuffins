@@ -18,7 +18,8 @@
 
 #include "gameplayer.h"
 
-void genericPlayer (char *name, GameMove move, int timesToPlay) {
+
+void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPlay) {
 	int i;
 	int myTid = MyTid();
 	int gameServer = WhoIs ("GameServer");
@@ -26,10 +27,10 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	// Initialize this player's request to be sent to the game server
 	PlayerRequest req;
 	strncpy(req.name, name, sizeof(req.name));
-	req.move = move;
+	req.move = start;
 
 	// Register with the name server
-	bwprintf (COM2, "Player: Registering as \"%s\"(%d).\r\n", name, myTid);
+	bwprintf (COM2, "Player: Registering as \"%s\"(%d).\r\n", req.name, myTid);
 	RegisterAs (name);
 	assert ( WhoIs(name) == MyTid() );
 
@@ -41,7 +42,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	// Play the game
 	req.type = PLAY;
 	for ( i = 0; i < timesToPlay; i ++ ) {
-		bwprintf (COM2, "Player: %s (%d): Playing %c.\r\n", name, myTid, move);
+		bwprintf (COM2, "Player: %s (%d): Playing %c.\r\n", name, myTid, req.move);
 		Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 
 		bwgetc(COM2);
@@ -68,6 +69,7 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 				assert ( 1 == 0 ); // You should NEVER get here
 				break;
 		}
+		req.move = getNext(req.move, reply.opponent.move);
 	}
 
 	// This player is bored. Quit playing.
@@ -79,19 +81,45 @@ void genericPlayer (char *name, GameMove move, int timesToPlay) {
 	Exit();
 }
 
+GameMove paper( GameMove mine, GameMove theirs ) {
+	return PAPER;
+}
+GameMove rock( GameMove mine, GameMove theirs ) {
+	return ROCK;
+}
+GameMove scissors( GameMove mine, GameMove theirs ) {
+	return SCISSORS;
+}
+GameMove mirror( GameMove mine, GameMove theirs ) {
+	return theirs;
+}
+GameMove predict( GameMove mine, GameMove theirs ) {
+	switch( theirs ) {
+		case ROCK:
+			return PAPER;
+		case SCISSORS:
+			return ROCK;
+		case PAPER:
+			return SCISSORS;
+		defalut:
+			debug( "We should NEVER get here. Unrecognized move.");
+			return 0;
+	}
+}
+
 // Only plays rock
 void rockPlayer () {
 	debug ("Rock player is starting. \r\n");
 	char *name = "Dwayne J.";
 	
-	genericPlayer (name, ROCK, 3);
+	genericPlayer (name, ROCK, &rock, 3);
 }
 // Only plays scissors
 void scissorsPlayer () {
 	debug ("Scissors player is starting. \r\n");
 	char *name = "Edward S.";
 
-	genericPlayer (name, SCISSORS, 3);
+	genericPlayer (name, SCISSORS, &scissors, 3);
 }
 
 // Only plays paper
@@ -99,5 +127,18 @@ void paperPlayer () {
 	debug ("Paper player is starting. \r\n");
 	char *name = "Paper Mario";
 	
-	genericPlayer (name, PAPER, 3);
+	genericPlayer (name, PAPER, &paper, 3);
 }
+
+void clonePlayer () {
+	TID id = MyTid();
+	char name[] = "EvilClone  ";
+	// copy the id into the name
+	itoa( id, &name[9] );
+
+	debug("%s (%d) is starting. \r\n", name, id);
+
+	genericPlayer (name, PAPER, &predict, 3);
+}
+
+

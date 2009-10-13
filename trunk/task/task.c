@@ -37,11 +37,11 @@ void k2_firstUserTask () {
 	Create (2, &rockPlayer);
 	Create (2, &paperPlayer);
 	Create (2, &scissorsPlayer);
-	Create (2, &scissorsPlayer);
+	Create (2, &clonePlayer);
 	Create (1, &paperPlayer);
 	Create (1, &scissorsPlayer);
 	Create (1, &rockPlayer);
-	Create (1, &scissorsPlayer);
+	Create (1, &clonePlayer);
 
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");

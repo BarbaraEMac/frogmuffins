@@ -36,18 +36,18 @@ Question 2
 	==
 	The task descriptor struct was modified to include a send queue. When a user
 	task sends a message, it blocks itself and waits on the receiver's send queue.
-	Since we are also trying to get gcc to compile in opitmized mode, many members
+	Since we are also trying to get gcc to compile in optmized mode, many members
 	we made volatile. We are still in the process of getting optimized mode to
 	work.
-	Finally, we also added a union to be able to get any system call arguments
-	cleanly and nicely.
+	Finally, we also added a union of structs (that points to the sp) to be able
+	to get at any system call arguments by the system call and argument names.
 
 	Message Passing
 	===============
 	We added message passing for kernel 2 and will describe the additional
 	algorithms and data structures below. Professor Cowan gave general 
 	message passing algorithms in class and the following algorithms are based
-	off his notes.
+	on his notes.
 	
 	Send
 	====
@@ -59,7 +59,7 @@ Question 2
 	The pseudo-code for the Send() function is:
 
 	1. Error check all arguments.
-	2. Fetch the receiver task using the supplied task id.
+	2. Fetch the receiver task using the supplied task id. 		(in O(1) time)
 	3. Set the sender state to RECEIVE_BLOCKED.
 	4. If the receiver is SEND_BLOCKED,
 	5.		Copy the message to the receiver's address space.
@@ -71,7 +71,8 @@ Question 2
 	11.		Wait for the receiver to call Receive().
 	
 	If any errors occur during the execution of Send(), they are caught and
-	returned to the calling code.
+	returned to the calling code. The overall execution time (ignoring the time
+	the senders spends on the send queue) is O(1 + sizeof(message))
 
 	Receive
 	=======
