@@ -125,7 +125,7 @@ void gs_run () {
 		}
 
 		// Wait for the user to hit a key before continuing
-		//bwgetc (COM2);
+		bwgetc (COM2);
 	}
 }
 
