@@ -126,6 +126,7 @@ void paperPlayer () {
 }
 
 void clonePlayer () {
+	debug ("Clone player is starting. \r\n");
 	TID id = MyTid();
 	char name[] = "EvilClone  ";
 	// copy the id into the name
@@ -137,6 +138,7 @@ void clonePlayer () {
 }
 
 void robinPlayer () {
+	debug ("Round Robin player is starting. \r\n");
 	TID id = MyTid();
 	char name[] = "RobinHood  ";
 	// copy the id into the name
