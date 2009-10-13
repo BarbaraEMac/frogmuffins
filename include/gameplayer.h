@@ -20,13 +20,16 @@ typedef struct {
 	Player 		opponent;		// The player's opponent's name
 } ServerReply;
 
+typedef GameMove (* NextMove)( GameMove mine, GameMove theirs );
 
-void genericPlayer (char *name, GameMove move, int timesToPlay);
+void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPlay);
 
 void rockPlayer();
 
 void paperPlayer();
 
 void scissorsPlayer();
+
+void clonePlayer();
 
 #endif
