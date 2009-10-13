@@ -30,12 +30,12 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 	req.move = start;
 
 	// Register with the name server
-	bwprintf (COM2, "Player: Registering as \"%s\"(%d).\r\n", req.name, myTid);
+	debug (COM2, "Player: Registering as \"%s\"(%d).\r\n", req.name, myTid);
 	RegisterAs (name);
 	assert ( WhoIs(name) == MyTid() );
 
 	// Sign up for a game
-	bwprintf (COM2, "Player: %s (%d): Signing up for a game.\r\n", name, myTid);
+	bwprintf (COM2, "\rPlayer: %s (%d): Signing up for a game.\r\n", name, myTid);
 	req.type = SIGNUP;
 	Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 	
@@ -132,5 +132,3 @@ void clonePlayer () {
 
 	genericPlayer (name, PAPER, &predict, 3);
 }
-
-
