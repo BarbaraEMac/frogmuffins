@@ -17,11 +17,6 @@
 #include "gameplayer.h"
 #include "gameserver.h"
 
-typedef union {
-	char name[NAME_LEN];
-} nem;
-
-
 void gs_run () {
 	debug ("Game Server is starting up. \r\n");
 
@@ -114,6 +109,8 @@ void gs_run () {
 				
 				// Increment the total number of moves for this match.
 				match->moves ++;
+
+				// TODO: Why is the Reply removed? This player will remain blocked forever ..
 				break;
 
 			default:
@@ -202,10 +199,10 @@ GameResult match_play (Player *p, Player *o) {
 	} else if (	(p->move == ROCK     && o->move == SCISSORS) || 
 			  	(p->move == PAPER    && o->move == ROCK)     || 
 			  	(p->move == SCISSORS && o->move == PAPER) ) {
-		debug ("\tmatch_play: result LOSE \r\n");
-		return  LOSE;
-	} else {
 		debug ("\tmatch_play: result WIN \r\n");
 		return WIN;
+	} else {
+		debug ("\tmatch_play: result LOSE \r\n");
+		return  LOSE;
 	}
 }
