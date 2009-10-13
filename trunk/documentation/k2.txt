@@ -9,14 +9,20 @@ oooo    oooo                                          oooo       .oooo.
  888  `88b.  888    .o  888      888   888  888    .o  888     .oP     .o 
 o888o  o888o `Y8bod8P' d888b    o888o o888o `Y8bod8P' o888o    8888888888 
 
-
-NOTE: THIS FILE CANNOT HAVE WIDTH > 80.
-
 Question 1
 ==========
-	The executable is located at: 
+	The executable is located at: /u8/becmacdonald/cs452/a2/handin/main/main.elf.
 
-	To operate the program, type 'go' at the RedBoot command prompt.
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a2.elf
+
+	To load the program, type 'load ARM/becmacdo_a2.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
 
 Question 2 
 ==========
@@ -26,24 +32,54 @@ Question 2
 	We wrote our context switch handling code to accept 5 arguments for kernel
 	1. Hence, it did not need to be modified for this assignment.
 
+	TD
+	==
+	The task descriptor struct was modified to include a send queue. When a user
+	task sends a message, it blocks itself and waits on the receiver's send queue.
+	Since we are also trying to get gcc to compile in opitmized mode, many members
+	we made volatile. We are still in the process of getting optimized mode to
+	work.
+	Finally, we also added a union to be able to get any system call arguments
+	cleanly and nicely.
+
+	Message Passing
+	===============
+	We added message passing for kernel 2 and will describe the additional
+	algorithms and data structures below. Professor Cowan gave general 
+	message passing algorithms in class and the following algorithms are based
+	off his notes.
+	
 	Send
 	====
+	Send() can be called by a user task to pass a message to another user task.
+	Note the Send() does not have to be called before the receiving task calls
+	Receive(). The code can handle the case where the receiving task calls 
+	Receive() before the sending task calls Send().
+
 	The pseudo-code for the Send() function is:
 
 	1. Error check all arguments.
 	2. Fetch the receiver task using the supplied task id.
 	3. Set the sender state to RECEIVE_BLOCKED.
-	4. Push the sending task onto the receiving task's send queue.
-	5. If the receiver is SEND_BLOCKED,
-	6.		Copy the message to the receiver's address space.
-	7.		Set the sender's state to REPLY_BLOCKED.
-	8. Otherwise, wait for the receiver.
+	4. If the receiver is SEND_BLOCKED,
+	5.		Copy the message to the receiver's address space.
+	6.		Set the sender's state to REPLY_BLOCKED.
+	7.		Give the sender's id to the receiver.
+	8.		Unblock the receiver by putting it on a ready queue.
+	9. Otherwise,
+	10.		Push the sending task onto the receiving task's send queue.
+	11.		Wait for the receiver to call Receive().
 	
 	If any errors occur during the execution of Send(), they are caught and
 	returned to the calling code.
 
 	Receive
 	=======
+	Receive() can be called by a user task to receive a message from another user
+	task. Note that Receive() does not need to be called after the other task
+	has called Send(). The code can handle the case where Receive() is called
+	first.
+
 	The pseudo-code for the Receive() function is:
 
 	1. Error check all arguments.
@@ -54,24 +90,29 @@ Question 2
 	6.		Copy the message to the receiver's address space.
 	7. 		Store the task id of the sender to be returned.
 	8.		Set the sender's state to REPLY_BLOCKED.
-	9. Otherwise, wait for the sender.
+	9. Otherwise, wait for the sender to call Send().
 
 	If any errors occur during the execution of Receive(), they are caught and
 	returned to the calling code.
 
 	Reply
 	=====
+	Reply() will be called by the receiving task to unblock the sending task and 
+	acknowledge it received the message. Note that Reply() should be called after
+	a message has been passed since it reverts the message passing states and 
+	unblocks tasks.
+	
 	The pseudo-code for the Reply() function is:
 	
 	1. Fetch the sender to reply to.
 	2. Ensure the sender is REPLY_BLOCKED.
-	3. Copy the reply to the sender's address space.
-	4. Set the state of the replier and sender to READY.
-	5. Push the sender and replier on to the ready queues.
+	3. Verify the memory addresses are valid.
+	4. Copy the reply to the sender's address space.
+	5. Set the state of the replier and sender to READY.
+	6. Push the sender and replier on to the ready queues.
 
 	If any errors occur during the execution of Reply(), they are caught and
 	returned to the calling code.
-
 
 	Name Server
 	==========
@@ -105,9 +146,16 @@ Question 2
 	15.	Reply to the other user task appropriately.
 	16.	}
 
+	Game Server & Game Players
+	==========================
+	Since the assignment only asked for a description of the changes to the
+	kernel, we will not include a description of the game server and players. The
+	code is heavily documented and easy to read, if needed. Or, we will be happy
+	to provide written details.
+
 Question 3
 ==========
-	All source code is located in:
+	All source code is located in: /u8/becmacdonald/cs452/a2/handin.
 
 	Here are the md5 hashes for each file:
 
@@ -116,12 +164,63 @@ Question 3
 Question 4
 ==========
 	Here is a listing of all submitted files:
+	Makefile
 
+	arch:
+	switch.c  switch.S
+
+	documentation:
+	k1.txt  k2.txt
+
+	include:
+	bwio.h   gameplayer.h  main.h        shell.h   syscalls.h  ts7200.h
+	debug.h  gameserver.h  nameserver.h  string.h  task.h
+	error.h  globals.h     requests.h    switch.h  td.h
+
+	lib:
+	libbwio.a  libdebug.a  libstring.a
+
+	main:
+	main.c  orex.ld  shell.c  td.c
+
+	server:
+	nameserver.c
+
+	src:
+	bwio.c  debug.c  libbwio_old.q  Makefile  string.c
+
+	syscall:
+	syscalls.c
+
+	task:
+	gameplayer.c  gameserver.c  requests.c  task.c
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
 
 Question 5
 ==========
-	Description of priorities for game tasks. 
+	Here is a description of priorities for all user tasks in Kernel 2.
+
+	The first user task that creates the Name Server, Game Server, and Game 
+	Players has the highest priority (0). This is because this task sets up all of
+	the other user tasks. We want to ensure everything is set up before the 
+	Name Server is queried or the games start.
+
+	The Name Server is created at the second highest priority (1) because we do
+	not want a user task to become blocked waiting for the Name Server to respond
+	to a query.
+
+	For the same reason as above, the Game Server is also created at the second
+	highest priority (1).
+
+	Players .....
+	
 
 Question 6 
 ==========
-	Output of kernel and reason why it is in the correct order.
+	Here is the output of the user tasks for Kernel 2:
+
+
+
+	Here is a description of why this output is correct:
+
