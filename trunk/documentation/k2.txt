@@ -39,6 +39,10 @@ Question 2
 	Since we are also trying to get gcc to compile in optmized mode, many members
 	we made volatile. We are still in the process of getting optimized mode to
 	work.
+	The TIDs are handed out in such a way that we can figure out where exactly
+	the TD is stored in constant time. This is achieved my making sure that
+	TID mod NUM_TD (total number of task descriptors possible) gives us the
+	index.
 	Finally, we also added a union of structs (that points to the sp) to be able
 	to get at any system call arguments by the system call and argument names.
 
@@ -72,7 +76,7 @@ Question 2
 	
 	If any errors occur during the execution of Send(), they are caught and
 	returned to the calling code. The overall execution time (ignoring the time
-	the senders spends on the send queue) is O(1 + sizeof(message))
+	the senders spends on the send queue) is O(1 + sizeof(message)).
 
 	Receive
 	=======
@@ -168,10 +172,10 @@ Question 4
 	Makefile
 
 	arch:
-	switch.c  switch.S
+	switch.S
 
 	documentation:
-	k1.txt  k2.txt
+	k2.txt
 
 	include:
 	bwio.h   gameplayer.h  main.h        shell.h   syscalls.h  ts7200.h
@@ -182,13 +186,13 @@ Question 4
 	libbwio.a  libdebug.a  libstring.a
 
 	main:
-	main.c  orex.ld  shell.c  td.c
+	main.c  orex.ld  td.c
 
 	server:
 	nameserver.c
 
 	src:
-	bwio.c  debug.c  libbwio_old.q  Makefile  string.c
+	bwio.c  debug.c  Makefile  string.c
 
 	syscall:
 	syscalls.c
