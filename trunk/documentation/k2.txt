@@ -219,6 +219,12 @@ Question 5
 
 Question 6 
 ==========
+
+	Note: The output will pause after the Game Server has handled 1 request from a
+	player. To continue the play, press any key. Sometimes the server will not 
+	output anything between calls to Receive(), so a key may have to be pressed
+	at most twice to get new output.
+
 	Here is the output of the user tasks for Kernel 2:
 
 
