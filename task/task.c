@@ -6,7 +6,7 @@
  * User task stuff goes in here.
  */
 
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -49,7 +49,7 @@ void k2_firstUserTask () {
 	// 2 at different priorities
 	Create (3, &clonePlayer);
 	Create (4, &clonePlayer);
-/*
+
 	// Let's make 50 players to test the td recycling
 	debug ("Creating 50 players at the lowest priority. \r\n");
 	int i;
@@ -60,7 +60,7 @@ void k2_firstUserTask () {
 		Create ((i%5)+5, &clonePlayer);
 		Create ((i%5)+5, &robinPlayer);
 	}
-*/
+
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");
 	Exit();
