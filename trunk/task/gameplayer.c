@@ -130,7 +130,7 @@ void clonePlayer () {
 	TID id = MyTid();
 	char name[] = "EvilClone  ";
 	// copy the id into the name
-	itoa( id , &name[9] );
+	itoa( id % 64, &name[9] );
 
 	debug("%s (%d) is starting. \r\n", name, id);
 
