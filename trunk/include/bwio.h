@@ -20,10 +20,6 @@ typedef char *va_list;
 #define ON	1
 #define	OFF	0
 
-int* clock_init( int clock_base, int enable, int val );
-
-void clock_stop( int clock_base );
-
 void wait( int ms );
 
 int bwsetfifo( int channel, int state );
@@ -49,5 +45,3 @@ int bwputr( int channel, unsigned int reg );
 void bwputw( int channel, int n, char fc, char *bf );
 
 void bwprintf( int channel, char *format, ... );
-
-int sscanf( char *src, char *format, ... );

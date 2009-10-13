@@ -7,9 +7,9 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
-// ***********************************************************
-// * NOTE: descriptions copied from the standard c libraries *
-// ***********************************************************
+// ****************************************************************
+// * NOTE: Most descriptions copied from the standard c libraries *
+// ****************************************************************
 
 typedef int size_t;
 
@@ -53,5 +53,45 @@ char * memcpy ( char * destination, const char * source, size_t num ) ;
  * until the characters differ or until a terminanting null-character is reached.
  */
 int strcmp (const char *str1, const char *str2);
+
+/**
+ * Parse a string given the format.
+ */
+int sscanf( char *src, char *fmt, ... );
+
+/**
+ * The following functions were borrowed and renamed from bwio.
+ * We did not write them ourselves.
+ */
+
+/**
+ * Convert the given character into an integer.
+ */
+int atod( char ch );
+
+/**
+ * Convert the given string to into an integer.
+ */
+char atoi( char ch, char **src, int base, int *nump );
+
+/**
+ * Converts a given unsigned integer into a string.
+ * The base can be specified.
+ */
+void uitoa( unsigned int num, unsigned int base, char *bf );
+
+/**
+ * Converts a given integer into a string.
+ * num - The integer to convert
+ * bf  - A buffer that we copy the returned string into.
+ */
+void itoa( int num, char *bf );
+
+/**
+ * Converts a character into its hexidecimal value.
+ * ch - The character to convert
+ * Returns: The hexidecimal value of the character.
+ */
+char ctox( char ch );
 
 #endif
