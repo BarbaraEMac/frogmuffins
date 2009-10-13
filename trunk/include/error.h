@@ -10,7 +10,7 @@
 enum ERROR {
 	NO_ERROR = 0,
 	NEG_TID = -10000,
-	DEFUNCT_TID = 9999,
+	DEFUNCT_TID,
 	OLD_TID, 		// Not from the current generation
 	INVALID_TID,
 	OUT_OF_BOUNDS,
