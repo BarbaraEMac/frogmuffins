@@ -6,7 +6,7 @@
  * A Rock, Paper, Scissors Client / Player
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include <bwio.h>
 #include <ts7200.h>
