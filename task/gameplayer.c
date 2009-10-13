@@ -81,14 +81,8 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 	Exit();
 }
 
-GameMove paper( GameMove mine, GameMove theirs ) {
-	return PAPER;
-}
-GameMove rock( GameMove mine, GameMove theirs ) {
-	return ROCK;
-}
-GameMove scissors( GameMove mine, GameMove theirs ) {
-	return SCISSORS;
+GameMove repeat( GameMove mine, GameMove theirs ) {
+	return mine;
 }
 GameMove mirror( GameMove mine, GameMove theirs ) {
 	return theirs;
@@ -112,14 +106,14 @@ void rockPlayer () {
 	debug ("Rock player is starting. \r\n");
 	char *name = "Dwayne J.";
 	
-	genericPlayer (name, ROCK, &rock, 3);
+	genericPlayer (name, ROCK, &repeat, 3);
 }
 // Only plays scissors
 void scissorsPlayer () {
 	debug ("Scissors player is starting. \r\n");
 	char *name = "Edward S.";
 
-	genericPlayer (name, SCISSORS, &scissors, 3);
+	genericPlayer (name, SCISSORS, &repeat, 3);
 }
 
 // Only plays paper
@@ -127,7 +121,7 @@ void paperPlayer () {
 	debug ("Paper player is starting. \r\n");
 	char *name = "Paper Mario";
 	
-	genericPlayer (name, PAPER, &paper, 3);
+	genericPlayer (name, PAPER, &repeat, 3);
 }
 
 void clonePlayer () {
