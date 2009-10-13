@@ -33,15 +33,30 @@ void k2_firstUserTask () {
 	Create (1, &gs_run);
 
 	// Create players for the game server
-	debug ("Creating 3 players. \r\n");
+	debug ("Creating 10 players. \r\n");
+/*	
+	// Same priorities
 	Create (2, &rockPlayer);
+	Create (2, &clonePlayer);
+	
 	Create (2, &paperPlayer);
-	Create (3, &scissorsPlayer);
+	Create (2, &clonePlayer);
+	
+	// 2 at same priority
+	Create (1, &scissorsPlayer);
+	Create (1, &clonePlayer);
+	
+	// 2 at different priorities
 	Create (3, &clonePlayer);
-	Create (4, &paperPlayer);
-	Create (4, &scissorsPlayer);
-	Create (5, &rockPlayer);
-	Create (5, &clonePlayer);
+	Create (4, &clonePlayer);
+*/
+	// Let's make 60 players to test the td recycling
+	debug ("Creating 60 players. \r\n");
+	int i;
+	for (i = 0; i < 60; i += 2) {
+		Create (6, &robinPlayer);
+		Create (6, &clonePlayer);
+	}
 
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");
