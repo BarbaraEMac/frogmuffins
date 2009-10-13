@@ -10,7 +10,7 @@
 #include "globals.h"
 #include "requests.h"
 
-#define NUM_PRIORITY 	3	// For now, we will use 3 priorities [0,2]
+#define NUM_PRIORITY 	10	// For now, we will use 3 priorities [0,2]
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
 #define NUM_TDS	 		64
