@@ -101,7 +101,7 @@ GameMove predict( GameMove mine, GameMove theirs ) {
 			return ROCK;
 		case PAPER:
 			return SCISSORS;
-		defalut:
+		default:
 			debug( "We should NEVER get here. Unrecognized move.");
 			return 0;
 	}
