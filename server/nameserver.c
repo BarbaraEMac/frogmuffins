@@ -11,7 +11,6 @@
 #include "error.h"
 #include "nameserver.h"
 
-
 void ns_run () {
 	debug ("ns_run: The Name Server is about to start. \r\n");	
 	NameServer ns;
@@ -32,7 +31,6 @@ void ns_run () {
 
 		switch (req.type) {
 			case REGISTERAS:
-				// TODO return error if the name already exists
 				ns_insert (&ns, req.name, senderTid);
 
 				assert ( ns_lookup(&ns, req.name)->tid == senderTid );
@@ -42,8 +40,7 @@ void ns_run () {
 				break;
 			default:
 				ret = NS_INVALID_REQ_TYPE;
-				// TODO: do we need this message?
-				error (1, "Nameserver request type is not valid.");
+				debug (1, "Nameserver request type is not valid.");
 				break;
 		}
 
