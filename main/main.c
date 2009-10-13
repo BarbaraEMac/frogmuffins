@@ -107,7 +107,7 @@ TD *schedule ( TD *oldTask, PQ *pq ) {
 	assert ( oldTask != 0 );
 	assert ( pq != 0 );
 	
-	debug ("schedule tid: %d parent: %d p: %d\r\n", oldTask->id,
+	debug ("schedule: active_tid: %d parent: %d p: %d\r\n", oldTask->id,
 			oldTask->parentId, oldTask->priority);
 	// Push the old active task back on to a queue - ready, blocked, (defunct?)
 	pq_insert ( pq, oldTask );
@@ -121,6 +121,7 @@ TD *schedule ( TD *oldTask, PQ *pq ) {
 		newActive->state = ACTIVE;
 	}
 	
+	debug ("schedule: scheduled %d (%x)\r\n", newActive->id, newActive);
 	return newActive;
 }
 
