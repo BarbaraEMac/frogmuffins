@@ -82,17 +82,52 @@ typedef struct {
 } GameServer;
 
 
+/**
+ * Initialize the game server.
+ */
 void gs_init (GameServer *s);
 
+/**
+ * All of the work that the Game Server does is in here.
+ */
 void gs_run ();
 
+/**
+ * Add a player to the matches.
+ * s - The Game Server
+ * p - The new player to add
+ * Returns: 
+ *		A match if both players have registered.
+ *		0 otherwise.
+ */
 MatchUp *gs_addPlayer (GameServer *s, Player *p);
 
+/**
+ * Given a task id, return the match it is playing in.
+ * s - The Game Server
+ * tid - The task's id
+ * Return: The match
+ * 		   0 otherwise
+ */
 MatchUp *gs_findMatchUp (GameServer *s, TID tid);
 
+/**
+ * Initialize the input match.
+ */
 void match_init (MatchUp *m);
 
+/**
+ * Given a match, return the two players in it.
+ * Returns:
+ * a - The player with the matching tid
+ * b - The player's opponent
+ */
 void match_getPlayers (MatchUp *m, TID tid, Player **a, Player **b);
 
+/**
+ * Given two players with two moves, determine the result of the game
+ * and return it.
+ */
 GameResult match_play (Player *player, Player *other);
+
 #endif

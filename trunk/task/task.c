@@ -34,7 +34,7 @@ void k2_firstUserTask () {
 
 	// Create players for the game server
 	debug ("Creating 10 players. \r\n");
-/*	
+	
 	// Same priorities
 	Create (2, &rockPlayer);
 	Create (2, &clonePlayer);
@@ -49,9 +49,9 @@ void k2_firstUserTask () {
 	// 2 at different priorities
 	Create (3, &clonePlayer);
 	Create (4, &clonePlayer);
-*/
+
 	// Let's make 60 players to test the td recycling
-	debug ("Creating 60 players. \r\n");
+	debug ("Creating 60 players at the lowest priority. \r\n");
 	int i;
 	for (i = 0; i < 60; i += 2) {
 		Create (6, &robinPlayer);

@@ -30,7 +30,7 @@ void gs_run () {
 	
 	// Initialize the Rock, Paper, Scissors Server
 	gs_init (&server);
-	// assert ( WhoIs ("GameServer") == MyTid() );
+	 assert ( WhoIs ("GameServer") == MyTid() );
 
 	FOREVER {
 		// Receive a message from a player!
@@ -39,7 +39,7 @@ void gs_run () {
 		assert( len == sizeof(PlayerRequest) );
 		debug ("game server: Returned from Receive. reqtype=%d\r\n", req.type);
 
-//		assert ( WhoIs(req.name) == senderTid );
+		assert ( WhoIs(req.name) == senderTid );
 
 		switch(req.type) {
 			case SIGNUP:
@@ -56,7 +56,6 @@ void gs_run () {
 					
 					assert ( match->a != match->b );
 					assert ( match->a->tid != match->b->tid );
-					//assert ( strcmp(match->a->name, match->b->name) != 0 );
 
 					// Create the reply
 					reply.result   = START;
@@ -121,7 +120,7 @@ void gs_run () {
 		}
 
 		// Wait for the user to hit a key before continuing
-		bwgetc (COM2);
+		//bwgetc (COM2);
 	}
 }
 
