@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
@@ -13,6 +13,7 @@
 #include "switch.h"
 #include "td.h"
 
+#define BITFIELD_WIDTH sizeof(BitField)*8
 
 /*
  * HELPER FUNCTIONS
@@ -20,8 +21,8 @@
 void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	debug ( "\tpq_setUsed this=%x used=%d, idx=%d\r\n", this, used, idx );
 	assert ( idx < NUM_TDS );
-	unsigned int i = idx / (sizeof(BitField)*8);// the index of the bitfield
-	unsigned int s = idx % (sizeof(BitField)*8);// the position in the bitfield
+	unsigned int i = idx / (BITFIELD_WIDTH);// the index of the bitfield
+	unsigned int s = idx % (BITFIELD_WIDTH);// the position in the bitfield
 	if ( used ) {
 		this->empty[i] &= ~(1 << s);
 	} else {
@@ -32,8 +33,8 @@ void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 int pq_isEmpty ( PQ *this, unsigned int idx ) {
 	debug ( "\tpq_isEmpty this=%x, idx=%d\r\n", this, idx );
 	assert ( idx < NUM_TDS );
-	unsigned int i = idx / (sizeof(BitField)*8);// the index of the bitfield
-	unsigned int s = idx % (sizeof(BitField)*8);// the position in the bitfield
+	unsigned int i = idx / (BITFIELD_WIDTH);// the index of the bitfield
+	unsigned int s = idx % (BITFIELD_WIDTH);// the position in the bitfield
 //debug ( "\tREMOVE THIS, empty=%x %x\r\n", this->empty[1], this->empty[0] );
 	int ans =  ( this->empty[i] & (1 << s) ); 
 	debug ( "\tpq_isEmpty return=%d\r\n", ans );
@@ -63,8 +64,8 @@ int pq_getUnused ( const PQ *this ) {
 	if ( (field & mask) == 0 ) { n += 1; }
 
 	debug ( "\tpq_getUnused, empty=%x %x n=%d \r\n", this->empty[1], 
-			this->empty[0], n + (i * sizeof(BitField)) );
-	return n + (i * sizeof(BitField));
+			this->empty[0], n + (i * BITFIELD_WIDTH) );
+	return n + (i * BITFIELD_WIDTH);
 }
 
 
