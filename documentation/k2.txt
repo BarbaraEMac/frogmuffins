@@ -164,7 +164,71 @@ Question 3
 
 	Here are the md5 hashes for each file:
 
+	167dac29ccba731688c00e9db670a553  ./include/error.h
+	a2912b64ea963481ad3bb970af33dc9d  ./include/clock.h
+	4cfe565bd55fba39fa5264c6f92447e2  ./include/syscalls.h
+	9af226f127c1fd759530cd45236c37b8  ./include/ts7200.h
+	1f636a0caf7a3b085550e06e9bf4f204  ./include/gameserver.h
+	284f5809b261c65bf4298f5707c6890e  ./include/bwio.h
+	650f0bc012f3c2008b22034f4a58b40f  ./include/switch.h
+	99c93fa25c52f885c1eff7de7dee2e0a  ./include/task.h
+	f12dba7c03ed2d309d83f0c603bdf00a  ./include/string.h
+	c45bac4a8032a517f70f7021869883ce  ./include/nameserver.h
+	7da1c1556c470cac1128f4a5efada763  ./include/td.h
+	68b329da9893e34099c7d8ad5cb9c940  ./include/shell.h
+	80dcd00887e6fdfff3adb7a933bd9da4  ./include/requests.h
+	771f329cf4f3ca93b29582c44cba7803  ./include/globals.h
+	f0210fab5c472fbd056c49576bcbe4d3  ./include/main.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	ca5c919f25c3d59e4b1e67cc78f4ab87  ./include/debug.h
 
+	0f78235c08871287135805a9692a14c6  ./lib/libbwio.a
+	1fea4e7dfe68e46b30ad1b9fcb4eed8a  ./lib/libclock.a
+	30282915ec244ba9af30e9fe2c10e11b  ./lib/libdebug.a
+	07efed34bd3bc756a8b7348c3b336981  ./lib/libstring.a
+
+	f0f36ad4b9054cb247637848c8857730  ./main/main.s
+	69b1217e2d6e72c4fc75c7cedd3c8109  ./main/main.c
+	d538370b31b3c6232b3fcaf95b6b961b  ./main/td.c
+	99d728f8cdd65178b8168a14092caf90  ./main/shell.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./main/orex.ld
+	161e817b0dff6c9bfb3654293fd227a4  ./main/main.o
+	3f856db9aaf0c9437ec858f97bcee3ad  ./main/td.s
+	d08763a916ac39987080623d7806356f  ./main/td.o
+	594987619c22ab91d187ad1079a4fdd7  ./main/main.map
+	f52379deafadf54665f6e8225e40a6f7  ./main/main.elf
+	e21ee3ced24a77215296a037e0e7f8f4  ./Makefile
+
+	8c71bec7b7b28cf2737f83116104e0fa  ./server/nameserver.s
+	3ebb49bddb9f0752525a2d563156d8d4  ./server/nameserver.c
+	caa007e4d1d571dcf65b22755525fdec  ./server/nameserver.o
+
+	1b213133ff8934bc0c152aad0d8a85e5  ./src/bwio.c
+	408c442d786f9436b969b27b5d934cd7  ./src/debug.c
+	97a527897e5be8082b52809db93aa68e  ./src/string.c
+	0657d557d9e2d20edac945dcef632bd5  ./src/clock.c
+	fc7af4fc8862bb54d191671f88f22fb3  ./src/Makefile
+	0f78235c08871287135805a9692a14c6  ./src/bwio.a
+	30282915ec244ba9af30e9fe2c10e11b  ./src/debug.a
+	07efed34bd3bc756a8b7348c3b336981  ./src/string.a
+	1fea4e7dfe68e46b30ad1b9fcb4eed8a  ./src/clock.a
+
+	152b748c8d12782477e19eddcb54f6fc  ./syscall/syscalls.s
+	2eb82a2f54070f80de91bf1c67b5998f  ./syscall/syscalls.c
+	e0f257c14c2f955b193861afcee14079  ./syscall/syscalls.o
+
+	1910b877d5bf1f4912f6e7a1798023c3  ./task/requests.s
+	2a680012f3698e3f29e0571a0926a49e  ./task/gameserver.c
+	6fdbce2bdc21ddacb995616ac1bd5aee  ./task/task.c
+	67176ab15a6023cb97879874dcb0c3b3  ./task/gameplayer.c
+	b2b843d12bb0eea59d331db06f02bc9e  ./task/requests.c
+	25dc84f3078f9b54e5dd583c013baa01  ./task/requests.o
+	adc05dce7505bc7ab37e4edfbf18bde5  ./task/task.s
+	b5a038a0e40af612be3541c7254e8b26  ./task/task.o
+	7150c2eb066735c719ded1e3cbe296d6  ./task/gameserver.s
+	f39172796aca884d2be541bb9a9e8bb5  ./task/gameserver.o
+	1eab361cca01dd61ebb10cf47cefda9d  ./task/gameplayer.s
+	8b96b1f0ce806dc4d4ad92c659d57a04  ./task/gameplayer.o
 
 Question 4
 ==========
@@ -245,7 +309,409 @@ Question 6
 
 	Here is the output of the user tasks for Kernel 2:
 
+	load ARM/becmacdo_a2.elf
+	Using default protocol (TFTP)
+	Entry point: 0x00218238, address range: 0x00218000-0x0021c934
+	RedBoot> go
+	Initialized serial port connection.
+	Initialized interrupt handler at addr 21838c. 
+	Player: Edward S. (7): Signing up for a game.
+	Player: EvilClone8 (8): Signing up for a game.
+	Player: Edward S. (7): Playing S.
+	Player: EvilClone8 (8): Playing P.
+	Player: EvilClone8 (8): Lost to Edward S. (7) :(.
+	Player: EvilClone8 (8): Playing R.
+	Player: Edward S. (7): Won against EvilClone8 (8)!
+	Player: Edward S. (7): Playing S.
+	Player: Edward S. (7): Lost to EvilClone8 (8) :(.
+	Player: Edward S. (7): Playing S.
+	Player: EvilClone8 (8): Won against Edward S. (7)!
+	Player: EvilClone8 (8): Playing R.
+	Player: EvilClone8 (8): Won against Edward S. (7)!
+	Player: EvilClone8 (8): Quitting.
+	Player: Edward S. (7): Lost to EvilClone8 (8) :(.
+	Player: Edward S. (7): Quitting.
+	Player: EvilClone8 (8): Quit.
+	Player: Edward S. (7): Quit.
+	Player: Dwayne J. (3): Signing up for a game.
+	Player: Paper Mario (5): Signing up for a game.
+	Player: EvilClone4 (4): Signing up for a game.
+	Player: Dwayne J. (3): Playing R.
+	Player: Paper Mario (5): Playing P.
+	Player: EvilClone6 (6): Signing up for a game.
+	Player: Paper Mario (5): Won against Dwayne J. (3)!
+	Player: Paper Mario (5): Playing P.
+	Player: Dwayne J. (3): Lost to Paper Mario (5) :(.
+	Player: Dwayne J. (3): Playing R.
+	Player: EvilClone4 (4): Playing P.
+	Player: EvilClone6 (6): Playing P.
+	Player: Dwayne J. (3): Lost to Paper Mario (5) :(.
+	Player: Dwayne J. (3): Playing R.
+	Player: Paper Mario (5): Won against Dwayne J. (3)!
+	Player: Paper Mario (5): Playing P.
+	Player: EvilClone6 (6): Tied with EvilClone4 (4).
+	Player: EvilClone6 (6): Playing S.
+	Player: EvilClone4 (4): Tied with EvilClone6 (6).
+	Player: EvilClone4 (4): Playing S.
+	Player: Paper Mario (5): Won against Dwayne J. (3)!
+	Player: Paper Mario (5): Quitting.
+	Player: Dwayne J. (3): Lost to Paper Mario (5) :(.
+	Player: Dwayne J. (3): Quitting.
+	Player: EvilClone4 (4): Tied with EvilClone6 (6).
+	Player: EvilClone4 (4): Playing R.
+	Player: EvilClone6 (6): Tied with EvilClone4 (4).
+	Player: EvilClone6 (6): Playing R.
+	Player: Paper Mario (5): Quit.
+	Player: Dwayne J. (3): Quit.
+	Player: EvilClone6 (6): Tied with EvilClone4 (4).
+	Player: EvilClone6 (6): Quitting.
+	Player: EvilClone4 (4): Tied with EvilClone6 (6).
+	Player: EvilClone4 (4): Quitting.
+	Player: EvilClone6 (6): Quit.
+	Player: EvilClone4 (4): Quit.
+	Player: EvilClone9 (9): Signing up for a game.
+	Player: EvilClone10 (10): Signing up for a game.
+	Player: EvilClone9 (9): Playing P.
+	Player: EvilClone10 (10): Playing P.
+	Player: EvilClone9 (9): Tied with EvilClone10 (10).
+	Player: EvilClone9 (9): Playing S.
+	Player: EvilClone10 (10): Tied with EvilClone9 (9).
+	Player: EvilClone10 (10): Playing S.
+	Player: EvilClone9 (9): Tied with EvilClone10 (10).
+	Player: EvilClone9 (9): Playing R.
+	Player: EvilClone10 (10): Tied with EvilClone9 (9).
+	Player: EvilClone10 (10): Playing R.
+	Player: EvilClone9 (9): Tied with EvilClone10 (10).
+	Player: EvilClone9 (9): Quitting.
+	Player: EvilClone9 (9): Quit.
+	Player: EvilClone10 (10): Tied with EvilClone9 (9).
+	Player: EvilClone10 (10): Quitting.
+	Player: EvilClone10 (10): Quit.
+	Player: RobinHood11 (11): Signing up for a game.
+	Player: EvilClone12 (12): Signing up for a game.
+	
+	... "Signing up" output condensed ...
+	
+	Player: EvilClone59 (59): Signing up for a game.
+	Player: RobinHood60 (60): Signing up for a game.
+	Player: RobinHood11 (11): Playing S.
+	Player: EvilClone12 (12): Playing P.
+	
+	... "Playing" output condensed ...
 
+	Player: EvilClone59 (59): Playing P.
+	Player: RobinHood60 (60): Playing S.
+	Player: EvilClone12 (12): Lost to RobinHood11 (11) :(.
+	Player: EvilClone12 (12): Playing R.
+	Player: RobinHood11 (11): Won against EvilClone12 (12)!
+	Player: RobinHood11 (11): Playing R.
+	Player: EvilClone14 (14): Lost to RobinHood13 (13) :(.
+	Player: EvilClone14 (14): Playing R.
+	Player: RobinHood13 (13): Won against EvilClone14 (14)!
+	Player: RobinHood13 (13): Playing R.
+	Player: RobinHood16 (16): Tied with RobinHood15 (15).
+	Player: RobinHood16 (16): Playing R.
+	Player: RobinHood15 (15): Tied with RobinHood16 (16).
+	Player: RobinHood15 (15): Playing R.
+	Player: RobinHood18 (18): Won against EvilClone17 (17)!
+	Player: RobinHood18 (18): Playing R.
+	Player: EvilClone17 (17): Lost to RobinHood18 (18) :(.
+	Player: EvilClone17 (17): Playing R.
+	Player: RobinHood20 (20): Won against EvilClone19 (19)!
+	Player: RobinHood20 (20): Playing R.
+	Player: EvilClone19 (19): Lost to RobinHood20 (20) :(.
+	Player: EvilClone19 (19): Playing R.
+	Player: EvilClone22 (22): Lost to RobinHood21 (21) :(.
+	Player: EvilClone22 (22): Playing R.
+	Player: RobinHood21 (21): Won against EvilClone22 (22)!
+	Player: RobinHood21 (21): Playing R.
+	Player: EvilClone24 (24): Lost to RobinHood23 (23) :(.
+	Player: EvilClone24 (24): Playing R.
+	Player: RobinHood23 (23): Won against EvilClone24 (24)!
+	Player: RobinHood23 (23): Playing R.
+	Player: RobinHood26 (26): Tied with RobinHood25 (25).
+	Player: RobinHood26 (26): Playing R.
+	Player: RobinHood25 (25): Tied with RobinHood26 (26).
+	Player: RobinHood25 (25): Playing R.
+	Player: RobinHood28 (28): Won against EvilClone27 (27)!
+	Player: RobinHood28 (28): Playing R.
+	Player: EvilClone27 (27): Lost to RobinHood28 (28) :(.
+	Player: EvilClone27 (27): Playing R.
+	Player: RobinHood30 (30): Won against EvilClone29 (29)!
+	Player: RobinHood30 (30): Playing R.
+	Player: EvilClone29 (29): Lost to RobinHood30 (30) :(.
+	Player: EvilClone29 (29): Playing R.
+	Player: EvilClone32 (32): Lost to RobinHood31 (31) :(.
+	Player: EvilClone32 (32): Playing R.
+	Player: RobinHood31 (31): Won against EvilClone32 (32)!
+	Player: RobinHood31 (31): Playing R.
+	Player: EvilClone34 (34): Lost to RobinHood33 (33) :(.
+	Player: EvilClone34 (34): Playing R.
+	Player: RobinHood33 (33): Won against EvilClone34 (34)!
+	Player: RobinHood33 (33): Playing R.
+	Player: RobinHood36 (36): Tied with RobinHood35 (35).
+	Player: RobinHood36 (36): Playing R.
+	Player: RobinHood35 (35): Tied with RobinHood36 (36).
+	Player: RobinHood35 (35): Playing R.
+	Player: RobinHood38 (38): Won against EvilClone37 (37)!
+	Player: RobinHood38 (38): Playing R.
+	Player: EvilClone37 (37): Lost to RobinHood38 (38) :(.
+	Player: EvilClone37 (37): Playing R.
+	Player: RobinHood40 (40): Won against EvilClone39 (39)!
+	Player: RobinHood40 (40): Playing R.
+	Player: EvilClone39 (39): Lost to RobinHood40 (40) :(.
+	Player: EvilClone39 (39): Playing R.
+	Player: EvilClone42 (42): Lost to RobinHood41 (41) :(.
+	Player: EvilClone42 (42): Playing R.
+	Player: RobinHood41 (41): Won against EvilClone42 (42)!
+	Player: RobinHood41 (41): Playing R.
+	Player: EvilClone44 (44): Lost to RobinHood43 (43) :(.
+	Player: EvilClone44 (44): Playing R.
+	Player: RobinHood43 (43): Won against EvilClone44 (44)!
+	Player: RobinHood43 (43): Playing R.
+	Player: RobinHood46 (46): Tied with RobinHood45 (45).
+	Player: RobinHood46 (46): Playing R.
+	Player: RobinHood45 (45): Tied with RobinHood46 (46).
+	Player: RobinHood45 (45): Playing R.
+	Player: RobinHood48 (48): Won against EvilClone47 (47)!
+	Player: RobinHood48 (48): Playing R.
+	Player: EvilClone47 (47): Lost to RobinHood48 (48) :(.
+	Player: EvilClone47 (47): Playing R.
+	Player: RobinHood50 (50): Won against EvilClone49 (49)!
+	Player: RobinHood50 (50): Playing R.
+	Player: EvilClone49 (49): Lost to RobinHood50 (50) :(.
+	Player: EvilClone49 (49): Playing R.
+	Player: EvilClone52 (52): Lost to RobinHood51 (51) :(.
+	Player: EvilClone52 (52): Playing R.
+	Player: RobinHood51 (51): Won against EvilClone52 (52)!
+	Player: RobinHood51 (51): Playing R.
+	Player: EvilClone54 (54): Lost to RobinHood53 (53) :(.
+	Player: EvilClone54 (54): Playing R.
+	Player: RobinHood53 (53): Won against EvilClone54 (54)!
+	Player: RobinHood53 (53): Playing R.
+	Player: RobinHood56 (56): Tied with RobinHood55 (55).
+	Player: RobinHood56 (56): Playing R.
+	Player: RobinHood55 (55): Tied with RobinHood56 (56).
+	Player: RobinHood55 (55): Playing R.
+	Player: RobinHood58 (58): Won against EvilClone57 (57)!
+	Player: RobinHood58 (58): Playing R.
+	Player: EvilClone57 (57): Lost to RobinHood58 (58) :(.
+	Player: EvilClone57 (57): Playing R.
+	Player: RobinHood60 (60): Won against EvilClone59 (59)!
+	Player: RobinHood60 (60): Playing R.
+	Player: EvilClone59 (59): Lost to RobinHood60 (60) :(.
+	Player: EvilClone59 (59): Playing R.
+	Player: RobinHood11 (11): Tied with EvilClone12 (12).
+	Player: RobinHood11 (11): Playing P.
+	Player: EvilClone12 (12): Tied with RobinHood11 (11).
+	Player: EvilClone12 (12): Playing P.
+	Player: RobinHood13 (13): Tied with EvilClone14 (14).
+	Player: RobinHood13 (13): Playing P.
+	Player: EvilClone14 (14): Tied with RobinHood13 (13).
+	Player: EvilClone14 (14): Playing P.
+	Player: RobinHood15 (15): Tied with RobinHood16 (16).
+	Player: RobinHood15 (15): Playing P.
+	Player: RobinHood16 (16): Tied with RobinHood15 (15).
+	Player: RobinHood16 (16): Playing P.
+	Player: EvilClone17 (17): Tied with RobinHood18 (18).
+	Player: EvilClone17 (17): Playing P.
+	Player: RobinHood18 (18): Tied with EvilClone17 (17).
+	Player: RobinHood18 (18): Playing P.
+	Player: EvilClone19 (19): Tied with RobinHood20 (20).
+	Player: EvilClone19 (19): Playing P.
+	Player: RobinHood20 (20): Tied with EvilClone19 (19).
+	Player: RobinHood20 (20): Playing P.
+	Player: RobinHood21 (21): Tied with EvilClone22 (22).
+	Player: RobinHood21 (21): Playing P.
+	Player: EvilClone22 (22): Tied with RobinHood21 (21).
+	Player: EvilClone22 (22): Playing P.
+	Player: RobinHood23 (23): Tied with EvilClone24 (24).
+	Player: RobinHood23 (23): Playing P.
+	Player: EvilClone24 (24): Tied with RobinHood23 (23).
+	Player: EvilClone24 (24): Playing P.
+	Player: RobinHood25 (25): Tied with RobinHood26 (26).
+	Player: RobinHood25 (25): Playing P.
+	Player: RobinHood26 (26): Tied with RobinHood25 (25).
+	Player: RobinHood26 (26): Playing P.
+	Player: EvilClone27 (27): Tied with RobinHood28 (28).
+	Player: EvilClone27 (27): Playing P.
+	Player: RobinHood28 (28): Tied with EvilClone27 (27).
+	Player: RobinHood28 (28): Playing P.
+	Player: EvilClone29 (29): Tied with RobinHood30 (30).
+	Player: EvilClone29 (29): Playing P.
+	Player: RobinHood30 (30): Tied with EvilClone29 (29).
+	Player: RobinHood30 (30): Playing P.
+	Player: RobinHood31 (31): Tied with EvilClone32 (32).
+	Player: RobinHood31 (31): Playing P.
+	Player: EvilClone32 (32): Tied with RobinHood31 (31).
+	Player: EvilClone32 (32): Playing P.
+	Player: RobinHood33 (33): Tied with EvilClone34 (34).
+	Player: RobinHood33 (33): Playing P.
+	Player: EvilClone34 (34): Tied with RobinHood33 (33).
+	Player: EvilClone34 (34): Playing P.
+	Player: RobinHood35 (35): Tied with RobinHood36 (36).
+	Player: RobinHood35 (35): Playing P.
+	Player: RobinHood36 (36): Tied with RobinHood35 (35).
+	Player: RobinHood36 (36): Playing P.
+	Player: EvilClone37 (37): Tied with RobinHood38 (38).
+	Player: EvilClone37 (37): Playing P.
+	Player: RobinHood38 (38): Tied with EvilClone37 (37).
+	Player: RobinHood38 (38): Playing P.
+	Player: EvilClone39 (39): Tied with RobinHood40 (40).
+	Player: EvilClone39 (39): Playing P.
+	Player: RobinHood40 (40): Tied with EvilClone39 (39).
+	Player: RobinHood40 (40): Playing P.
+	Player: RobinHood41 (41): Tied with EvilClone42 (42).
+	Player: RobinHood41 (41): Playing P.
+	Player: EvilClone42 (42): Tied with RobinHood41 (41).
+	Player: EvilClone42 (42): Playing P.
+	Player: RobinHood43 (43): Tied with EvilClone44 (44).
+	Player: RobinHood43 (43): Playing P.
+	Player: EvilClone44 (44): Tied with RobinHood43 (43).
+	Player: EvilClone44 (44): Playing P.
+	Player: RobinHood45 (45): Tied with RobinHood46 (46).
+	Player: RobinHood45 (45): Playing P.
+	Player: RobinHood46 (46): Tied with RobinHood45 (45).
+	Player: RobinHood46 (46): Playing P.
+	Player: EvilClone47 (47): Tied with RobinHood48 (48).
+	Player: EvilClone47 (47): Playing P.
+	Player: RobinHood48 (48): Tied with EvilClone47 (47).
+	Player: RobinHood48 (48): Playing P.
+	Player: EvilClone49 (49): Tied with RobinHood50 (50).
+	Player: EvilClone49 (49): Playing P.
+	Player: RobinHood50 (50): Tied with EvilClone49 (49).
+	Player: RobinHood50 (50): Playing P.
+	Player: RobinHood51 (51): Tied with EvilClone52 (52).
+	Player: RobinHood51 (51): Playing P.
+	Player: EvilClone52 (52): Tied with RobinHood51 (51).
+	Player: EvilClone52 (52): Playing P.
+	Player: RobinHood53 (53): Tied with EvilClone54 (54).
+	Player: RobinHood53 (53): Playing P.
+	Player: EvilClone54 (54): Tied with RobinHood53 (53).
+	Player: EvilClone54 (54): Playing P.
+	Player: RobinHood55 (55): Tied with RobinHood56 (56).
+	Player: RobinHood55 (55): Playing P.
+	Player: RobinHood56 (56): Tied with RobinHood55 (55).
+	Player: RobinHood56 (56): Playing P.
+	Player: EvilClone57 (57): Tied with RobinHood58 (58).
+	Player: EvilClone57 (57): Playing P.
+	Player: RobinHood58 (58): Tied with EvilClone57 (57).
+	Player: RobinHood58 (58): Playing P.
+	Player: EvilClone59 (59): Tied with RobinHood60 (60).
+	Player: EvilClone59 (59): Playing P.
+	Player: RobinHood60 (60): Tied with EvilClone59 (59).
+	Player: RobinHood60 (60): Playing P.
+	Player: EvilClone12 (12): Tied with RobinHood11 (11).
+	Player: EvilClone12 (12): Quitting.
+	Player: RobinHood11 (11): Tied with EvilClone12 (12).
+	Player: RobinHood11 (11): Quitting.
+	Player: EvilClone14 (14): Tied with RobinHood13 (13).
+	Player: EvilClone14 (14): Quitting.
+	Player: RobinHood13 (13): Tied with EvilClone14 (14).
+	Player: RobinHood13 (13): Quitting.
+	Player: RobinHood16 (16): Tied with RobinHood15 (15).
+	Player: RobinHood16 (16): Quitting.
+	Player: RobinHood15 (15): Tied with RobinHood16 (16).
+	Player: RobinHood15 (15): Quitting.
+	Player: RobinHood18 (18): Tied with EvilClone17 (17).
+	Player: RobinHood18 (18): Quitting.
+	Player: EvilClone17 (17): Tied with RobinHood18 (18).
+	Player: EvilClone17 (17): Quitting.
+	Player: RobinHood20 (20): Tied with EvilClone19 (19).
+	Player: RobinHood20 (20): Quitting.
+	Player: EvilClone19 (19): Tied with RobinHood20 (20).
+	Player: EvilClone19 (19): Quitting.
+	Player: EvilClone22 (22): Tied with RobinHood21 (21).
+	Player: EvilClone22 (22): Quitting.
+	Player: RobinHood21 (21): Tied with EvilClone22 (22).
+	Player: RobinHood21 (21): Quitting.
+	Player: EvilClone24 (24): Tied with RobinHood23 (23).
+	Player: EvilClone24 (24): Quitting.
+	Player: RobinHood23 (23): Tied with EvilClone24 (24).
+	Player: RobinHood23 (23): Quitting.
+	Player: RobinHood26 (26): Tied with RobinHood25 (25).
+	Player: RobinHood26 (26): Quitting.
+	Player: RobinHood25 (25): Tied with RobinHood26 (26).
+	Player: RobinHood25 (25): Quitting.
+	Player: RobinHood28 (28): Tied with EvilClone27 (27).
+	Player: RobinHood28 (28): Quitting.
+	Player: EvilClone27 (27): Tied with RobinHood28 (28).
+	Player: EvilClone27 (27): Quitting.
+	Player: RobinHood30 (30): Tied with EvilClone29 (29).
+	Player: RobinHood30 (30): Quitting.
+	Player: EvilClone29 (29): Tied with RobinHood30 (30).
+	Player: EvilClone29 (29): Quitting.
+	Player: EvilClone32 (32): Tied with RobinHood31 (31).
+	Player: EvilClone32 (32): Quitting.
+	Player: RobinHood31 (31): Tied with EvilClone32 (32).
+	Player: RobinHood31 (31): Quitting.
+	Player: EvilClone34 (34): Tied with RobinHood33 (33).
+	Player: EvilClone34 (34): Quitting.
+	Player: RobinHood33 (33): Tied with EvilClone34 (34).
+	Player: RobinHood33 (33): Quitting.
+	Player: RobinHood36 (36): Tied with RobinHood35 (35).
+	Player: RobinHood36 (36): Quitting.
+	Player: RobinHood35 (35): Tied with RobinHood36 (36).
+	Player: RobinHood35 (35): Quitting.
+	Player: RobinHood38 (38): Tied with EvilClone37 (37).
+	Player: RobinHood38 (38): Quitting.
+	Player: EvilClone37 (37): Tied with RobinHood38 (38).
+	Player: EvilClone37 (37): Quitting.
+	Player: RobinHood40 (40): Tied with EvilClone39 (39).
+	Player: RobinHood40 (40): Quitting.
+	Player: EvilClone39 (39): Tied with RobinHood40 (40).
+	Player: EvilClone39 (39): Quitting.
+	Player: EvilClone42 (42): Tied with RobinHood41 (41).
+	Player: EvilClone42 (42): Quitting.
+	Player: RobinHood41 (41): Tied with EvilClone42 (42).
+	Player: RobinHood41 (41): Quitting.
+	Player: EvilClone44 (44): Tied with RobinHood43 (43).
+	Player: EvilClone44 (44): Quitting.
+	Player: RobinHood43 (43): Tied with EvilClone44 (44).
+	Player: RobinHood43 (43): Quitting.
+	Player: RobinHood46 (46): Tied with RobinHood45 (45).
+	Player: RobinHood46 (46): Quitting.
+	Player: RobinHood45 (45): Tied with RobinHood46 (46).
+	Player: RobinHood45 (45): Quitting.
+	Player: RobinHood48 (48): Tied with EvilClone47 (47).
+	Player: RobinHood48 (48): Quitting.
+	Player: EvilClone47 (47): Tied with RobinHood48 (48).
+	Player: EvilClone47 (47): Quitting.
+	Player: RobinHood50 (50): Tied with EvilClone49 (49).
+	Player: RobinHood50 (50): Quitting.
+	Player: EvilClone49 (49): Tied with RobinHood50 (50).
+	Player: EvilClone49 (49): Quitting.
+	Player: EvilClone52 (52): Tied with RobinHood51 (51).
+	Player: EvilClone52 (52): Quitting.
+	Player: RobinHood51 (51): Tied with EvilClone52 (52).
+	Player: RobinHood51 (51): Quitting.
+	Player: EvilClone54 (54): Tied with RobinHood53 (53).
+	Player: EvilClone54 (54): Quitting.
+	Player: RobinHood53 (53): Tied with EvilClone54 (54).
+	Player: RobinHood53 (53): Quitting.
+	Player: RobinHood56 (56): Tied with RobinHood55 (55).
+	Player: RobinHood56 (56): Quitting.
+	Player: RobinHood55 (55): Tied with RobinHood56 (56).
+	Player: RobinHood55 (55): Quitting.
+	Player: RobinHood58 (58): Tied with EvilClone57 (57).
+	Player: RobinHood58 (58): Quitting.
+	Player: EvilClone57 (57): Tied with RobinHood58 (58).
+	Player: EvilClone57 (57): Quitting.
+	Player: RobinHood60 (60): Tied with EvilClone59 (59).
+	Player: RobinHood60 (60): Quitting.
+	Player: EvilClone59 (59): Tied with RobinHood60 (60).
+	Player: EvilClone59 (59): Quitting.
+	Player: EvilClone12 (12): Quit.
+	Player: RobinHood11 (11): Quit.
+	
+	... "Quitting" output condensed ...
+	
+	Player: RobinHood60 (60): Quit.
+	Player: EvilClone59 (59): Quit.
+	Exiting normally.
+
+	Program completed with status 0
+	RedBoot> 
 
 	Here is a description of why this output is correct:
 	
@@ -259,6 +725,8 @@ Question 6
 	players after the first match. RobinHood players start by playing Scissors
 	and play Rock and Paper in that order and keep cycling.
 	
+	Output Explanation
+	==================
 	In the beginning, the first 4 players play in round robin order. The first
 	task makes their move, the second task makes their move, then the third,
 	and finally the fourth are scheduled since they are all at the same priority.
@@ -281,5 +749,4 @@ Question 6
 
 
 	..... explanation of output ....
-
 
