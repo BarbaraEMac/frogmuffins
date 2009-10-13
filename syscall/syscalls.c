@@ -13,7 +13,6 @@
 #include "syscalls.h"
 #include "td.h"
 
-
 int isValidMem ( const char *addr, const TD *td ) {
 	if ( addr == 0 ) {
 		return NULL_ADDR;
@@ -26,11 +25,6 @@ int isValidMem ( const char *addr, const TD *td ) {
 	return NO_ERROR;
 }
 
-// RETURNS:
-//• The size of the message supplied by the replying task.
-//• -1 – if the task id is impossible.
-//• -2 – if the task id is not an existing task.
-//• -3 – if the send-receive-reply transaction is incomplete.
 int send (TD *sender, PQ *pq, TID tid) {
 	debug ("send: from=%x, to=%x (%d)\r\n", sender, pq_fetchById(pq, tid), tid);
 	// Check all arguments
@@ -70,7 +64,6 @@ int send (TD *sender, PQ *pq, TID tid) {
 		*receiver->a->receive.tid = sender->id;
 
 		// Unblock the receiver
-		// TODO: Why don't we put this in reply() like it should be?
 		pq_insert(pq, receiver);
 	} else {
 		// Put yourself on the other task's send queue.
@@ -81,9 +74,6 @@ int send (TD *sender, PQ *pq, TID tid) {
 	return ret;
 }
 
-// Returns.
-// • The size of the message sent.
-// • -1 – if the message was truncated.
 int receive (TD *receiver, TID *tid) {
 	debug ("rcv : rcvr=%x (%d)\r\n", receiver, receiver->id);
 
@@ -118,14 +108,6 @@ int receive (TD *receiver, TID *tid) {
 	return ret;
 }
 
-/*
- * Returns.
-  •  0 – if the reply succeeds.
-  • -1 – if the task id is not a possible task id.
-  • -2 – if the task id is not an existing task.
-  • -3 – if the task is not reply blocked.
-  • -4 – if there was insufficient space for the entire reply in the sender’s reply buffer.
-*/
 int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, pq_fetchById(pq, tid), tid);
 	assert ( from != 0 );
@@ -160,9 +142,8 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	assert (to->state == READY);
 	assert (from->state == READY);
 
-	// Make the tasks ready by putting them on the ready queues
-	// NOTE: 'from' will be put on queue automatically by scheduler
-	// TODO: scheduler == SEND. Why don't we just do it here?!
+	// Make the sender (to) task ready by putting it on a ready queue
+	// NOTE: 'from' will be put on queue by send() if it was blocked
 	pq_insert ( pq, to );
 
 	return ret;
