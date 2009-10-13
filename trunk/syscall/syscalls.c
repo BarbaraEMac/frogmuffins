@@ -37,6 +37,7 @@ int send (TD *sender, PQ *pq, TID tid) {
 	assert ( sender != 0 );
 	assert ( sender->state == ACTIVE );
 	assert ( pq != 0 );
+	assert ( sender->id != tid ); // Do not send a message to yourself.
 	int ret = NO_ERROR;
 
 	// Verify the pointers point to valid memory addresses
@@ -69,6 +70,7 @@ int send (TD *sender, PQ *pq, TID tid) {
 		*receiver->a->receive.tid = sender->id;
 
 		// Unblock the receiver
+		// TODO: Why don't we put this in reply() like it should be?
 		pq_insert(pq, receiver);
 	} else {
 		// Put yourself on the other task's send queue.
@@ -128,6 +130,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, pq_fetchById(pq, tid), tid);
 	assert ( from != 0 );
 	assert ( pq != 0 );
+	assert ( from->id != tid ); // Do not reply to yourself.
 	int ret = NO_ERROR;
 
 	// FROM is really the receiver OR replier if a worker task was spawned
@@ -159,6 +162,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 
 	// Make the tasks ready by putting them on the ready queues
 	// NOTE: 'from' will be put on queue automatically by scheduler
+	// TODO: scheduler == SEND. Why don't we just do it here?!
 	pq_insert ( pq, to );
 
 	return ret;
@@ -171,6 +175,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
  * Updates the states of the tasks
  */
 int passMessage ( TD *from, TD *to, MsgType type ) {
+	assert ( to != from );
 	// Get the message buffers and lengths
 	char  *source = from->a->send.msg;
 	size_t sourceLen = from->a->send.msglen;
