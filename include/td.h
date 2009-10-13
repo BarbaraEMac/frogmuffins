@@ -15,7 +15,7 @@
 #define USER_END		0x01fdd000
 #define NUM_TDS	 		64
 #define NUM_BITFIELD	NUM_TDS/32
-#define	STACK_SIZE		0x40000
+#define	STACK_SIZE		0x10000
 #define STACK_BASE		0x260000
 
 enum TASK_STATE {
