@@ -156,14 +156,8 @@ int main( int argc, char* argv[] ) {
 
 	FOREVER {	
 		debug ("	Scheduling a new task.\r\n");
-		tmp = schedule (active, &pq);
+		active = schedule (active, &pq);
 		
-		if ( tmp != active ) {
-			bwgetc( COM2 );
-			//bwprintf (COM2, "Scheduled %x (%d)\r\n", tmp, tmp->id);
-			active = tmp;
-		}
-
 		// Run out of tasks to run
 		if ( active == 0 ) {
 			break;
