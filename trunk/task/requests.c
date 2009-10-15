@@ -52,14 +52,6 @@ int Reply (TID tid, char *reply, size_t rpllen) {
 	SWI(8);
 }
 
-
-/*
- * Returns.
- •  0 – success.
- • -1 – if the nameserver task id inside the wrapper is invalid.
- • -2 – if the nameserver task id inside the wrapper is not the name
-    server.
- */
 int RegisterAs (char *name) {
 	NSRequest req;
 	int ret;
@@ -69,19 +61,43 @@ int RegisterAs (char *name) {
 	return ret;
 }
 
-/*
-Returns.
- • tid – the task id of the registered task.
- • -1 – if the nameserver task id inside the wrapper is invalid.
- • -2 – if the nameserver task id inside the wrapper is not the
-    nameserver.
-*/
 
 TID WhoIs (char *name) {
 	NSRequest req;
 	TID tid;
 	req.type = WHOIS;
-	strncpy( req.name, name, sizeof(req.name));
+	strncpy(req.name, name, sizeof(req.name));
 	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &tid, sizeof(TID) );
 	return tid;
+}
+
+int AwaitEvent (int eventid, char *event, int eventlen) {
+	
+}
+
+int Delay ( int ticks ) {
+	char ret[5];
+	CSRequest req;
+	req.type = DELAY;
+	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
+
+	return ret;
+}
+
+int Time () {
+	int time;
+	CSRequest req;
+	req.type = TIME;
+	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+
+	return time;
+}
+
+int DelayUntil (int ticks) {
+	char ret[5];
+	CSRequest req;
+	req.type = DELAYUNTIL;
+	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
+	
+	return ret;
 }
