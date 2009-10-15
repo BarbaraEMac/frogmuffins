@@ -23,4 +23,6 @@ int reply (TD *sender, PQ *pq, TID tid, char *reply, int rpllen);
 
 int passMessage (TD *sender, TD *receiver, MsgType reply);
 
+void awaitEvent ();
+
 #endif

@@ -206,3 +206,8 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	}
 	return ret;
 }
+
+void awaitEvent () {
+
+
+}
