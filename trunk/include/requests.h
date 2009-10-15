@@ -26,8 +26,8 @@ enum NSRequestCode {
 enum CSRequestCode {
 	DELAY = 1,
 	TIME,
-	DELAYUNTIL
-
+	DELAYUNTIL,
+	NOTIFY
 };
 
 typedef struct {
