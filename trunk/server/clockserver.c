@@ -53,6 +53,6 @@ void cs_run () {
 }
 
 int cs_init (ClockServer *cs) {
-
+	RegisterAs ("ClockServer");
 }
 
