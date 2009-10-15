@@ -81,13 +81,17 @@ void pq_init ( PQ *this ) {
         this->ready[i] = 0;
     }
 
+	// No TDs are blocked at the start
+	for ( i = 0; i < NUM_INTERRUPTS; i ++ ) {
+		this->intBlocked[i] = 0;
+	}
+
 	for ( i = 0; i < NUM_BITFIELD; i++ ) {
 		this->empty[i] = 0xFFFFFFFF;
 	}
 
-    this->lastId   = 0;
+    this->lastId = 0;
 	this->highestPriority = NUM_PRIORITY;
-	this->blocked = 0;
 }
 
 TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
