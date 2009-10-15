@@ -13,20 +13,31 @@
 #include "globals.h"
 
 #define NS_TID 		1
+#define CS_TID 		2
 #define NAME_LEN	12
-
-enum NSRequestCode {
-	REGISTERAS = 1,
-	WHOIS
-};
 
 typedef char TaskName[NAME_LEN];
 
+enum NSRequestCode {
+	REGISTERAS = 1,
+	WHOIS,
+	};
+
+enum CSRequestCode {
+	DELAY = 1,
+	TIME,
+	DELAYUNTIL
+
+};
+
 typedef struct {
-	enum NSRequestCode 	type;
-	TaskName 			name;
+	enum NSRequestCode type;
+	TaskName name;
 } NSRequest;
 
+typedef struct {
+	enum CSRequestCode type;
+} CSRequest;
 
 // More to be added later
 enum RequestCode {
@@ -132,5 +143,25 @@ int RegisterAs (char *name);
  * Query the name server.
  */
 TID WhoIs (char *name);
+
+/**
+ * Blocks until the specified event occurs and returns.
+ */
+int AwaitEvent (int eventid, char *event, int eventlen);
+
+/** 
+ * Wait for the given time.
+ */
+int Delay ( int ticks );
+
+/**
+ * Return the time since the clock server started.
+ */
+int Time ();
+
+/**
+ * Wait until the given time.
+ */
+int DelayUntil (int ticks);
 
 #endif
