@@ -11,11 +11,93 @@
 #include <ts7200.h>
 
 #include "debug.h"
+#include "clockserver.h"
 #include "gameplayer.h"
 #include "gameserver.h"
 #include "nameserver.h"
 #include "requests.h"
 #include "task.h"
+//-------------------------------------------------------------------------
+//---------------------------Kernel 3--------------------------------------
+//-------------------------------------------------------------------------
+void k3_firstUserTask () {
+	debug ("First task started. \r\n");
+	int len;
+	TID id;
+	char req;
+	char ret[4][2];
+
+	// Create the name server
+	debug ("Creating the name server. \r\n");
+	Create (1, &ns_run);
+
+	// Create the clock server
+	debug ("Creating the clock server. \r\n");
+	Create (1, &cs_run);
+
+	// Create the clients
+	Create (3, &k3_client);
+	Create (4, &k3_client);
+	Create (5, &k3_client);
+	Create (6, &k3_client);
+	
+	// Initialize the return values for each client
+	ret[0][0] = 10;
+	ret[0][2] = 20;
+	ret[1][0] = 23;
+	ret[1][2] = 9;
+	ret[2][0] = 33;
+	ret[2][2] = 6;
+	ret[3][0] = 71;
+	ret[3][2] = 3;
+
+	// Receive from the clients
+	debug ("First user task is receiving.\r\n");
+	int i;
+	for ( i = 0; i < 4; i ++ ) {
+		len = Receive (&id, (char*) &req, sizeof(char));
+		assert ( len == sizeof(char)*2 );
+	
+		Reply ( id, (char *) &ret[i], sizeof(char)*2 );
+	}
+	
+	// Quit since this task is done
+	debug ("First user task exiting.\r\n");
+	Exit();
+
+}
+
+void k3_client () {
+	debug ("Client %d is starting.\r\n", MyTid());
+	char replyBuffer[2];
+	char msg;
+	int csTid = WhoIs (CLOCK_NAME);
+	int i;
+
+	// Register with the name server
+	RegisterAs ("Client" + MyTid());
+	
+	// Send to your parents
+	Send ( MyParentTid(), &msg, sizeof(char), 
+		   replyBuffer, sizeof(char)*2 );
+	
+	// Print out the clock server's id
+	bwprintf (COM2, "Client %d knows the clock server's id is %d.\r\n", 
+			  MyTid(), csTid);
+	
+	// Delay the returned number of times and print.
+	int delayLen = (int) replyBuffer[0];
+	int numDelays = (int) replyBuffer[1];
+	for ( i = 0; i < numDelays; i ++ ) {
+		Delay (delayLen);
+		bwprintf (COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
+				   MyTid(), delayLen, i);
+	}
+
+	// Exit!
+	debug ("Client %d is exiting.\r\n", MyTid());
+	Exit();
+}
 
 //-------------------------------------------------------------------------
 //---------------------------Kernel 2--------------------------------------
