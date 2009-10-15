@@ -24,6 +24,7 @@ enum TASK_STATE {
 	SEND_BLKD,			// Task is blocked on a send queue
 	RCV_BLKD,			// Task is blocked on a receive queue
 	RPLY_BLKD,			// Task is blocked waiting for a reply - It is not on a queue
+	AWAITING_EVT,		// Task is blocked and awaiting an event
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
 
