@@ -1,0 +1,93 @@
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
+
+ 	     __  __                                ___          __     
+		/\ \/\ \                              /\_ \       /'__`\   
+		\ \ \/'/'     __   _ __    ___      __\//\ \     /\_\L\ \  
+		 \ \ , <    /'__`\/\`'__\/' _ `\  /'__`\\ \ \    \/_/_\_<_ 
+		  \ \ \\`\ /\  __/\ \ \/ /\ \/\ \/\  __/ \_\ \_    /\ \L\ \
+		   \ \_\ \_\ \____\\ \_\ \ \_\ \_\ \____\/\____\   \ \____/
+		    \/_/\/_/\/____/ \/_/  \/_/\/_/\/____/\/____/    \/___/ 
+
+Question 1
+==========
+	The executable is located at: /u8/becmacdonald/cs452/a3/handin/main/main.elf.
+
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a3.elf
+
+	To load the program, type 'load ARM/becmacdo_a3.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
+
+Question 2 
+==========
+	
+	Weaknesses in Previous Kernel That We Fixed
+	===========================================
+
+
+
+	Context Switch
+	==============
+	
+	
+	Interrupt Handling
+	==================
+
+
+	TD
+	==
+	
+	
+	Await Event
+	===========
+
+	
+	Clock Server
+	============
+
+	Delay
+	=====
+
+	Time
+	====
+
+	DelayUntil
+	==========
+
+	Clock Notifier
+	==============
+
+
+	User Tasks for Kernel 3
+	==========================
+	Since the assignment only asked for a description of the changes to the
+	kernel, we will not include a description of the user tasks. The
+	code is heavily documented and easy to read, if needed. Or, we will be happy
+	to provide written details.
+
+Question 3
+==========
+	All source code is located in: /u8/becmacdonald/cs452/a3/handin.
+
+	Here are the md5 hashes for each file:
+
+	
+Question 4
+==========
+	Here is a listing of all submitted files:
+
+
+
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
+
+Question 5
+==========
+
+	Output and an explanation
