@@ -72,7 +72,7 @@ TID WhoIs (char *name) {
 }
 
 int AwaitEvent (int eventid, char *event, int eventlen) {
-	
+	SWI(9);
 }
 
 int Delay ( int ticks ) {

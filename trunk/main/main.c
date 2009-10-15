@@ -84,7 +84,9 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			td->returnValue = reply (td, pq, req->a->reply.tid, 
 						req->a->reply.reply, req->a->reply.rpllen);
 			break;
-		
+		case AWAITEVENT:
+			td->returnValue = awaitEvent ();
+			break;
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
