@@ -10,13 +10,14 @@
 #include "globals.h"
 #include "requests.h"
 
-#define NUM_PRIORITY 	10	// For now, we will use 3 priorities [0,2]
+#define NUM_PRIORITY 	10	// For now, we will use 10 priorities [0,9]
 #define USER_START 		0x00044f88
 #define USER_END		0x01fdd000
 #define NUM_TDS	 		64
 #define NUM_BITFIELD	NUM_TDS/32
 #define	STACK_SIZE		0x10000
 #define STACK_BASE		0x260000
+#define NUM_INTERRUPTS	3
 
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
@@ -27,6 +28,13 @@ enum TASK_STATE {
 	AWAITING_EVT,		// Task is blocked and awaiting an event
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
+
+// Use these to index into the intBlocked array
+enum INTERRUPTS {
+	COM1 = 0,	
+	COM2,
+	TIMER
+} interruptTypes;
 
 // We want to call task descriptors TDs for short.
 typedef struct taskdesc TD;
@@ -74,10 +82,9 @@ typedef struct {
 
 	TID lastId;					// Last id to used
 
-	Queue blocked;				// A single queue of blocked tasks
-
 	BitField empty[NUM_BITFIELD];// bitfield mask telling us which td's are used
 
+	Queue intBlocked[NUM_INTERRUPTS]	// A queue of blocked tasks awaiting interrupts
 } PQ;
 
 /**
