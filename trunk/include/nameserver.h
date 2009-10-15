@@ -4,8 +4,8 @@
  * dgoc
  */
 
-#ifndef __SERVER_H__
-#define __SERVER_H__
+#ifndef __NAME_SERVER_H__
+#define __NAME_SERVER_H__
 
 #include "requests.h"
 
