@@ -7,10 +7,10 @@
 
 #include <bwio.h>
 
+#include "clockserver.h"
 #include "debug.h"
 #include "error.h"
-#include "clockserver.h"
-
+#include "requests.h"
 
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
@@ -53,6 +53,6 @@ void cs_run () {
 }
 
 int cs_init (ClockServer *cs) {
-	RegisterAs ("ClockServer");
+	RegisterAs (CLOCK_NAME);
 }
 
