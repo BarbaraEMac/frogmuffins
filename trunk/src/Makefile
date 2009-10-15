@@ -17,7 +17,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 ARFLAGS = rcs
 
-all:  bwio.a debug.a string.a clock.a
+all:  bwio.a debug.a string.a
 
 %.s: %.c 
 	$(XCC) -S $(CFLAGS) -o $@ $<
