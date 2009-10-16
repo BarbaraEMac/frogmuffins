@@ -13,7 +13,7 @@
 #include "error.h"
 #include "requests.h"
 
-#define CLOCK_TIMER 	TIMER3_BASE
+#define CLOCK_TIMER 	TIMER1_BASE
 #define NUM_SLEEPERS	1024
 
 void cs_run () {
