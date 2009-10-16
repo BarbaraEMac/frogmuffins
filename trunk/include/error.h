@@ -8,26 +8,22 @@
 #define __ERROR_H__
 
 enum ERROR {
-	NO_ERROR = 0,
-	NEG_TID = -10000,
-	DEFUNCT_TID,
-	OLD_TID, 		// Not from the current generation
-	INVALID_TID,
-	OUT_OF_BOUNDS,
-	RCV_BUFFER_FULL,
-	RPLY_BUFFER_FULL,
-	PQ_FULL,
-	NULL_ADDR,
-	SNDR_NOT_RPLY_BLKD,
-	BUFFER_FULL,
-	INVALID_PRIORITY,
-	NO_TDS_LEFT,
-	INVALID_START_FCN,
-	NAME_NOT_REGISTERED,
-	NOT_FOUND,
-	NS_INVALID_REQ_TYPE,
-	CS_INVALID_REQ_TYPE
 	
+	NO_ERROR = 0,			// Everything ran smoothly!
+	NEG_TID = -10000,		// The task id is negative
+	DEFUNCT_TID,			// The corresponding td is defunct
+	OLD_TID, 				// Not from the current generation
+	INVALID_TID,			// The task id is not valid
+	OUT_OF_BOUNDS,			// The address is not within the task's address space
+	RCV_BUFFER_FULL,		// The Receive() buffer is full
+	RPLY_BUFFER_FULL,		// The Reply() buffer is full
+	NULL_ADDR,				// A buffer address is 0 (null)
+	SNDR_NOT_RPLY_BLKD,		// The Sender is in a bad state
+	INVALID_PRIORITY,		// The given priority is invalid
+	NO_TDS_LEFT,			// No more useable TDs - Cannot "create" more
+	NOT_FOUND,				// Name Server could not locate the corresponding task
+	NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
+	CS_INVALID_REQ_TYPE		// Invalid Clock Server request type
 
 } error;
 

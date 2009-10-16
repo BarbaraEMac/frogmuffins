@@ -48,7 +48,7 @@ int pq_getUnused ( const PQ *this ) {
 	for ( i = 0; i < NUM_BITFIELD && this->empty[i]==0; i ++ ) {}
 
 	if ( i >= NUM_BITFIELD ) {	// if everything's full we're screwed
-		return PQ_FULL;
+		return NO_TDS_LEFT;
 	}
 	int n = 0;
 	BitField field = this->empty[i], mask;
@@ -131,11 +131,6 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	}
 	TD *td = &pq->tdArray[idx];
 	
-	// Signal an error if we are out of unused TDs
-	if (idx >= NUM_TDS ) {
-		return (TD *) NO_TDS_LEFT;
-	}
-
 	// Mark the slot as used
 	pq_setUsed( pq, idx, 1 );
 
