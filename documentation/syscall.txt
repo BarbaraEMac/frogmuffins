@@ -118,8 +118,3 @@ return the error code all of the way back to the sender task. This sender task
 should check the error code before it continues with the rest of its execution.
 For this reason, the error codes must be shared between the kernel and user
 tasks.
-
-
-
-
-	
