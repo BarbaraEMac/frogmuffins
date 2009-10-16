@@ -31,8 +31,8 @@ enum TASK_STATE {
 
 // Use these to index into the intBlocked array
 enum INTERRUPTS {
-	COM1 = 0,	
-	COM2,
+	COMONE = 0,	
+	COMTWO,
 	TIMER
 } interruptTypes;
 
@@ -74,17 +74,16 @@ struct taskdesc {
  * The task descriptor priority queues.
  */
 typedef struct {
-	
 	TD tdArray[NUM_TDS]; 		// Stores all the TDs
-
-    Queue ready[NUM_PRIORITY]; 	// The ready queue
-	int highestPriority;		// The highest non-empty bucket in the ready Q
 
 	TID lastId;					// Last id to used
 
 	BitField empty[NUM_BITFIELD];// bitfield mask telling us which td's are used
 
-	Queue intBlocked[NUM_INTERRUPTS]	// A queue of blocked tasks awaiting interrupts
+    Queue ready[NUM_PRIORITY]; 	// The ready queue
+	int highestPriority;		// The highest non-empty bucket in the ready Q
+
+	Queue intBlocked[NUM_INTERRUPTS];	// A queue of blocked tasks awaiting interrupts
 } PQ;
 
 /**

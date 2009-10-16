@@ -6,6 +6,7 @@
 //#define DEBUG
 
 #include <bwio.h>
+#include <ts7200.h>
 
 #include "clockserver.h"
 #include "debug.h"

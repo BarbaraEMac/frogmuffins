@@ -55,6 +55,8 @@ void ns_run () {
 void ns_init (NameServer *ns) {
 	debug ("ns_init: name server=%x \r\n", ns);
 	ns->nextEmpty = 0;
+
+	assert ( MyTid() == NS_TID );
 }
 
 void ns_insert (NameServer *ns, const char *name, int tid) {
