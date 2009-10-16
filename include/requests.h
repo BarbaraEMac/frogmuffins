@@ -37,6 +37,7 @@ typedef struct {
 
 typedef struct {
 	enum CSRequestCode type;
+	int  ticks;
 } CSRequest;
 
 // More to be added later
@@ -153,7 +154,7 @@ int AwaitEvent (int eventid, char *event, int eventlen);
 /** 
  * Wait for the given time.
  */
-int Delay ( int ticks );
+int Delay (int ticks);
 
 /**
  * Return the time since the clock server started.
