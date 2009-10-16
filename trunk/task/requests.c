@@ -78,7 +78,8 @@ int AwaitEvent (int eventid, char *event, int eventlen) {
 int Delay ( int ticks ) {
 	char ret[5];
 	CSRequest req;
-	req.type = DELAY;
+	req.type  = DELAY;
+	req.ticks = ticks;
 	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
 
 	return ret;
@@ -87,7 +88,8 @@ int Delay ( int ticks ) {
 int Time () {
 	int time;
 	CSRequest req;
-	req.type = TIME;
+	req.type  = TIME;
+	req.ticks = 0;
 	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
 
 	return time;
@@ -96,7 +98,8 @@ int Time () {
 int DelayUntil (int ticks) {
 	char ret[5];
 	CSRequest req;
-	req.type = DELAYUNTIL;
+	req.type  = DELAYUNTIL;
+	req.ticks = ticks;
 	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
 	
 	return ret;
