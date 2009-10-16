@@ -13,7 +13,7 @@
 #include "globals.h"
 
 #define NS_TID 		1
-#define CS_TID 		2
+#define CS_TID 		2 // TODO: Remove this since Bill Cowan said it was WRONG in last term's newsgroup
 #define NAME_LEN	12
 
 typedef char TaskName[NAME_LEN];
