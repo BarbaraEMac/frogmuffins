@@ -49,10 +49,10 @@ Syscall Implementation
 ======================
 	If Create was called, then the kernel executes td_create() with all of
 Create()'s arguments. To get a new td, we pull the next unused one from an
-array of tds in our TD manager, PQ. We initialize it with the supplied values
-and add it to a ready queue. We return the task id of this new task to the 
-parent TD. It stores this value as the returnValue in the TD and the system
-call is completed.
+array of tds in our TD manager, PQ. We initialize it with the supplied values,
+a fresh new stack pointer, a default PSR, and add it to a ready queue.
+We return the task id of this new task to the parent TD. It stores this value
+as the returnValue in the TD and the system call is completed.
 
 	If MyTid() was called, the kernel looks at the active task's task id and 
 stores it into the TD's returnValue member. At this point, the system call is
@@ -104,7 +104,7 @@ NEG_TID is -10000 and enums assign values by incrementing by 1 for each
 subsequent entry, each following entry will be negative. 
 The value for DEFUNCT_TID is -9999, OLD_TID is -9998, etc.  
 
-	We tried to be specific as we could with the error codes so that we would
+	We were as specific as we could with the error codes so that we would
 always know the exact error that was triggered. For example, there are 4
 different error codes for checking a task id. We also separated the buffer
 full errors to determine if the receive OR reply buffer is full. This makes
