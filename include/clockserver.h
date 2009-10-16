@@ -41,7 +41,7 @@ void notifier_run();
 void notifier_init();
 
 // Old clock functions
-int* clock_init( int clock_base, int enable, int val );
+int* clock_init( int clock_base, int enable, int interrupt, int val );
 
 void clock_stop( int clock_base );
 
