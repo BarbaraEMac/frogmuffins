@@ -9,19 +9,36 @@
 
 #define CLOCK_NAME "ClockServer"
 
+#include "globals.h"
+
+typedef struct sleeper Sleeper;
+
+struct sleeper {
+	TID tid;
+	int endTime;
+
+	Sleeper *next;
+	Sleeper *prev;
+};
+
 typedef struct {
-
-
+	// Queue of	{tid, time} to indicate sleeping tasks
+	Sleeper *sleepers;
 } ClockServer;
 
 void cs_run ();
 
-int cs_init (ClockServer *cs);
+void cs_init (ClockServer *cs);
 
+// List operators
+void list_insert ( Sleeper **head, Sleeper *toAdd );
+
+void list_remove ( Sleeper **head, Sleeper *toAdd );
 
 // Notifier
 void notifier_run();
 
+void notifier_init();
 
 // Old clock functions
 int* clock_init( int clock_base, int enable, int val );
