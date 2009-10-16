@@ -29,13 +29,6 @@ enum TASK_STATE {
 	DEFUNCT			 	// Task will never run again :(
 } taskState;
 
-// Use these to index into the intBlocked array
-enum INTERRUPTS {
-	COMONE = 0,	
-	COMTWO,
-	TIMER
-} interruptTypes;
-
 // We want to call task descriptors TDs for short.
 typedef struct taskdesc TD;
 

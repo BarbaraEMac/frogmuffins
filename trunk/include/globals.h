@@ -15,4 +15,11 @@ typedef int TID;
 // Pointer the beginning of task execution
 typedef void (* Task) ();
 
+// Use these to index into the intBlocked array
+enum INTERRUPTS {
+	COMONE = 0,	
+	COMTWO,
+	TIMER
+} interruptTypes;
+
 #endif
