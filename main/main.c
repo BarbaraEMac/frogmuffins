@@ -4,7 +4,7 @@
  * dgoc
  */
 
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -93,6 +93,10 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			td_destroy( td, pq );
 			debug( "Exiting task,\r\n");
 			break;
+
+		case HARDWAREINT:
+			bwprintf( COM2, "got a HARDWARE INTERRUPT!\r\n" );
+			// TODO: handle the interrupt
 
 		case PASS:
 		default:
