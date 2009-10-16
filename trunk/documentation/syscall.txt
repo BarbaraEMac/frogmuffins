@@ -1,0 +1,125 @@
+												becmacdo	  Barbara Macdonald
+												dgoc				 Daniel Goc
+
+ 		 __                     _ _         ___          
+		/ _\_   _ ___  ___ __ _| | |___    / __\__  _ __ 
+		\ \| | | / __|/ __/ _` | | / __|  / _\/ _ \| '__|
+		_\ \ |_| \__ \ (_| (_| | | \__ \ / / | (_) | |   
+		\__/\__, |___/\___\__,_|_|_|___/ \/   \___/|_|   
+		    |___/                                        
+             	            			   _   _ 
+				  /\ /\___ _ __ _ __   ___| | / |
+				 / //_/ _ \ '__| '_ \ / _ \ | | |
+				/ __ \  __/ |  | | | |  __/ | | |
+				\/  \/\___|_|  |_| |_|\___|_| |_|
+                                 
+	
+Types
+=====
+	The system call types are all stored in an enum so that we can use a 
+switch statement to easily determine how to handle the call. 
+At this point of our kernel, this is the enum: 
+	enum RequestCode {
+		CREATE = 1,
+		MYTID = 2,
+		MYPARENTTID = 3,
+		PASS = 4,
+		EXIT = 5,
+		SEND = 6,
+		RECEIVE = 7,
+		REPLY = 8,
+		AWAITEVENT = 9
+	};
+As we implement more system calls, they will be added to this enum. 
+Note: We specify the integer value of the enum here to remind ourselves to
+match up the code for the SWI instruction (in the following paragraph).
+
+Syscall Handler
+===============
+	When a user task makes a system call, all we do is execute the assembly
+instruction 'swi' with a single argument. We do not perform any error checking
+at this point. We chose to implement system calls this way since it is faster 
+for calls that do no actual work, ie. Pass(). The argument passed to 'swi' is an 
+integer value corresponding to the system call type. For example, if Create 
+was called, then '1' would be the argument. These arguments correspond to 
+the integer values of the enum. To determine which system call to handle for 
+the active task, we switch on the argument value. 
+
+Syscall Implementation
+======================
+	If Create was called, then the kernel executes td_create() with all of
+Create()'s arguments. To get a new td, we pull the next unused one from an
+array of tds in our TD manager, PQ. We initialize it with the supplied values
+and add it to a ready queue. We return the task id of this new task to the 
+parent TD. It stores this value as the returnValue in the TD and the system
+call is completed.
+
+	If MyTid() was called, the kernel looks at the active task's task id and 
+stores it into the TD's returnValue member. At this point, the system call is
+completed.
+
+	If MyParentTid() was called, the kernel places the parent's task id into the
+active task's returnValue member and completes the system call.
+
+	If Pass() was called, the kernel does nothing to handle and system call and
+allows the scheduler to run.
+
+	If Exit() was called, the kernel sets the active task's state to DEFUNCT and
+calls the scheduler. The scheduler will not place this task on a ready queue, so
+it will never be scheduled to run again.
+
+	Send(), Receive(), and Reply() were all documented in the documentation file
+for Kernel 2 and AwaitEvent() has not been written yet. It will be documented 
+for Kernel 3.
+
+Error Codes
+===========
+	We have a file in include/ named error.h. This file holds all of the error
+codes for both the kernel and user tasks. The errors are stored as an enum and
+all of the values are negative so that we can distinguish between valid return
+codes (positive) and errors (negative). At this point, returning an error code
+of 0 signifies that no error occurred.
+
+	Here is the current enum: 
+	enum ERROR {
+		NO_ERROR = 0,			// Everything ran smoothly!
+		NEG_TID = -10000,		// The task id is negative
+		DEFUNCT_TID,			// The corresponding td is defunct
+		OLD_TID, 				// Not from the current generation
+		INVALID_TID,			// The task id is not valid
+		OUT_OF_BOUNDS,			// The addr is not within the task's addr space
+		RCV_BUFFER_FULL,		// The Receive() buffer is full
+		RPLY_BUFFER_FULL,		// The Reply() buffer is full
+		NULL_ADDR,				// A buffer address is 0 (null)
+		SNDR_NOT_RPLY_BLKD,		// The Sender is in a bad state
+		INVALID_PRIORITY,		// The given priority is invalid
+		NO_TDS_LEFT,			// No more useable TDs - Cannot "create" more
+		NOT_FOUND,				// Name Server could not locate the task
+		NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
+		CS_INVALID_REQ_TYPE		// Invalid Clock Server request type
+	} error;
+
+	The error names are pretty self explanatory and the comments help. Since
+NEG_TID is -10000 and enums assign values by incrementing by 1 for each 
+subsequent entry, each following entry will be negative. 
+The value for DEFUNCT_TID is -9999, OLD_TID is -9998, etc.  
+
+	We tried to be specific as we could with the error codes so that we would
+always know the exact error that was triggered. For example, there are 4
+different error codes for checking a task id. We also separated the buffer
+full errors to determine if the receive OR reply buffer is full. This makes
+debugging much easier.
+
+	Since we are using C and cannot throw exceptions back at calling code, we
+simply pass errors back up through the calling code. It is the calling code's
+responsibility to check for these errors and act appropriately. For example,
+if a task tries to send a message to task id -4, we would detect this error and
+return the error code all of the way back to the sender task. This sender task
+should check the error code before it continues with the rest of its execution.
+For this reason, the error codes must be shared between the kernel and user
+tasks.
+
+
+
+
+	
