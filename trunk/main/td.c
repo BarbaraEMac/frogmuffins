@@ -138,7 +138,7 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	pq->lastId += diff;
 	td->id = pq->lastId;
 
-    td->spsr = 0x10;	
+    td->spsr = DEFAULT_PSR;	
 	td->sb = (int *) STACK_BASE + (STACK_SIZE * idx); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
 	asm( "#; look after this");
