@@ -6,7 +6,7 @@
  * User task stuff goes in here.
  */
 
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -113,6 +113,7 @@ void k2_firstUserTask () {
 	// Create the game server for Rock Paper Scissors
 	debug ("Creating the Rock Paper Scissors server. \r\n");
 	Create (1, &gs_run);
+//	Send( 1, 2, 3, 4, 5 );
 
 	// Create players for the game server
 	debug ("Creating 8 players. \r\n");
@@ -121,17 +122,38 @@ void k2_firstUserTask () {
 	Create (2, &rockPlayer);
 	Create (2, &clonePlayer);
 	
-	Create (2, &paperPlayer);
+/*	Create (2, &paperPlayer);
 	Create (2, &clonePlayer);
-	
+*/	
 	// 2 at same priority
 	Create (1, &scissorsPlayer);
 	Create (1, &clonePlayer);
 	
 	// 2 at different priorities
-	Create (3, &clonePlayer);
+/*	Create (3, &clonePlayer);
 	Create (4, &clonePlayer);
+*/
+	int *i = (int *) (VIC1_BASE + VIC_SOFT_INT);
+	int k, a=0;
+	for(k = 0; k < 25; k++ ) {
+		bwprintf(COM2, "sending software int to addr:%x. \r\n", i);
+		a = 0;
+		*i = 0x10;
+		asm("#;after here");
+		a += 1;
+		a += 2;
+		a += 4;
+		a += 8;
+		a += 16;
+		a += 32;
+		a += 64;
+		a += 128;
 
+		bwprintf(COM2, "sent a software int. waiting for input, a=%x\r\n", a);
+		bwgetc(COM2);
+	}
+
+/*
 	// Let's make 50 players to test the td recycling
 	debug ("Creating 50 players at the lowest priority. \r\n");
 	int i;
@@ -142,7 +164,7 @@ void k2_firstUserTask () {
 		Create ((i%5)+5, &clonePlayer);
 		Create ((i%5)+5, &robinPlayer);
 	}
-
+*/
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");
 	Exit();

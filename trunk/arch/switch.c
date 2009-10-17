@@ -9,12 +9,15 @@
 
 #include "switch.h"
 
+void kernelExit(TD *active, Request *req) {
+}
+
 void kernelEnter() {
 }
 
-void kernelExit(struct taskdesc *active, struct request *req) {
+void interruptHandler() {
 }
 
-int syscall(int arg0, int arg1, int arg3, int type) {
+/*int syscall(int arg0, int arg1, int arg3, int type) {
 	return 0;
-}
+}*/
