@@ -21,14 +21,9 @@ struct sleeper {
 	Sleeper *prev;
 };
 
-typedef struct {
-	// Queue of	{tid, time} to indicate sleeping tasks
-	Sleeper *sleepers;
-} ClockServer;
-
 void cs_run ();
 
-void cs_init (ClockServer *cs);
+void cs_init (Sleeper **sleepersQ);
 
 // List operators
 void list_insert ( Sleeper **head, Sleeper *toAdd );
