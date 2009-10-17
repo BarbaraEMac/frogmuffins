@@ -17,24 +17,25 @@
 
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
-	ClockServer cs;
-	int 	   senderTid;
-	CSRequest  req;
+	Sleeper   *sleepersQ;		// A queue of all sleeping user tasks
+	int 	   senderTid;		// The task id of the message sender
+	CSRequest  req;				// A clock server request message
 	int 	   ret, len;
 	int       *currentTime = clock_init ( TIMER3_BASE, 1, 0, 0 );
 	int		   curTimeInTicks;
-	Sleeper    allocdSleepers[NUM_SLEEPERS];
-	int		   nextSleeper = 0;
-	Sleeper   *tmpSleeper;
+	Sleeper    allocdSleepers[NUM_SLEEPERS]; // For allocating memory
+	int		   nextSleeper = 0;	// ptr into allocdSleepers array
+	Sleeper   *tmpSleeper;		// tmp ptr
 
 	// Initialize the Clock Server
-	cs_init (&cs);
+	cs_init (&sleepersQ);
 
 	FOREVER {
 		// Receive a server request
 		debug ("cs: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(CSRequest) );
-		debug ("cs: Received: fromTid=%d name='%s' type=%d  len=%d\r\n", senderTid, req.name, req.type, len);
+		debug ("cs: Received: fromTid=%d name='%s' type=%d  len=%d\r\n", 
+				senderTid, req.name, req.type, len);
 	
 		assert( len == sizeof(CSRequest) );
 
@@ -45,7 +46,7 @@ void cs_run () {
 				tmpSleeper->endTime = *currentTime + (req.ticks * 100);
 				tmpSleeper->tid     = senderTid;
 				
-				list_insert ( &(cs.sleepers), tmpSleeper );
+				list_insert ( &(sleepersQ), tmpSleeper );
 				break;
 			
 			case DELAYUNTIL:
@@ -54,7 +55,7 @@ void cs_run () {
 				tmpSleeper->endTime = req.ticks;
 				tmpSleeper->tid     = senderTid;
 
-				list_insert ( &(cs.sleepers), tmpSleeper );
+				list_insert ( &(sleepersQ), tmpSleeper );
 				break;
 			
 			case TIME:
@@ -68,11 +69,11 @@ void cs_run () {
 			case NOTIFY:
 				curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
 				curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
-				tmpSleeper = cs.sleepers;
+				tmpSleeper = sleepersQ;
 
 				while ( *currentTime >= tmpSleeper->endTime ) {
 					// Remove from the list of sleeping tasks
-					list_remove ( &(cs.sleepers), tmpSleeper );
+					list_remove ( &(sleepersQ), tmpSleeper );
 
 					// Wake it up!
 					Reply (senderTid, (char*) &curTimeInTicks, sizeof(int));
@@ -95,6 +96,21 @@ void cs_run () {
 	}
 	
 	Exit(); // This will never be called.
+}
+
+void cs_init (Sleeper **sleepersQ) {
+	int err;
+
+	// Register with the Name Server
+	RegisterAs (CLOCK_NAME);
+	
+	// Spawn a notifying helper task
+	if ( (err = Create( 1, &notifier_run )) < NO_ERROR ) {
+		error (err, "Cannot create the clock notifier.\r\n");
+	}
+
+	// No tasks are currently waiting
+	*sleepersQ = 0;
 }
 
 void list_insert ( Sleeper **head, Sleeper *toAdd ) {
@@ -162,21 +178,6 @@ void list_remove ( Sleeper **head, Sleeper *toRm ) {
 	toRm->next = 0;
 	toRm->prev = 0;
 }
-
-void cs_init (ClockServer *cs) {
-	int err;
-
-	// Register with the Name Server
-	RegisterAs (CLOCK_NAME);
-	
-	// Spawn a notifying helper task
-	if ( (err = Create( 1, &notifier_run )) < NO_ERROR ) {
-		error (err, "Cannot create the clock notifier.\r\n");
-	}
-
-	cs->sleepers = 0;
-}
-
 
 void notifier_run() {
 
