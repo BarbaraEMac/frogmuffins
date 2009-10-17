@@ -16,7 +16,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
-OBJECTS = main/main.o arch/switch.o task/requests.o main/td.o task/task.o syscall/syscalls.o server/clockserver.o server/nameserver.o task/gameserver.o task/gameplayer.o
+OBJECTS = main/main.o arch/switch.o task/requests.o main/td.o task/task.o main/syscalls.o server/clockserver.o server/nameserver.o task/gameserver.o task/gameplayer.o
 
 HEADERS = include/*.h
 
