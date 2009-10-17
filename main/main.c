@@ -187,6 +187,7 @@ int main( int argc, char* argv[] ) {
 		}
 		if ( active->returnValue < NO_ERROR ) {
 			error( active->returnValue, "Kernel request failed.");
+			bwgetc(COM2);
 		}
 		getNextRequest (active, &nextRequest);
 		

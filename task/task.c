@@ -56,7 +56,7 @@ void k3_firstUserTask () {
 	int i;
 	for ( i = 0; i < 4; i ++ ) {
 		len = Receive (&id, (char*) &req, sizeof(char));
-		assert ( len == sizeof(char)*2 );
+		assert ( len == sizeof(char) );
 	
 		Reply ( id, (char *) &ret[i], sizeof(char)*2 );
 	}
@@ -81,13 +81,10 @@ void k3_client () {
 	Send ( MyParentTid(), &msg, sizeof(char), 
 		   replyBuffer, sizeof(char)*2 );
 	
-	// Print out the clock server's id
-	bwprintf (COM2, "Client %d knows the clock server's id is %d.\r\n", 
-			  MyTid(), csTid);
-	
 	// Delay the returned number of times and print.
 	int delayLen = (int) replyBuffer[0];
 	int numDelays = (int) replyBuffer[1];
+	debug("delayLen= %d, numDelays = %d\r\n", delayLen, numDelays );
 	for ( i = 0; i < numDelays; i ++ ) {
 		Delay (delayLen, csTid);
 		bwprintf (COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
