@@ -167,6 +167,8 @@ int Delay (int ticks);
 
 /**
  * Install a driver to run to handle an interrupt from hardware
+ * This driver gets run in priviledged mode immediately after an
+ * interrupt occurs, and MUST turn off the source of the interrupt
  */
 int InstallDriver (int eventid, Driver driver);
 

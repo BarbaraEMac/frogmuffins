@@ -176,20 +176,18 @@ int main( int argc, char* argv[] ) {
 	}
 
 	FOREVER {	
-		debug ("	Scheduling a new task.\r\n");
 		active = schedule (active, &mgr);
 		
 		// Run out of tasks to run
 		if ( active == 0 ) {
 			break;
 		}
-
-		debug ("	Getting the next request.\r\n");
+		if ( active->returnValue < NO_ERROR ) {
+			error( active->returnValue, "Kernel request failed.");
+		}
 		getNextRequest (active, &nextRequest);
-		debug ("	Got a new request successfully.\r\n");
 		
 		service (active, &nextRequest, &mgr);
-		debug ("	Done servicing the request.\r\n");
 	}
 
 	bwputstr( COM2, "Exiting normally.\r\n" );
