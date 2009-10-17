@@ -7,6 +7,7 @@
 #define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
+#include <math.h>
 
 #include "debug.h"
 #include "error.h"
@@ -18,9 +19,10 @@
 
 #define WAIT	 for( i=0; i<200000; i++) {}
 
+
 int interruptStatus (int base) {
-	int *clear = (int *) (base);
-	return *clear;
+	int *status = (int *) (base);
+	return *status;
 }
 /**
  * Perform a context switch.
@@ -108,9 +110,15 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
-			bwprintf( COM2, "got a HARDWARE INTERRUPT!\r\n" );
-			driver =  
-			// TODO: handle the interrupt
+			eventId = ctz( interruptStatus( VIC1_BASE ) );
+			bwprintf( COM2, "got HARDWARE INTERRUPT #%d!\r\n", eventId );
+			assert( eventId < 32 );
+			driver = mgr->intDriver[eventId];
+			assert( driver != 0 );
+			td = queue_pop( &mgr->intBlocked[eventId] );
+			td->returnValue = driver( td->a->awaitEvent.event, 
+					td->a->awaitEvent.eventLen );
+			// TODO: wake up the dasl
 			i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
 			*i = 0xFFFFFFFF;
 
@@ -150,7 +158,7 @@ TD *schedule ( TD *oldTask, TDM *mgr ) {
 
 int main( int argc, char* argv[] ) {
 	TDM		 mgr;			// The task descriptor manager
-	TD	    *active;		// A pointer to the actively running task
+	TD		*active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
 
 	// Initialize the printing connection
@@ -169,14 +177,14 @@ int main( int argc, char* argv[] ) {
 	
 	// Turn off interrupts 
 	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
-	*handler = 0;
+	*handler = 0x10;
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
 
 	// Create the first task and set it as the active one
-    //active = td_create ( 1, &receiverTask, -1, &mgr );
-    // Set priority = 0 to ensure that this task completes
+	//active = td_create ( 1, &receiverTask, -1, &mgr );
+	// Set priority = 0 to ensure that this task completes
 	active = td_create ( 0, &k2_firstUserTask, -1, &mgr );
 
 	if ( active < NO_ERROR ) {

@@ -7,6 +7,7 @@
 #include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
+#include <math.h>
 
 #include "error.h"
 #include "requests.h"
@@ -50,23 +51,11 @@ int mgr_getUnused ( const TDM *this ) {
 	if ( i >= NUM_BITFIELD ) {	// if everything's full we're screwed
 		return NO_TDS_LEFT;
 	}
-	int n = 0;
-	BitField field = this->empty[i], mask;
-	assert( field != 0 );
-	mask = 0xFFFF;
-	if ( (field & mask) == 0 ) { n += 16; }
-	mask = 0xFF << n;
-	if ( (field & mask) == 0 ) { n += 8; }
-	mask = 0xF << n;
-	if ( (field & mask) == 0 ) { n += 4; }
-	mask = 0x3 << n;
-	if ( (field & mask) == 0 ) { n += 2; }
-	mask = 0x1 << n;
-	if ( (field & mask) == 0 ) { n += 1; }
+	int n = ctz(this->empty[i]) + (i * BITFIELD_WIDTH);
 
 	debug ( "\tmgr_getUnused, empty=%x %x n=%d \r\n", this->empty[1], 
-			this->empty[0], n + (i * BITFIELD_WIDTH) );
-	return n + (i * BITFIELD_WIDTH);
+			this->empty[0], n);
+	return n;
 }
 
 

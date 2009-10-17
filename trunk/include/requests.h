@@ -96,7 +96,7 @@ typedef volatile const union {
 	struct {
 		int eventId;
 		char *event;
-		size_t eventlen;
+		size_t eventLen;
 	} awaitEvent;
 	struct {
 		int eventId;
