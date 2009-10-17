@@ -82,6 +82,7 @@ typedef struct {
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
 	Queue intBlocked[NUM_INTERRUPTS];	// A queue of blocked tasks awaiting interrupts
+	Driver intDriver[NUM_INTERRUPTS];	// An array of drivers to handler each interrupt
 } TDM;
 
 /**
