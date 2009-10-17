@@ -105,7 +105,7 @@ int mgr_installDriver( TDM *this, int eventId, Driver driver ) {
 		return INVALID_EVENTID;
 	}
 	this->intDriver[eventId] = driver;
-	return 0;	// success
+	return NO_ERROR;	// success
 }
 
 TD * td_create (int priority, Task start, TID parentId, TDM *mgr) {

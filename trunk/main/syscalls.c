@@ -207,15 +207,28 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	return ret;
 }
 
-void awaitEvent (TD *td, TDM *mgr, enum INTERRUPTS type) {
+int awaitEvent (TD *td, TDM *mgr, int eventId ) {
+
+	// Check that this is a valid event id
+	if( eventId < 0 || eventId >= NUM_INTERRUPTS ) {
+		return INVALID_EVENTID;
+	}
+
+	// Check that the driver for this event is installed
+	if( mgr->intDriver[eventId] == 0 ) {
+		return NO_DRIVER;
+	}
 
 	// Turn on this interrupt
 	int *handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
-	*handler |= (1 << type);	
+	*handler |= (1 << eventId);	
 	
 	// Change task state
 	td->state = AWAITING_EVT;
 	
 	// Put this task on the corresponding interrupt blocked queue
-	queue_push ( &mgr->intBlocked[type], td );
+	queue_push ( &mgr->intBlocked[eventId], td );
+
+	// Everything worked
+	return NO_ERROR;
 }

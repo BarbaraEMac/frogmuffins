@@ -91,7 +91,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 						req->a->reply.reply, req->a->reply.rpllen);
 			break;
 		case AWAITEVENT:
-		//	td->returnValue = awaitEvent ();
+			td->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
 			break;
 
 		case INSTALLDRIVER:
