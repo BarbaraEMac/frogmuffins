@@ -59,7 +59,8 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( mgr != 0 );
 	
 	TD *child;
-	int *i;
+	int *i, eventId;
+	Driver driver;
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -108,6 +109,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 
 		case HARDWAREINT:
 			bwprintf( COM2, "got a HARDWARE INTERRUPT!\r\n" );
+			driver =  
 			// TODO: handle the interrupt
 			i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
 			*i = 0xFFFFFFFF;
@@ -142,7 +144,7 @@ TD *schedule ( TD *oldTask, TDM *mgr ) {
 		newActive->state = ACTIVE;
 	}
 	
-	debug ("schedule: scheduled %d (%x)\r\n", newActive->id, newActive);
+	debug ("schedule: scheduled %d @%x\r\n", newActive->id, newActive);
 	return newActive;
 }
 
@@ -165,9 +167,9 @@ int main( int argc, char* argv[] ) {
 	asm("#; done setting up the handlers");
 	bwprintf( COM2, "Initialized interrupt handlers at addr %x.\r\n", handler);
 	
-	// Turn on interrupts for
+	// Turn off interrupts 
 	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
-	*handler = 0xF0;
+	*handler = 0;
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
