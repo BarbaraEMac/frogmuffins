@@ -36,6 +36,5 @@ clean:
 
 copy:
 	cp bwio.a ../lib/libbwio.a
-	cp clock.a ../lib/libclock.a
 	cp debug.a ../lib/libdebug.a
 	cp string.a ../lib/libstring.a
