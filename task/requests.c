@@ -80,32 +80,32 @@ int InstallDriver (int eventid, Driver driver) {
 }
 
 
-int Delay ( int ticks ) {
+int Delay (int ticks, TID csTid) {
 	char ret[5];
 	CSRequest req;
 	req.type  = DELAY;
 	req.ticks = ticks;
-	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
+	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
 
 	return ret;
 }
 
-int Time () {
+int Time (TID csTid) {
 	int time;
 	CSRequest req;
 	req.type  = TIME;
 	req.ticks = 0;
-	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
 
 	return time;
 }
 
-int DelayUntil (int ticks) {
+int DelayUntil (int ticks, TID csTid) {
 	char ret[5];
 	CSRequest req;
 	req.type  = DELAYUNTIL;
 	req.ticks = ticks;
-	Send(CS_TID, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
+	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
 	
 	return ret;
 }

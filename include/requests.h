@@ -17,7 +17,6 @@
 
 // KERNEL SPECIFIC CONSTANTS
 #define NS_TID 		1
-#define CS_TID 		2 // TODO: Remove this since Bill Cowan said it was WRONG in last term's newsgroup
 #define NAME_LEN	12
 
 typedef char TaskName[NAME_LEN];
@@ -31,11 +30,10 @@ enum INTERRUPTS {
 	TIMER2 = 5
 } interruptTypes;
 
-
 enum NSRequestCode {
 	REGISTERAS = 1,
 	WHOIS,
-	};
+};
 
 enum CSRequestCode {
 	DELAY = 1,
@@ -172,11 +170,6 @@ TID WhoIs (char *name);
  */
 int AwaitEvent (int eventid, char *event, size_t eventlen);
 
-/** 
- * Wait for the given time.
- */
-int Delay (int ticks);
-
 /**
  * Install a driver to run to handle an interrupt from hardware
  * This driver gets run in priviledged mode immediately after an
@@ -184,14 +177,19 @@ int Delay (int ticks);
  */
 int InstallDriver (int eventid, Driver driver);
 
+/** 
+ * Wait for the given time.
+ */
+int Delay (int ticks, TID csTid);
+
 /**
  * Return the time since the clock server started.
  */
-int Time ();
+int Time (TID csTid);
 
 /**
  * Wait until the given time.
  */
-int DelayUntil (int ticks);
+int DelayUntil (int ticks, TID csTid);
 
 #endif

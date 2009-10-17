@@ -89,7 +89,7 @@ void k3_client () {
 	int delayLen = (int) replyBuffer[0];
 	int numDelays = (int) replyBuffer[1];
 	for ( i = 0; i < numDelays; i ++ ) {
-		Delay (delayLen);
+		Delay (delayLen, csTid);
 		bwprintf (COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
 				   MyTid(), delayLen, i);
 	}
