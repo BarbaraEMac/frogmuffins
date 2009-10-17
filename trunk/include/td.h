@@ -92,6 +92,15 @@ typedef struct {
 void mgr_init (TDM *mgr);
 
 /**
+ * Install a driver for the given eventid
+ * mgr - The task descriptor manager
+ * eventId - id of the event to install the driver for
+ * driver - the driver to install 
+ * RETURN: error code if failed
+ */
+int mgr_installDriver( TDM *mgr, int eventId, Driver driver );
+
+/**
  * Create a new TD.
  * priority - The priority for the new TD.
  * start - The user task function.

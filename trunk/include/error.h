@@ -21,6 +21,7 @@ enum ERROR {
 	SNDR_NOT_RPLY_BLKD,		// The Sender is in a bad state
 	INVALID_PRIORITY,		// The given priority is invalid
 	NO_TDS_LEFT,			// No more useable TDs - Cannot "create" more
+	INVALID_EVENTID,		// The event id is not valid
 	NOT_FOUND,				// Name Server could not locate the corresponding task
 	NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
 	CS_INVALID_REQ_TYPE		// Invalid Clock Server request type
