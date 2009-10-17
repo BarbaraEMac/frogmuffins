@@ -23,6 +23,15 @@
 typedef char TaskName[NAME_LEN];
 typedef int (* Driver) (char * event, size_t eventlen);
 
+// You can Await Event on these
+enum INTERRUPTS {
+	UART1 = 23,	
+	UART2 = 25,
+	TIMER1 = 4,
+	TIMER2 = 5
+} interruptTypes;
+
+
 enum NSRequestCode {
 	REGISTERAS = 1,
 	WHOIS,

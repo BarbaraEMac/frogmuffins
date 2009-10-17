@@ -14,12 +14,4 @@ typedef int TID;
 
 // Pointer the beginning of task execution
 typedef void (* Task) ();
-
-// You can Await Event on these
-enum INTERRUPTS {
-	UART1 = 0,	
-	UART2,
-	TIMER
-} interruptTypes;
-
 #endif
