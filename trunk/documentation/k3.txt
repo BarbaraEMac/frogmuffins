@@ -31,6 +31,17 @@ Question 2
 	===========================================
 
 
+	TD and TD Manager
+	=================
+	We made a few changes to our task descriptor (TD) struct and manager (TDM).
+	We added a new TD state AWAITING_EVT to indicate that a task is blocked and
+	waiting for a particular event. Tasks with this state will not be put on a 
+	ready queue or scheduled to be active until the event has occurred.
+
+	We also changed the name of our task descriptor manager. It used to be
+	called PQ since it just held priority queue operations for the ready queue.
+	Now that it has device drive information, the ready queues and the 
+	await event queues, we've changed the name to TDM (which stands for TD Manager).
 
 	Context Switch
 	==============
@@ -40,8 +51,8 @@ Question 2
 	==================
 
 
-	TD
-	==
+	Device Drivers
+	==============
 	
 	
 	Await Event
@@ -50,6 +61,40 @@ Question 2
 	
 	Clock Server
 	============
+	The clock server is a user task that keeps track of the current time since 
+	the kernel was started. It operates much like the name server and rock,
+	paper, scissors server. Here is the pseudo code:
+
+		Initialize the server by:
+			Registering with the Name Server.
+			Creating a helper Notifer task.
+			Clearing the buffer of sleeping user tasks.
+
+		FOREVER {
+			Receive a query from another user task.
+
+			If the query was Delay (ticks),
+				Put the user task to sleep for at least ticks amount of time.
+			If the query was DelayUntil (ticks),
+				Put the user task to sleep until the current time is ticks.
+			If the query was Time(),
+				Return the current time to the user task.
+			If the query was Notify(),
+				Record the current time.
+				Wake up any user tasks that should be woken up by Reply().
+			If you received another query,
+				Error!
+		}
+
+	The ClockServe mainly consists of a single queue of Sleeper structs,
+	where Sleeper is of the form:
+		TID tid;
+		int endTime;
+
+		Sleeper *nextSleepingUserTask;
+		Sleeper *previousSleepingUserTask;
+
+	This queue is a circular, doubly-linked list. 
 
 	Delay
 	=====
