@@ -9,6 +9,8 @@
 #include <clock.h>
 #include <ts7200.h>
 
+#include "string.h"
+
 /*
  * The UARTs are initialized by RedBoot to the following state
  * 	115,200 bps
@@ -80,7 +82,7 @@ int bwsendc( int channel, char c, int timeout ) {
 		break;
 	}
 
-    clock = clock_init( TIMER2_BASE, 1, timeout );
+    clock = clock_init( TIMER2_BASE, 1, 0, timeout );
     // wait for the input to be ready
     while( (( *flags & TXFF_MASK ) || !( *flags & CTS_MASK ))
             && ( *clock > 0 ) ) {}
@@ -209,7 +211,7 @@ int bwreadc( int channel, char *c, int timeout) {
         break;
     }
     if( timeout ) {
-        clock = clock_init( TIMER2_BASE, 1, timeout );
+        clock = clock_init( TIMER2_BASE, 1, 0, timeout );
         while( !( *flags & RXFF_MASK ) && (*clock > 0) ) {}          //busy-wait
         clock_stop( TIMER2_BASE );
     }
