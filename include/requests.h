@@ -12,6 +12,10 @@
 #include <string.h>
 #include "globals.h"
 
+// ARCHITECTURE SPECIFIC CONSTANTS
+#define FRAME_SIZE 	23
+
+// KERNEL SPECIFIC CONSTANTS
 #define NS_TID 		1
 #define CS_TID 		2 // TODO: Remove this since Bill Cowan said it was WRONG in last term's newsgroup
 #define NAME_LEN	12
@@ -50,7 +54,8 @@ enum RequestCode {
 	SEND = 6,
 	RECEIVE = 7,
 	REPLY = 8,
-	AWAITEVENT = 9
+	AWAITEVENT = 9,
+	HARDWAREINT = 99
 };
 
 // A Neat holder that lets us reference arguments based on the syscall
@@ -64,7 +69,9 @@ typedef volatile const union {
 		char *msg;
 		size_t msglen;
 		char *reply;
-		int dummy[18]; // this is a filler since we use the previous stack addr
+		int dummy[FRAME_SIZE - 4]; // this is a filler since we use the
+								 // arguments as they are passed in to the
+								 // system request
 		size_t rpllen;
 	} send;
 	struct {

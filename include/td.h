@@ -10,13 +10,17 @@
 #include "globals.h"
 #include "requests.h"
 
-#define NUM_PRIORITY 	10	// For now, we will use 10 priorities [0,9]
-#define USER_START 		0x00044f88
+// Hardware specific constants
 #define USER_END		0x01fdd000
-#define NUM_TDS	 		64
-#define NUM_BITFIELD	NUM_TDS/32
+#define USER_START 		0x00044f88
 #define	STACK_SIZE		0x10000
 #define STACK_BASE		0x260000
+#define	DEFAULT_PSR		0x10
+
+// Kernel specific constants
+#define NUM_PRIORITY 	10	// For now, we will use 10 priorities [0,9]
+#define NUM_TDS	 		64
+#define NUM_BITFIELD	NUM_TDS/32
 #define NUM_INTERRUPTS	3
 
 enum TASK_STATE {

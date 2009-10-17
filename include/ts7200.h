@@ -82,3 +82,15 @@
 #define UART_HDLCSTS_OFFSET	0x21c
 
 
+// Vectored interrupts
+#define VIC1_BASE			0x800B0000
+#define VIC2_BASE			0x800C0000
+#define VIC_RAW_INTR		0x8
+#define VIC_INT_ENABLE		0x10
+#define VIC_INT_EN_CLR	 	0x14
+#define VIC_SOFT_INT		0x18
+#define VIC_SOFT_INT_CLR 	0x1C
+
+
+
+

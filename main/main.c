@@ -18,6 +18,10 @@
 
 #define WAIT	 for( i=0; i<200000; i++) {}
 
+int interruptStatus (int base) {
+	int *clear = (int *) (base);
+	return *clear;
+}
 /**
  * Perform a context switch.
  * Gets the request from a user task.
@@ -28,15 +32,16 @@ void getNextRequest ( TD *td, Request *req ) {
 	assert ( td != 0 );
 	assert ( req != 0 );
 
-	debug( "Kernel Exit sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
+	debug( "KERNEL EXIT: sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
 			td->sp[PC_OFFSET] );
 	
 	// Context Switch!
 	kernelExit (td, req);
 
-	debug( "Kernel Entry sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
+	debug( "KERNEL ENTRY: sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
 			td->sp[PC_OFFSET] );
-	
+	int *raw = (int *) (VIC1_BASE + VIC_RAW_INTR);
+	debug( "INTERRUPTS: %x\r\n", *raw );	
 	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
 			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
 			req->a->send.reply,req->a->send.rpllen );
@@ -54,6 +59,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	assert ( pq != 0 );
 	
 	TD *child;
+	int *i;
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -97,6 +103,8 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case HARDWAREINT:
 			bwprintf( COM2, "got a HARDWARE INTERRUPT!\r\n" );
 			// TODO: handle the interrupt
+			i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
+			*i = 0xFFFFFFFF;
 
 		case PASS:
 		default:
@@ -142,11 +150,20 @@ int main( int argc, char* argv[] ) {
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
-	asm("#; start setting up swi handler");
-	int volatile * swi = (int *) 0x28;
-	*swi = (int) &kernelEnter;
-	asm("#; done setting up the handler");
-	bwprintf( COM2, "Initialized interrupt handler at addr %x. \r\n", *swi );
+	asm("#; start setting up interrupt handlers");
+	int volatile * handler;
+	handler = (int *) 0x28;
+	*handler = (int) &kernelEnter;
+	handler = (int *) 0x38; 
+	*handler = (int) &interruptHandler;
+	asm("#; done setting up the handlers");
+	bwprintf( COM2, "Initialized interrupt handlers at addr %x.\r\n", handler);
+	
+	// Turn on interrupts for
+	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
+	*handler = 0xF0;
+
+
 	
 	// Initialize the priority queues
 	pq_init ( &pq );

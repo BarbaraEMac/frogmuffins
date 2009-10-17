@@ -6,12 +6,23 @@
 #ifndef __SWITCH_H__
 #define __SWITCH_H__
 
-#define PC_OFFSET 12
+#define PC_OFFSET 	12
 
 #include "td.h"
 #include "requests.h"
+// kernelExit switches from the kernel to the task described, 
+// doing the following:
+// * save the kernel context
+// * change to system state;
+// * install the sp the active task
+// * pop the registers of the active task from its stack;
+// * put the return value in r0;
+// * return to svc state;
+// * install the spsr of the active task; and
+// * install the pc of the active task.
+void kernelExit(TD *active, Request *req);
 
-// kerEnt allows a task to return exectution to the kernel, 
+// kernelEntry allows a task to return exectution to the kernel, 
 // doing the following:
 // * acquire the arguments of the request
 // * acquire the lr, which is the pc of the active task;
@@ -26,20 +37,12 @@
 // * put the sp and the spsr into the TD of the active task.
 void kernelEnter();
 
-// kerExit switches from the kernel to the task described, 
-// doing the following:
-// * save the kernel context
-// * change to system state;
-// * install the sp the active task
-// * pop the registers of the active task from its stack;
-// * put the return value in r0;
-// * return to svc state;
-// * install the spsr of the active task; and
-// * install the pc of the active task.
-void kernelExit(TD *active, Request *req);
+// handles hardware interrupts by jumping into kernel in a simiral way the 
+// kernelEntry does
+void interruptHandler();
 
 // This is not currently used.
 // We might change this in the future if needed.
-int syscall(int arg0, int arg1, int arg3, enum RequestCode type);
+//int syscall(int arg0, int arg1, int arg3, enum RequestCode type);
 
 #endif
