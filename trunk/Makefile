@@ -33,7 +33,7 @@ all: main/main.elf
 	$(AS) $(ASFLAGS) -o $@ $<
 
 main/main.elf: $(OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -lclock -ldebug -lstring -lgcc 
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -lclock -ldebug -lstring -lmath -lgcc 
 
 arch/switch.o: arch/switch.S
 	$(AS) $(ASFLAGS) -o arch/switch.o arch/switch.S
