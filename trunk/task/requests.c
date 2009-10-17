@@ -71,9 +71,14 @@ TID WhoIs (char *name) {
 	return tid;
 }
 
-int AwaitEvent (int eventid, char *event, int eventlen) {
+int AwaitEvent (int eventid, char *event, size_t eventlen) {
 	SWI(9);
 }
+
+int InstallDriver (int eventid, Driver driver) {
+	SWI(10);
+}
+
 
 int Delay ( int ticks ) {
 	char ret[5];
