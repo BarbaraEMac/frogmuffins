@@ -15,10 +15,10 @@ typedef int TID;
 // Pointer the beginning of task execution
 typedef void (* Task) ();
 
-// Use these to index into the intBlocked array
+// You can Await Event on these
 enum INTERRUPTS {
-	COMONE = 0,	
-	COMTWO,
+	UART1 = 0,	
+	UART2,
 	TIMER
 } interruptTypes;
 

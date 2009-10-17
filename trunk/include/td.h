@@ -21,7 +21,7 @@
 #define NUM_PRIORITY 	10	// For now, we will use 10 priorities [0,9]
 #define NUM_TDS	 		64
 #define NUM_BITFIELD	NUM_TDS/32
-#define NUM_INTERRUPTS	3
+#define NUM_INTERRUPTS	32
 
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
@@ -41,11 +41,12 @@ typedef TD* Queue;
 
 // Bitfield is also just an int
 typedef int BitField;
+
 /**
  * A Task Descriptor that the kernel uses to define a user task.
  */
 struct taskdesc {
-	volatile int spsr;				// Saved Processor State Register
+	volatile int spsr;		// Saved Processor State Register
 	union {
 		int volatile * volatile sp;		// Stack Pointer
 		ReqArgs * volatile a;			// request arguments in a neatly avaiable union
@@ -60,15 +61,15 @@ struct taskdesc {
 						
 	enum TASK_STATE state;	// State of the task - see enum above
 
-	TD *nextPQ; 			// Link to the next TD in the PQ
-	TD *prevPQ; 			// Link to the prev TD in the PQ
+	TD *nextTD; 			// Link to the next TD in the TDM
+	TD *prevTD; 			// Link to the prev TD in the TDM
 
 	Queue sendQ;			// A circularly linked list of TDs that 
 							// have called send() this TD a message
 };
 
 /**
- * The task descriptor priority queues.
+ * The task descriptor manager.
  */
 typedef struct {
 	TD tdArray[NUM_TDS]; 		// Stores all the TDs
@@ -81,62 +82,62 @@ typedef struct {
 	int highestPriority;		// The highest non-empty bucket in the ready Q
 
 	Queue intBlocked[NUM_INTERRUPTS];	// A queue of blocked tasks awaiting interrupts
-} PQ;
+} TDM;
 
 /**
  * Initialize the priority queues and TDs in the td array.
- * pq - The PQ to init.
+ * mgr - The TDM to init.
  */
-void pq_init (PQ *pq);
+void mgr_init (TDM *mgr);
 
 /**
  * Create a new TD.
  * priority - The priority for the new TD.
  * start - The user task function.
  * parentId - The id of the parent who created this task.
- * pq - The priority queue manager.
+ * mgr - The task descriptor manager.
  * RETURN: A pointer to the new TD.
  */
-TD * td_create (int priority, Task start, TID parentId, PQ *pq);
+TD * td_create (int priority, Task start, TID parentId, TDM *mgr);
 
 /**
  * Recycle the space associated witht a TD
  * td - the task descriptor that has exited
- * pq - The prority queue manager
+ * mgr - The prority queue manager
  */
-void td_destroy (TD *td, PQ *pq);
+void td_destroy (TD *td, TDM *mgr);
 
 /**
  * Initialize a single td.
  * priority - The priority for the new TD.
  * start - The user task function.
  * parentId - The id of the parent who created this task.
- * pq - The priority queue manager.
+ * mgr - The task descriptor manager.
  * RETURN: A pointer to the new TD.
  */
-TD * td_init (int priority, Task start, TID parentId, PQ *pq);
+TD *td_init (int priority, Task start, TID parentId, TDM *mgr);
 
 /**
  * Inserts the TD into an appropriate priority queue.
- * pq - The priority queue manager.
+ * mgr - The task descriptor manager.
  * td - The task descriptor to insert.
  */
-void pq_insert (PQ *pq, TD *td);
+void mgr_insert (TDM *mgr, TD *td);
 
 /**
  * Pops the highest priority TD off of the ready queue.
- * pq - The priority queue manager.
+ * mgr - The task descriptor manager.
  * RETURN: The highest priority READY TD.
  */
-TD *pq_popReady (PQ *pq);
+TD *mgr_popReady (TDM *mgr);
 
 /**
  * Fetches a TD from the task id.
- * pq - The priority queue manager.
+ * mgr - The task descriptor manager.
  * tid - The id of the task to find.
  * RETURN: A pointer to the TD corresponding to the given tid.
  */
-TD *pq_fetchById (PQ *pq, TID tid);
+TD *mgr_fetchById (TDM *mgr, TID tid);
 
 /**
  * Given a pointer to the head of a queue, push a new entry as the tail.

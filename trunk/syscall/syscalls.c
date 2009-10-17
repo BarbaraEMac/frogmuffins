@@ -25,12 +25,12 @@ int isValidMem ( const char *addr, const TD *td ) {
 	return NO_ERROR;
 }
 
-int send (TD *sender, PQ *pq, TID tid) {
-	debug ("send: from=%x, to=%x (%d)\r\n", sender, pq_fetchById(pq, tid), tid);
+int send (TD *sender, TDM *mgr, TID tid) {
+	debug ("send: from=%x, to=%x (%d)\r\n", sender, mgr_fetchById(mgr, tid), tid);
 	// Check all arguments
 	assert ( sender != 0 );
 	assert ( sender->state == ACTIVE );
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 	assert ( sender->id != tid ); // Do not send a message to yourself.
 	int ret = NO_ERROR;
 
@@ -42,8 +42,8 @@ int send (TD *sender, PQ *pq, TID tid) {
 		return ret; // TODO Add a mask here so that we can tell is apart
 	}
 	
-	TD *receiver = pq_fetchById (pq, tid);
-	// pq_fetchById error checks the tid
+	TD *receiver = mgr_fetchById (mgr, tid);
+	// mgr_fetchById error checks the tid
 	if ( receiver < NO_ERROR ) {
 		return (int) receiver;
 	}
@@ -64,7 +64,7 @@ int send (TD *sender, PQ *pq, TID tid) {
 		*receiver->a->receive.tid = sender->id;
 
 		// Unblock the receiver
-		pq_insert(pq, receiver);
+		mgr_insert(mgr, receiver);
 	} else {
 		// Put yourself on the other task's send queue.
 		debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
@@ -108,10 +108,10 @@ int receive (TD *receiver, TID *tid) {
 	return ret;
 }
 
-int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
-	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, pq_fetchById(pq, tid), tid);
+int reply (TD *from, TDM *mgr, TID tid, char *reply, int rpllen) {
+	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, mgr_fetchById(mgr, tid), tid);
 	assert ( from != 0 );
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 	assert ( from->id != tid ); // Do not reply to yourself.
 	int ret = NO_ERROR;
 
@@ -119,8 +119,8 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 	// TO is really the sender that we are acking
 
 	// Update the TD states
-	TD *to = pq_fetchById ( pq, tid );
-	// pq_fetchById error checks the tid
+	TD *to = mgr_fetchById ( mgr, tid );
+	// mgr_fetchById error checks the tid
 	if ( to < NO_ERROR ) {
 		return (int) to;
 	}
@@ -144,7 +144,7 @@ int reply (TD *from, PQ *pq, TID tid, char *reply, int rpllen) {
 
 	// Make the sender (to) task ready by putting it on a ready queue
 	// NOTE: 'from' will be put on queue by send() if it was blocked
-	pq_insert ( pq, to );
+	mgr_insert ( mgr, to );
 
 	return ret;
 }
@@ -207,7 +207,15 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	return ret;
 }
 
-void awaitEvent () {
+void awaitEvent (TD *td, TDM *mgr, enum INTERRUPTS type) {
 
-
+	// Turn on this interrupt
+	int *handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
+	*handler |= (1 << type);	
+	
+	// Change task state
+	td->state = AWAITING_EVT;
+	
+	// Put this task on the corresponding interrupt blocked queue
+	queue_push ( &mgr->intBlocked[type], td );
 }

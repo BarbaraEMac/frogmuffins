@@ -18,8 +18,8 @@
 /*
  * HELPER FUNCTIONS
  */
-void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
-	debug ( "\tpq_setUsed this=%x used=%d, idx=%d\r\n", this, used, idx );
+void mgr_setUsed ( TDM *this, unsigned int idx, int used ) {
+	debug ( "\tmgr_setUsed this=%x used=%d, idx=%d\r\n", this, used, idx );
 	assert ( idx < NUM_TDS );
 	unsigned int i = idx / (BITFIELD_WIDTH);// the index of the bitfield
 	unsigned int s = idx % (BITFIELD_WIDTH);// the position in the bitfield
@@ -30,19 +30,19 @@ void pq_setUsed ( PQ *this, unsigned int idx, int used ) {
 	}
 }
 
-int pq_isEmpty ( PQ *this, unsigned int idx ) {
-	debug ( "\tpq_isEmpty this=%x, idx=%d\r\n", this, idx );
+int mgr_isEmpty ( TDM *this, unsigned int idx ) {
+	debug ( "\tmgr_isEmpty this=%x, idx=%d\r\n", this, idx );
 	assert ( idx < NUM_TDS );
 	unsigned int i = idx / (BITFIELD_WIDTH);// the index of the bitfield
 	unsigned int s = idx % (BITFIELD_WIDTH);// the position in the bitfield
 	
 	int ans =  ( this->empty[i] & (1 << s) ); 
-	debug ( "\tpq_isEmpty return=%d\r\n", ans );
+	debug ( "\tmgr_isEmpty return=%d\r\n", ans );
 	return ans;
 }
 
-int pq_getUnused ( const PQ *this ) {
-	debug ( "\tpq_getUnused this=%x\r\n", this );
+int mgr_getUnused ( const TDM *this ) {
+	debug ( "\tmgr_getUnused this=%x\r\n", this );
 	int i;
 	// find the first non-full bitfield
 	for ( i = 0; i < NUM_BITFIELD && this->empty[i]==0; i ++ ) {}
@@ -64,7 +64,7 @@ int pq_getUnused ( const PQ *this ) {
 	mask = 0x1 << n;
 	if ( (field & mask) == 0 ) { n += 1; }
 
-	debug ( "\tpq_getUnused, empty=%x %x n=%d \r\n", this->empty[1], 
+	debug ( "\tmgr_getUnused, empty=%x %x n=%d \r\n", this->empty[1], 
 			this->empty[0], n + (i * BITFIELD_WIDTH) );
 	return n + (i * BITFIELD_WIDTH);
 }
@@ -73,7 +73,7 @@ int pq_getUnused ( const PQ *this ) {
 /*
  * PUBLIC FUNCTIONS
  */
-void pq_init ( PQ *this ) {
+void mgr_init ( TDM *this ) {
     int i;
     
 	// Each ready priority queue should be empty.
@@ -94,49 +94,49 @@ void pq_init ( PQ *this ) {
 	this->highestPriority = NUM_PRIORITY;
 }
 
-TD * td_create (int priority, Task start, TID parentId, PQ *pq) {
-	debug ( "td_create: priority=%d, parent=%d pq=%x\r\n",
-			priority, parentId, pq);
+TD * td_create (int priority, Task start, TID parentId, TDM *mgr) {
+	debug ( "td_create: priority=%d, parent=%d mgr=%x\r\n",
+			priority, parentId, mgr);
 	
 	if ( priority < 0 || priority > NUM_PRIORITY ) {
 		return (TD *) INVALID_PRIORITY;
 	}
 	
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 
 	// Grab the new task
-	TD *newTask = td_init ( priority, start, parentId, pq );
+	TD *newTask = td_init ( priority, start, parentId, mgr );
 	
 	if ( (int) newTask < NO_ERROR ) {
 		return newTask;
 	}
 
 	// Insert into ready queue
-    pq_insert (pq, newTask);
+    mgr_insert (mgr, newTask);
 	
     return newTask;
 }
 
-TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
-	debug ( "td_init: priority=%d, parent=%d pq=%x\r\n",
-			priority, parentId, pq);
+TD * td_init ( int priority, Task start, TID parentId, TDM *mgr ) {
+	debug ( "td_init: priority=%d, parent=%d mgr=%x\r\n",
+			priority, parentId, mgr);
 	assert ( priority >= 0 );
 	assert ( priority < NUM_PRIORITY );
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 	
 	// Grab an unused TD from the array.
-	int idx = pq_getUnused ( pq );
+	int idx = mgr_getUnused ( mgr );
 	if ( idx < NO_ERROR ) {
 		return (TD *) idx;
 	}
-	TD *td = &pq->tdArray[idx];
+	TD *td = &mgr->tdArray[idx];
 	
 	// Mark the slot as used
-	pq_setUsed( pq, idx, 1 );
+	mgr_setUsed( mgr, idx, 1 );
 
-	int diff = idx - (pq->lastId % NUM_TDS); 
-	pq->lastId += diff;
-	td->id = pq->lastId;
+	int diff = idx - (mgr->lastId % NUM_TDS); 
+	mgr->lastId += diff;
+	td->id = mgr->lastId;
 
     td->spsr = DEFAULT_PSR;	
 	td->sb = (int *) STACK_BASE + (STACK_SIZE * idx); 
@@ -153,28 +153,28 @@ TD * td_init ( int priority, Task start, TID parentId, PQ *pq ) {
 	// Tasks start as READY
 	td->state = READY;
 
-    // Temporary until we insert into PQ
-    td->nextPQ = 0;
-    td->prevPQ = 0;
+    // Temporary until we insert into TDM
+    td->nextTD = 0;
+    td->prevTD = 0;
 
 	td->sendQ = 0;
 
 	return td;
 }
 
-void td_destroy (TD *td, PQ *pq) {
+void td_destroy (TD *td, TDM *mgr) {
 	assert( td->state == DEFUNCT );
 	int idx = (td->id) % NUM_TDS; 
 
 	// Mark the td as unused
-	pq_setUsed( pq, idx, 0 );
-	/*bwprintf( COM2, "empty=%08x %08x \r\n", pq->empty[1], pq->empty[0] );
+	mgr_setUsed( mgr, idx, 0 );
+	/*bwprintf( COM2, "empty=%08x %08x \r\n", mgr->empty[1], mgr->empty[0] );
 	bwprintf( COM2, "destroying TD at idx:%d\r\n", idx);
 	bwgetc(COM2);*/
 }
 
-void pq_insert ( PQ *this, TD *td ) {
-	debug ("pq_insert this=%x td=%x priority=%d state=%d.\r\n",
+void mgr_insert ( TDM *this, TD *td ) {
+	debug ("mgr_insert this=%x td=%x priority=%d state=%d.\r\n",
 			this, td, td->priority, td->state);
 	assert ( this != 0 );
 	assert ( td != 0 );
@@ -210,6 +210,10 @@ void pq_insert ( PQ *this, TD *td ) {
 		case RPLY_BLKD:
 			debug ("%x is RPLY_BLKD \r\n", td);
 			break;
+		case AWAITING_EVT:
+			debug ("%x is AWAITING_EVT \r\n", td);
+			break;
+
 		case DEFUNCT:
 		default:
 			// Do nothing for defunct tasks for now ...
@@ -218,8 +222,8 @@ void pq_insert ( PQ *this, TD *td ) {
 	}
 }
 
-TD *pq_popReady ( PQ *this ) {
-	debug("pq_popReady this=%x priority=%d\r\n", this, this->highestPriority);
+TD *mgr_popReady ( TDM *this ) {
+	debug("mgr_popReady this=%x priority=%d\r\n", this, this->highestPriority);
 	assert ( this != 0 );
 
 	int p = this->highestPriority;
@@ -247,21 +251,21 @@ TD *pq_popReady ( PQ *this ) {
 	return top;
 }
 
-TD *pq_fetchById ( PQ *this, TID tid ) {
-	debug("pq_fetchById this=%x tid=%d\r\n", this, tid);
+TD *mgr_fetchById ( TDM *this, TID tid ) {
+	debug("mgr_fetchById this=%x tid=%d\r\n", this, tid);
 	// Verify td > 0
 	if ( tid < 0 ) {
 		return (TD *) NEG_TID;
 	}
 
-	int idx= tid % NUM_TDS;
+	int idx = tid % NUM_TDS;
 	
 	// Check if TD is in use
-	if ( pq_isEmpty( this, idx) ) {
+	if ( mgr_isEmpty( this, idx) ) {
 		return (TD *) INVALID_TID;
 	}
 
-	// Fetch the appropriante TD
+	// Fetch the appropriate TD
 	TD *ret = &this->tdArray[idx];
 	
 	// Verify tid points to a valid td
@@ -274,7 +278,7 @@ TD *pq_fetchById ( PQ *this, TID tid ) {
 		return (TD *) DEFUNCT_TID;
 	}
 
-	debug("pq_fetchById TD=%x \r\n", ret);
+	debug("mgr_fetchById TD=%x \r\n", ret);
 	return ret;
 }
 
@@ -287,25 +291,25 @@ void queue_push ( Queue *q, TD *newTail ) {
 
 	// If the queue was empty, add this as the only item.
 	if ( head  == 0 ) {
-		newTail->prevPQ = newTail;
-		newTail->nextPQ = newTail;
+		newTail->prevTD = newTail;
+		newTail->nextTD = newTail;
 
 		// Add this to the queue
 		*q = newTail;
 	}
 	// Push as a new tail
 	else {
-		TD *tail = head->prevPQ; // Cannot be 0; Could be head
+		TD *tail = head->prevTD; // Cannot be 0; Could be head
 		assert ( tail != 0 );
-		assert ( tail->nextPQ != 0 );
+		assert ( tail->nextTD != 0 );
 		
 		// Update inserted's elements pointers
-		newTail->nextPQ = head;
-		newTail->prevPQ = tail;
+		newTail->nextTD = head;
+		newTail->prevTD = tail;
 		
 		// Put the element in the queue
-		head->prevPQ = newTail;
-		tail->nextPQ = newTail;
+		head->prevTD = newTail;
+		tail->nextTD = newTail;
 	}
 
 	assert ( *q != 0 );
@@ -317,17 +321,17 @@ TD *queue_pop (Queue *head) {
 
 	TD *top = *head;
 	assert ( top != 0 );
-	assert ( top->prevPQ != 0 );
-	assert ( top->nextPQ != 0 );
+	assert ( top->prevTD != 0 );
+	assert ( top->nextTD != 0 );
 
-	TD *prev = top->prevPQ; // Cannot be 0; Can be top itself
-	TD *next = top->nextPQ; // Cannot be 0; Can be top itself
+	TD *prev = top->prevTD; // Cannot be 0; Can be top itself
+	TD *next = top->nextTD; // Cannot be 0; Can be top itself
 
-	prev->nextPQ = next;	// Reset the links
-	next->prevPQ = prev;
+	prev->nextTD = next;	// Reset the links
+	next->prevTD = prev;
 	
-	top->nextPQ = 0;		// Ensure this task points to nothing
-	top->prevPQ = 0;
+	top->nextTD = 0;		// Ensure this task points to nothing
+	top->prevTD = 0;
 
 	// If top == next, we've popped the last one on this queue.
 	debug ("	queue_pop: top: %x prev: %x next: %x\r\n", top, prev, next);
