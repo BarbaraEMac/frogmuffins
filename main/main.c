@@ -20,9 +20,9 @@
 #define WAIT	 for( i=0; i<200000; i++) {}
 
 
-int interruptStatus (int base) {
-	int *status = (int *) (base);
-	return *status;
+int readMemory (int addr) {
+	int *value = (int *) (addr);
+	return *value;
 }
 /**
  * Perform a context switch.
@@ -42,8 +42,7 @@ void getNextRequest ( TD *td, Request *req ) {
 
 	debug( "KERNEL ENTRY: sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
 			td->sp[PC_OFFSET] );
-	int *raw = (int *) (VIC1_BASE + VIC_RAW_INTR);
-	debug( "INTERRUPTS: %x\r\n", *raw );	
+	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
 	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
 			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
 			req->a->send.reply,req->a->send.rpllen );
@@ -61,8 +60,6 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( mgr != 0 );
 	
 	TD *child;
-	int *i, eventId;
-	Driver driver;
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -110,19 +107,10 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
-			eventId = ctz( interruptStatus( VIC1_BASE ) );
-			bwprintf( COM2, "got HARDWARE INTERRUPT #%d!\r\n", eventId );
-			assert( eventId < 32 );
-			driver = mgr->intDriver[eventId];
-			assert( driver != 0 );
-			td = queue_pop( &mgr->intBlocked[eventId] );
-			td->returnValue = driver( td->a->awaitEvent.event, 
-					td->a->awaitEvent.eventLen );
-			// TODO: wake up the dasl
-			i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
-			*i = 0xFFFFFFFF;
-
+			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
+			// fall through
 		case PASS:
+			// fall through
 		default:
 			// For now, do nothing
 			break;
@@ -177,7 +165,7 @@ int main( int argc, char* argv[] ) {
 	
 	// Turn off interrupts 
 	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
-	*handler = 0x10;
+	*handler = 0x0;
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
@@ -185,7 +173,7 @@ int main( int argc, char* argv[] ) {
 	// Create the first task and set it as the active one
 	//active = td_create ( 1, &receiverTask, -1, &mgr );
 	// Set priority = 0 to ensure that this task completes
-	active = td_create ( 0, &k2_firstUserTask, -1, &mgr );
+	active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
 
 	if ( active < NO_ERROR ) {
 		error ( (int) active, "Initializing the first task");

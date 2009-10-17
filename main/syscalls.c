@@ -7,6 +7,7 @@
 #include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
+#include <math.h>
 
 #include "debug.h"
 #include "error.h"
@@ -231,4 +232,27 @@ int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 
 	// Everything worked
 	return NO_ERROR;
+}
+
+void handleInterrupt( TDM *mgr, int intStatus ) {
+
+	// Get an index of the actual interrupt
+	int eventId = ctz( intStatus );
+	debug( "handleInterrupt #%d status=%x\r\n", eventId, status );
+	assert( eventId < 32 );
+
+	// Get the driver for the interrupt that happened
+	Driver driver = mgr->intDriver[eventId];
+	assert( driver != 0 );
+	
+	TD* td = queue_pop( &mgr->intBlocked[eventId] );
+	td->returnValue = driver( td->a->awaitEvent.event, 
+			td->a->awaitEvent.eventLen );
+	td->state = READY;
+	mgr_insert( mgr, td );
+
+	// Turn off software interrupts
+	int *i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
+	*i = 0xFFFFFFFF;
+
 }
