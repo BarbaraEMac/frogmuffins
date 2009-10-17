@@ -1,6 +1,6 @@
 int ctz( int x ) {
 	if ( x == 0 ) return 32;
-	int n = 32;
+	int n = 0;
 	int mask = 0xFFFF;
 	if ( (x & mask) == 0 ) { n += 16; }
 	mask = 0xFF << n;
