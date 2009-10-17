@@ -77,13 +77,18 @@ void mgr_init ( TDM *this ) {
     int i;
     
 	// Each ready priority queue should be empty.
-    for ( i = 0; i < NUM_PRIORITY; i ++ ) {
+    for ( i = 0; i < NUM_PRIORITY; i++ ) {
         this->ready[i] = 0;
     }
 
 	// No TDs are blocked at the start
-	for ( i = 0; i < NUM_INTERRUPTS; i ++ ) {
+	for ( i = 0; i < NUM_INTERRUPTS; i++ ) {
 		this->intBlocked[i] = 0;
+	}
+
+	// No drivers are installed at the start
+	for ( i = 0; i < NUM_INTERRUPTS; i++ ) {
+		this->intDriver[i] = 0;
 	}
 
 	for ( i = 0; i < NUM_BITFIELD; i++ ) {
@@ -92,6 +97,15 @@ void mgr_init ( TDM *this ) {
 
     this->lastId = 0;
 	this->highestPriority = NUM_PRIORITY;
+}
+
+int mgr_installDriver( TDM *this, int eventId, Driver driver ) {
+
+	if( eventId >= NUM_INTERRUPTS || eventId < 0) {
+		return INVALID_EVENTID;
+	}
+	this->intDriver[eventId] = driver;
+	return 0;	// success
 }
 
 TD * td_create (int priority, Task start, TID parentId, TDM *mgr) {

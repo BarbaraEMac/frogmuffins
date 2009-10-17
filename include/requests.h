@@ -87,11 +87,14 @@ typedef volatile const union {
 		size_t rpllen;
 	} reply;
 	struct {
-		char *name;
-	} registerAs;
+		int eventId;
+		char *event;
+		size_t eventlen;
+	} awaitEvent;
 	struct {
-		char *name;
-	} whoIs;
+		int eventId;
+		Driver driver;
+	} installDriver;
 } ReqArgs;
 
 typedef struct {

@@ -93,6 +93,12 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 		case AWAITEVENT:
 		//	td->returnValue = awaitEvent ();
 			break;
+
+		case INSTALLDRIVER:
+			td->returnValue = mgr_installDriver(mgr, 
+				req->a->installDriver.eventId, req->a->installDriver.driver);
+			break;
+
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
