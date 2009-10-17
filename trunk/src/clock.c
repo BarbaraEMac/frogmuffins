@@ -4,7 +4,8 @@
  * dgoc
  */
 
-#include "clock.h"
+#include <clock.h>
+#include <ts7200.h>
 
 int* clock_init( int clock_base, int enable, int interrupt, int val ) {
     int *clock_ldr = (int *)( clock_base + LDR_OFFSET );
