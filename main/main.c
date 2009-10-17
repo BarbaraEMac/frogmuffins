@@ -21,8 +21,12 @@
 
 
 int readMemory (int addr) {
-	int *value = (int *) (addr);
-	return *value;
+	int volatile *mem = (int *) (addr);
+	return *mem;
+}
+void writeMemory (int addr, int value) {
+	int volatile *mem = (int *) (addr);
+	*mem = value;
 }
 /**
  * Perform a context switch.
@@ -154,18 +158,13 @@ int main( int argc, char* argv[] ) {
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
-	asm("#; start setting up interrupt handlers");
-	int volatile * handler;
-	handler = (int *) 0x28;
-	*handler = (int) &kernelEnter;
-	handler = (int *) 0x38; 
-	*handler = (int) &interruptHandler;
-	asm("#; done setting up the handlers");
-	bwprintf( COM2, "Initialized interrupt handlers at addr %x.\r\n", handler);
+	writeMemory(0x28, (int) &kernelEnter );
+	writeMemory(0x38, (int) &interruptHandler );
+	bwprintf( COM2, "Initialized interrupt handlers.\r\n");
 	
 	// Turn off interrupts 
-	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
-	*handler = 0x0;
+	writeMemory(VIC1_BASE + VIC_INT_ENABLE, 0 );
+	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
