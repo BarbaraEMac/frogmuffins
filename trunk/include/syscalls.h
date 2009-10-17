@@ -24,6 +24,6 @@ int reply (TD *sender, TDM *mgr, TID tid, char *reply, int rpllen);
 
 int passMessage (TD *sender, TD *receiver, MsgType reply);
 
-int awaitEvent (TD *td, TDM *mgr, int eventId );
+int awaitEvent (TD *td, TDM *mgr, int eventId);
 
 #endif
