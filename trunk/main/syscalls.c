@@ -238,21 +238,26 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 
 	// Get an index of the actual interrupt
 	int eventId = ctz( intStatus );
-	debug( "handleInterrupt #%d status=%x\r\n", eventId, status );
+	debug( "handleInterrupt #%d status=%x\r\n", eventId, intStatus );
 	assert( eventId < 32 );
 
 	// Get the driver for the interrupt that happened
 	Driver driver = mgr->intDriver[eventId];
 	assert( driver != 0 );
 	
+	// Pop the awaiting td off the interrupt blocked queue
 	TD* td = queue_pop( &mgr->intBlocked[eventId] );
+
+	// Handle the interrupt
 	td->returnValue = driver( td->a->awaitEvent.event, 
 			td->a->awaitEvent.eventLen );
+
+	// Reset the td's state
 	td->state = READY;
+	// Push the td back on the ready queues
 	mgr_insert( mgr, td );
 
 	// Turn off software interrupts
 	int *i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
 	*i = 0xFFFFFFFF;
-
 }
