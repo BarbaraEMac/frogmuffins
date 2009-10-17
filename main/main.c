@@ -51,12 +51,12 @@ void getNextRequest ( TD *td, Request *req ) {
  * Service a user task's request.
  * td - The active task.
  * req - The request from the user task.
- * pq - The priority queue of task descriptors.
+ * mgr - The task descriptor manager with queues.
  */
-void service ( TD *td, Request *req, PQ *pq ) { 
+void service ( TD *td, Request *req, TDM *mgr ) { 
 	assert ( td != 0 );
 	assert ( req != 0 );
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 	
 	TD *child;
 	int *i;
@@ -64,7 +64,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 	// Determine the request type and handle the call
 	switch ( req->type ) {
 		case CREATE:
-			child = td_create(req->a->create.priority, req->a->create.code, td->id, pq);
+			child = td_create(req->a->create.priority, req->a->create.code, td->id, mgr);
 			
 			// Save an error code if there was one
 			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
@@ -79,7 +79,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 
 		case SEND:
-			td->returnValue = send (td, pq, req->a->send.tid);
+			td->returnValue = send (td, mgr, req->a->send.tid);
 			break;
 		
 		case RECEIVE:
@@ -87,7 +87,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 			break;
 
 		case REPLY:
-			td->returnValue = reply (td, pq, req->a->reply.tid, 
+			td->returnValue = reply (td, mgr, req->a->reply.tid, 
 						req->a->reply.reply, req->a->reply.rpllen);
 			break;
 		case AWAITEVENT:
@@ -96,7 +96,7 @@ void service ( TD *td, Request *req, PQ *pq ) {
 		case EXIT:
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
-			td_destroy( td, pq );
+			td_destroy( td, mgr );
 			debug( "Exiting task,\r\n");
 			break;
 
@@ -116,20 +116,20 @@ void service ( TD *td, Request *req, PQ *pq ) {
 /**
  * Schedule the next active task to run.
  * oldTask - The previous active task to be added to another queue.
- * pq - The priority queues of the task descriptors.
+ * mgr - The task descriptor manager with queues.
  */
-TD *schedule ( TD *oldTask, PQ *pq ) {
+TD *schedule ( TD *oldTask, TDM *mgr ) {
 	assert ( oldTask != 0 );
-	assert ( pq != 0 );
+	assert ( mgr != 0 );
 	
 	debug ("schedule: active_tid: %d parent: %d p: %d\r\n", oldTask->id,
 			oldTask->parentId, oldTask->priority);
 	// Push the old active task back on to a queue - ready, blocked, (defunct?)
-	pq_insert ( pq, oldTask );
+	mgr_insert ( mgr, oldTask );
 
 	// Pop new task off the ready queue
 	// if 0 is returned, then we have no more tasks to run.
-	TD *newActive = pq_popReady ( pq );
+	TD *newActive = mgr_popReady ( mgr );
 
 	// Set the state to active since this task is going to run
 	if ( newActive != 0 ) {
@@ -141,7 +141,7 @@ TD *schedule ( TD *oldTask, PQ *pq ) {
 }
 
 int main( int argc, char* argv[] ) {
-	PQ 		 pq;			// The priority queue manager
+	TDM		 mgr;			// The task descriptor manager
 	TD	    *active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
 
@@ -163,15 +163,13 @@ int main( int argc, char* argv[] ) {
 	handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
 	*handler = 0xF0;
 
-
-	
 	// Initialize the priority queues
-	pq_init ( &pq );
+	mgr_init ( &mgr );
 
 	// Create the first task and set it as the active one
-    //active = td_create ( 1, &receiverTask, -1, &pq );
+    //active = td_create ( 1, &receiverTask, -1, &mgr );
     // Set priority = 0 to ensure that this task completes
-	active = td_create ( 0, &k2_firstUserTask, -1, &pq );
+	active = td_create ( 0, &k2_firstUserTask, -1, &mgr );
 
 	if ( active < NO_ERROR ) {
 		error ( (int) active, "Initializing the first task");
@@ -179,7 +177,7 @@ int main( int argc, char* argv[] ) {
 
 	FOREVER {	
 		debug ("	Scheduling a new task.\r\n");
-		active = schedule (active, &pq);
+		active = schedule (active, &mgr);
 		
 		// Run out of tasks to run
 		if ( active == 0 ) {
@@ -190,7 +188,7 @@ int main( int argc, char* argv[] ) {
 		getNextRequest (active, &nextRequest);
 		debug ("	Got a new request successfully.\r\n");
 		
-		service (active, &nextRequest, &pq);
+		service (active, &nextRequest, &mgr);
 		debug ("	Done servicing the request.\r\n");
 	}
 
