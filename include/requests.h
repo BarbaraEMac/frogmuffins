@@ -21,6 +21,7 @@
 #define NAME_LEN	12
 
 typedef char TaskName[NAME_LEN];
+typedef int (* Driver) (char * event, size_t eventlen);
 
 enum NSRequestCode {
 	REGISTERAS = 1,
@@ -55,6 +56,7 @@ enum RequestCode {
 	RECEIVE = 7,
 	REPLY = 8,
 	AWAITEVENT = 9,
+	INSTALLDRIVER = 10,
 	HARDWAREINT = 99
 };
 
@@ -156,12 +158,17 @@ TID WhoIs (char *name);
 /**
  * Blocks until the specified event occurs and returns.
  */
-int AwaitEvent (int eventid, char *event, int eventlen);
+int AwaitEvent (int eventid, char *event, size_t eventlen);
 
 /** 
  * Wait for the given time.
  */
 int Delay (int ticks);
+
+/**
+ * Install a driver to run to handle an interrupt from hardware
+ */
+int InstallDriver (int eventid, Driver driver);
 
 /**
  * Return the time since the clock server started.
