@@ -196,7 +196,7 @@ void notifier_run() {
 	
 	FOREVER {
 		// Wait for 1 "tick" (50ms) to pass
-		tick = AwaitEvent ( TIMER, awaitBuffer, sizeof(char)*10 );
+		tick = AwaitEvent ( TIMER1, awaitBuffer, sizeof(char)*10 );
 		
 		// Check the return buffer?
 		
