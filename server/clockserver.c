@@ -18,18 +18,22 @@
 
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
-	Sleeper   *sleepersQ;		// A queue of all sleeping user tasks
+	
 	int 	   senderTid;		// The task id of the message sender
 	CSRequest  req;				// A clock server request message
 	int 	   ret, len;
+	
 	int       *currentTime = clock_init ( TIMER3_BASE, 1, 0, 0 );
 	int		   curTimeInTicks;
+	
+	Sleeper   *sleepersQ;		// A queue of all sleeping user tasks
 	Sleeper    allocdSleepers[NUM_SLEEPERS]; // For allocating memory
 	int		   nextSleeper = 0;	// ptr into allocdSleepers array
 	Sleeper   *tmpSleeper;		// tmp ptr
 
 	// Initialize the Clock Server
 	cs_init (&sleepersQ);
+	assert( sleepersQ == 0 );
 
 	FOREVER {
 		// Receive a server request
@@ -39,11 +43,24 @@ void cs_run () {
 				senderTid, req.name, req.type, len);
 	
 		assert( len == sizeof(CSRequest) );
+		assert( senderTid > 0 );
+		assert( req != 0 );
+		assert( req.ticks >= 0 );
+		
+		// Calculate the current time in ticks in case a task wants to know
+		curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
+		curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
+		assert( curTimeInTicks > 0 );
 
+		// Handle the request
 		switch (req.type) {
 			case DELAY:
+				debug ("cs: task %d delays %d ticks.\r\n", senderTid, ticks);
 				tmpSleeper = &allocdSleepers[nextSleeper++];
-
+	
+				assert( nextSleeper < NUM_SLEEPERS );
+				assert( tmpSleeper != 0 );
+					
 				tmpSleeper->endTime = *currentTime + (req.ticks * 100);
 				tmpSleeper->tid     = senderTid;
 				
@@ -51,8 +68,13 @@ void cs_run () {
 				break;
 			
 			case DELAYUNTIL:
+				debug ("cs: task %d delays until %d ticks. (currently: %d)\r\n",
+					   senderTid, ticks, currentTimeInTicks);
 				tmpSleeper = &allocdSleepers [nextSleeper++];
 
+				assert( nextSleeper < NUM_SLEEPERS );
+				assert( tmpSleeper != 0 );
+					
 				tmpSleeper->endTime = req.ticks;
 				tmpSleeper->tid     = senderTid;
 
@@ -60,19 +82,16 @@ void cs_run () {
 				break;
 			
 			case TIME:
-				// Return the number of ticks since starting
-				curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
-				curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
+				debug ("cs: task %d wants to know the current time: %d\r\n", 
+					   senderTid, currentTimeInTicks);
 				Reply (senderTid, (char*) &curTimeInTicks, sizeof(int));
-				
 				break;
 
 			case NOTIFY:
-				curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
-				curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
-				tmpSleeper = sleepersQ;
-
-				while ( *currentTime >= tmpSleeper->endTime ) {
+				tmpSleeper = sleepersQ; // Can be 0 if nothing has delayed
+				while ( tmpSleeper != 0 && *currentTime >= tmpSleeper->endTime ) {
+					assert( tmpSleeper != 0 );
+					
 					// Remove from the list of sleeping tasks
 					list_remove ( &(sleepersQ), tmpSleeper );
 
@@ -82,18 +101,13 @@ void cs_run () {
 					// Increment iterator pointer
 					tmpSleeper = tmpSleeper->next;
 				}
-
 				break;
 			
 			default:
 				ret = CS_INVALID_REQ_TYPE;
-				debug (1, "Clockserver request type is not valid.");
+				error (ret, "Clockserver request type is not valid.");
 				break;
 		}
-
-		debug ("cs: about to Reply to %d. \r\n", senderTid);
-		Reply ( senderTid, (char *) &ret, sizeof(int) );
-		debug ("cs: returned from Replying to %d. \r\n", senderTid);
 	}
 	
 	Exit(); // This will never be called.
@@ -116,6 +130,9 @@ void cs_init (Sleeper **sleepersQ) {
 
 void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 	
+	assert( head != 0 );
+	assert( toAdd != 0 );
+
 	// The empty list
 	if ( *head == 0 ) {
 		toAdd->next = toAdd;
@@ -139,7 +156,6 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 	}
 	// The new element needs to be inserted in the middle
 	else {
-		
 		Sleeper *itr = (*head)->next;
 		while ( toAdd->endTime > itr->endTime && itr != *head ) {
 			assert ( itr != 0 );
@@ -158,6 +174,8 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 	}
 
 	assert ( *head != 0 );
+	assert( toAdd->next != 0 );
+	assert( toAdd->prev != 0 );
 }
 
 void list_remove ( Sleeper **head, Sleeper *toRm ) {
@@ -182,7 +200,7 @@ void list_remove ( Sleeper **head, Sleeper *toRm ) {
 
 void notifier_run() {
 
-	int 	  tick, error;
+	int 	  err;
 	int 	  clockServerId = MyParentTid();
 	char 	  reply;
 	char 	  awaitBuffer[10];
@@ -196,26 +214,25 @@ void notifier_run() {
 	
 	FOREVER {
 		// Wait for 1 "tick" (50ms) to pass
-		tick = AwaitEvent ( TIMER1, awaitBuffer, sizeof(char)*10 );
+		if ( (err = AwaitEvent( TIMER1, awaitBuffer, sizeof(char)*10 )) 
+				< NO_ERROR ) {
+			// Handle errors
 		
-		// Check the return buffer?
-		
-		// Handle errors
-		if ( tick < NO_ERROR ) {
-
 		}
+	
+		// Check the return buffer?
+
 
 		// Tell the Clock Server 1 tick has passed
-		error = Send( clockServerId, (char*) &req, sizeof(CSRequest),
-					  &reply, sizeof(char) );
-
-		// Handle errors
-		if ( error < NO_ERROR ) {
-
+		if ( (err = Send( clockServerId, (char*) &req, sizeof(CSRequest),
+					      &reply, sizeof(char) )) < NO_ERROR ) {
+			// Handle errors
+			
 		}
 
-
+		// The device driver will clear the interrupt
 	}
+
 	Exit(); // This will never be called.
 }
 
