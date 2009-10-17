@@ -13,7 +13,6 @@
 #include "error.h"
 #include "requests.h"
 
-#define CLOCK_TIMER 	TIMER1_BASE
 #define NUM_SLEEPERS	1024
 
 void cs_run () {
@@ -22,7 +21,7 @@ void cs_run () {
 	int 	   senderTid;
 	CSRequest  req;
 	int 	   ret, len;
-	int       *currentTime = (int*)( CLOCK_TIMER + VAL_OFFSET ); // in ticks
+	int       *currentTime = clock_init ( TIMER3_BASE, 1, 0, 0 );
 	int		   curTimeInTicks;
 	Sleeper    allocdSleepers[NUM_SLEEPERS];
 	int		   nextSleeper = 0;
@@ -60,12 +59,15 @@ void cs_run () {
 			
 			case TIME:
 				// Return the number of ticks since starting
-				curTimeInTicks = (*currentTime) / 100;
+				curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
+				curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
 				Reply (senderTid, (char*) &curTimeInTicks, sizeof(int));
 				
 				break;
 
 			case NOTIFY:
+				curTimeInTicks  = 0xFFFFFFFF - *currentTime; // since the timer counts down
+				curTimeInTicks /= 100;	// convert to ticks (where 50ms = 1 tick)
 				tmpSleeper = cs.sleepers;
 
 				while ( *currentTime >= tmpSleeper->endTime ) {
@@ -209,6 +211,8 @@ void notifier_run() {
 		if ( error < NO_ERROR ) {
 
 		}
+
+
 	}
 	Exit(); // This will never be called.
 }
@@ -218,7 +222,7 @@ void notifier_init () {
 	RegisterAs ("ClkNotifier");
 	
 	// Init clock stuff
-	clock_init ( CLOCK_TIMER, 1, 1, 100 );
+	clock_init ( TIMER1_BASE, 1, 1, 100 );
 }	
 
 int* clock_init( int clock_base, int enable, int interrupt, int val ) {
