@@ -29,6 +29,7 @@ Question 2
 	
 	Weaknesses in Previous Kernel That We Fixed
 	===========================================
+	context switch
 
 
 	TD and TD Manager
@@ -53,11 +54,34 @@ Question 2
 
 	Device Drivers
 	==============
-	
+	How do they work? What do they do? Why do we have them?
 	
 	Await Event
 	===========
+	AwaitEvent() can be called by a user task to block the task until a particular 
+	event has occurred. Since this is a system call, the handler for AwaitEvent()
+	calls swi with the corresponding code (9) for this type of system call as a 
+	single argument.
+	
+	Here is the pseudo code for kernel code of awaitEvent():
+		Ensure that the arguments are correct.
+			Event Id is valid.
+			The driver for this event id has been installed.
+		Turn on the interrupt for this particular event.
+		Change the state of the active task to AWAITING_EVT.
+		Push the task on the interrupt blocked queues.
+		Signal no error.
 
+	For this kernel, user tasks can only wait on TIMER1 or TIMER2. This will cause
+	the task to wait until a timer interrupt has occurred. 
+
+	The interrupt blocked queues are stored as a single array of queues within the 
+	TD Manager. The interrupt type (0 -> 31) is used as an index into the array 
+	pointing to the head of each FIFO queue. If no task has called AwaitEvent() for
+	an interrupt type, that queue has a null (0) value. We recognize that we will
+	probably not turn on all 32 interrupt types and there may be some wastedspace
+	here. However, we designed our kernel to be as flexible as possible with as 
+	little rewriting of code in the future.
 	
 	Clock Server
 	============
@@ -86,7 +110,7 @@ Question 2
 				Error!
 		}
 
-	The ClockServe mainly consists of a single queue of Sleeper structs,
+	The ClockServer mainly consists of a single queue of Sleeper structs,
 	where Sleeper is of the form:
 		TID tid;
 		int endTime;
@@ -127,6 +151,31 @@ Question 4
 ==========
 	Here is a listing of all submitted files:
 
+	arch/switch.c              include/td.h
+	arch/switch.S              include/ts7200.h
+	documentation/k1.txt       lib/libbwio.a
+	documentation/k2.out       lib/libclock.a
+	documentation/k2.txt       lib/libdebug.a
+	documentation/k3.txt       lib/libmath.a
+	documentation/syscall.txt  lib/libstring.a
+	driver/drivers.c           main/main.c
+	include/bwio.h             main/orex.ld
+	include/clock.h            main/syscalls.c
+	include/clockserver.h      main/td.c
+	include/debug.h            server/clockserver.c
+	include/drivers.h          server/nameserver.c
+	include/error.h            src/bwio.c
+	include/gameplayer.h       src/clock.c
+	include/gameserver.h       src/debug.c
+	include/globals.h          src/Makefile
+	include/math.h             src/math.c
+	include/nameserver.h       src/string.c
+	include/requests.h         task/gameplayer.c
+	include/shell.h            task/gameserver.c
+	include/string.h           task/requests.c
+	include/switch.h           task/shell.c
+	include/syscalls.h         task/task.c
+	include/task.h
 
 
 
