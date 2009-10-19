@@ -25,7 +25,8 @@ void ns_run () {
 		// Receive a server request
 		debug ("ns: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(NSRequest) );
-		debug ("ns: Received: fromTid=%d name='%s' type=%d  len=%d\r\n", senderTid, req.name, req.type, len);
+		debug ("ns: Received: fromTid=%d name='%s' type=%d  len=%d\r\n", 
+				senderTid, req.name, req.type, len);
 	
 		assert( len == sizeof(NSRequest) );
 
