@@ -86,7 +86,9 @@ interruptHandler:
 	stmfd	sp!, {ip}
 	#; switch back to interrupt mode
 	msr 	CPSR_c, #0xD2
-	#; copy the lr NOTE: we just made ip scratch
+	#; copy the lr
+	#; NOTE: we just made ip scratch
+	#; NOTE2: lr is 4 bytes ahead of what we need to return it to
 	sub 	ip, lr, #4
 	#; switch to system mode
 	msr 	CPSR_c, #0xDF
@@ -95,12 +97,14 @@ interruptHandler:
 	stmfd	sp!, {r0-r12, lr}
 	#; temporarily store the user's sp
 	mov 	ip, sp
+	#; switch back to interrupt mode to get the spsr
+	msr 	CPSR_c, #0xD2
+	mrs 	r6, SPSR
 	#; switch to supervisor mode
 	msr 	CPSR_c, #0xD3
 	#; restore the kernel's registers holding the address of TD and Request
 	ldmfd	sp!, {r0, r1}
 	#; put the sp, and spsr into the active task
-	mrs 	r6, SPSR
 	stmia	r0, {r6, ip}
 	#; get the interrupt type
 	mov		r6, #99
