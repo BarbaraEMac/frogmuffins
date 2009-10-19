@@ -49,7 +49,7 @@ void shell_run ( ) {
         input[i] = 0;						// Clear the next character
 		k++; l++;
 		if( k!=l ) { bwputstr(COM2, "\r\n GOTCHA \r\n"); }
-		if( bwreadc( COM2, &(input[i]), 0 ) ) {
+		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");
                 input[i+1] = 0;
