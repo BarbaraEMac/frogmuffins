@@ -39,14 +39,14 @@ void getNextRequest ( TD *td, Request *req ) {
 	assert ( td != 0 );
 	assert ( req != 0 );
 
-	debug( "KERNEL EXIT: sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
-			td->sp[PC_OFFSET] );
+	debug( "KERNEL EXIT: (%d) sp=%x spsr=%x pc=%x\r\n", 
+			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	
 	// Context Switch!
 	kernelExit (td, req);
 
-	debug( "KERNEL ENTRY: sp=%x spsr=%x pc=%x\r\n", td->sp, td->spsr,
-			td->sp[PC_OFFSET] );
+	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
+			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
 	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
 			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
@@ -100,7 +100,6 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case INSTALLDRIVER:
-			debug ("INSTALLING\r\n");
 			td->returnValue = mgr_installDriver(mgr, 
 				req->a->installDriver.eventId, req->a->installDriver.driver);
 			break;
@@ -109,13 +108,9 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			// Set the state to defunct so it never runs again
 			td->state = DEFUNCT;
 			td_destroy( td, mgr );
-			debug( "Exiting task,\r\n");
-			
-			bwprintf (COM2, "task %d EXITED\r\n",td->id);
 			break;
 
 		case HARDWAREINT:
-			debug ("\t\t\t\tHARDWARE INTERRRUPT\r\n");
 			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
 			// fall through
 		case PASS:
@@ -157,6 +152,9 @@ int main( int argc, char* argv[] ) {
 	TDM		 mgr;			// The task descriptor manager
 	TD		*active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
+
+	// Reset the screen
+	bwputstr( COM2, "\33[24d");
 
 	// Initialize the printing connection
 	bwsetfifo( COM2, OFF );

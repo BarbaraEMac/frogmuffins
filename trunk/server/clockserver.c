@@ -17,20 +17,43 @@
 
 #define NUM_SLEEPERS	1024
 
+
+typedef struct {
+	int			 ticks;						// current time in ticks
+	Sleeper		*sleepersQ;					// A queue of all sleeping user tasks
+	Sleeper		 memSleepers[NUM_SLEEPERS]; // For allocating memory
+	int			 numSleepers;				// number of sleepers already allocated
+} CS;
+
+
+void cs_addSleeper( CS *this, int endTime, TID senderTid ) {
+
+	debug ("cs_addSleeper: task %d endTime %d ticks.\r\n", senderTid, endTime);
+	Sleeper *sleeper = &this->memSleepers[this->numSleepers++];
+
+	assert( this->numSleepers < NUM_SLEEPERS );
+	assert( sleeper != 0 );
+		
+	sleeper->endTime = endTime;
+	sleeper->tid	 = senderTid;
+	
+	list_insert ( &(this->sleepersQ), sleeper );
+
+}
+
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
 	
-	int 	   senderTid;		// The task id of the message sender
-	CSRequest  req;				// A clock server request message
-	int 	   len;
+	int			 senderTid;					// The task id of the message sender
+	CSRequest	 req;						// A clock server request message
+	int			 len;
 	
-	int       *time = clock_init ( TIMER3_BASE, 1, 0, 0 );
-	int		   ticks;
-	
-	Sleeper   *sleepersQ;		// A queue of all sleeping user tasks
-	Sleeper    memSleepers[NUM_SLEEPERS]; // For allocating memory
-	int		   numSleepers = 0;	// ptr into memSleepers array
-	Sleeper   *sleeper;		// tmp ptr
+	int			*time = clock_init ( TIMER3_BASE, 1, 0, 0 );
+	int			 ticks;
+	Sleeper		*sleepersQ;					// A queue of all sleeping user tasks
+	Sleeper		 memSleepers[NUM_SLEEPERS]; // For allocating memory
+	int			 numSleepers = 0;			// ptr into memSleepers array
+	Sleeper		*sleeper;					// tmp ptr
 
 	// Initialize the Clock Server
 	cs_init (&sleepersQ);
@@ -62,7 +85,7 @@ void cs_run () {
 				assert( sleeper != 0 );
 					
 				sleeper->endTime = ticks + req.ticks;
-				sleeper->tid     = senderTid;
+				sleeper->tid	 = senderTid;
 				
 				list_insert ( &(sleepersQ), sleeper );
 				break;
