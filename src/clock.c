@@ -15,7 +15,7 @@ int* clock_init( int clock_base, int enable, int interrupt, int val ) {
     *clock_ldr = val;
     // set the enable bit
     if( enable ) { *clock_ctl = ENABLE_MASK; }
-	if( interrupt ) { *clock_ctl = MODE_MASK; }
+	if( interrupt ) { *clock_ctl |= MODE_MASK; }
     // return a pointer to the clock
     return (int *)( clock_base + VAL_OFFSET );
 }

@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
@@ -68,7 +68,7 @@ int send (TD *sender, TDM *mgr, TID tid) {
 		mgr_insert(mgr, receiver);
 	} else {
 		// Put yourself on the other task's send queue.
-		debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
+		//	debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
 		queue_push ( &receiver->sendQ, sender );
 	}
 
@@ -93,7 +93,7 @@ int receive (TD *receiver, TID *tid) {
 	// If someone is on the send queue, complete the transaction.
 	if ( receiver->sendQ != 0 ) {
 		TD *sender = queue_pop ( &receiver->sendQ );
-		debug ("POPPING %x OFF A SEND Q st=%d\r\n", sender, sender->state);
+		//debug ("POPPING %x OFF A SEND Q st=%d\r\n", sender, sender->state);
 
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
@@ -209,7 +209,7 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 }
 
 int awaitEvent (TD *td, TDM *mgr, int eventId ) {
-
+	debug ("awaitEvent: tid:%d @(%x) eventId: %d\r\n", td->id, td, eventId);
 	// Check that this is a valid event id
 	if( eventId < 0 || eventId >= NUM_INTERRUPTS ) {
 		return INVALID_EVENTID;
@@ -244,20 +244,24 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 	// Get the driver for the interrupt that happened
 	Driver driver = mgr->intDriver[eventId];
 	assert( driver != 0 );
-	
-	// Pop the awaiting td off the interrupt blocked queue
-	TD* td = queue_pop( &mgr->intBlocked[eventId] );
 
-	// Handle the interrupt
-	td->returnValue = driver( td->a->awaitEvent.event, 
-			td->a->awaitEvent.eventLen );
+	if( mgr->intBlocked[eventId] != 0 ) {
+		// Pass the event to the task waiting for it
+		TD* td = queue_pop( &mgr->intBlocked[eventId] );
+		td->returnValue = driver( td->a->awaitEvent.event, 
+				td->a->awaitEvent.eventLen );
+		td->state = READY;
+		mgr_insert( mgr, td );
+	} 
 
-	// Reset the td's state
-	td->state = READY;
-	// Push the td back on the ready queues
-	mgr_insert( mgr, td );
-
+	if( mgr->intBlocked[eventId] == 0 ) {
+		// Turn off interrupts as there is no-one to handle them
+		int *handler = (int *) (VIC1_BASE + VIC_INT_EN_CLR);
+		*handler |= (1 << eventId);	
+	}
+	/*
 	// Turn off software interrupts
 	int *i = (int *) (VIC1_BASE + VIC_SOFT_INT_CLR);
 	*i = 0xFFFFFFFF;
+	*/
 }
