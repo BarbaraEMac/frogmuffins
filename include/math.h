@@ -1,3 +1,11 @@
+/**
+ * CS 452: Kernel
+ * becmacdo
+ * dgoc
+ */
+#ifndef __MATH_H__
+#define __MATH_H__
+
 /*
  * Count Trailing Zeroes
  * x - the integer in which to count the leading zeroes
@@ -5,3 +13,5 @@
  * digit
  */
 int ctz( int x );
+
+#endif
