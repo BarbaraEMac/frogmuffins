@@ -24,7 +24,6 @@ int timer1Driver (char *retBuf, int buflen) {
 }
 
 int timer2Driver (char *retBuf, int buflen) {
-	assert(1==0);
 	
 	// Get clear location
 	int *clearLoc = (int *)(TIMER2_BASE + CLR_OFFSET);

@@ -32,7 +32,7 @@ void shell_run ( ) {
     
 	// Create the name server
 	debug ("Creating the name server. \r\n");
-	Create (1, &ns_run);
+	Create (2, &ns_run);
 	
 	// Create the clock server
 	debug ("Creating the clock server. \r\n");
