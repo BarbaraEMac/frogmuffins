@@ -47,37 +47,93 @@ Question 2
 
 	Context Switch
 	==============
-	
-	
+	The context switch was slightly changed from the one used in K1 and K2 to
+	make sure we aren't overwriting scratch register. Here is how it works now:
+	 1) switch to system mode
+	 2) save active task's state {r0-r12, lr, pc}
+		NOTE: pc is useless and will be overwritten shortly
+	 3) temporarily store the user's sp
+	 4) switch to back supervisor mode
+	 5) store the actual pc we want to store (on the user stack)
+	 6) restore the kernel's registers holding the address of TD and Request
+	 7) put the sp, and read and put the spsr into the active task
+	 8) get the request type
+	 9) read the immediate value of swi
+	10) fill the request with the arguments
+	11) restore the rest of kernel's registers & jump back to the kernel
+		(this returns to where kernelExit would return if it was a normal function)
+
+	The Kernel exit routine was appropriately modified to be:
+	 1) store the kernel state
+	 2) fetch the active tasks's sp and spsr
+	 3) read the address to return to (the active tasks's pc)
+	 4) install the spsr in supervisor's spsr
+	 5) put the return value in r0
+	 6) switch to system mode
+	 9) restore the active task {r1-r12, lr} NOTE: r0 is skipped 
+	10) we didn't read the pc, so add to the sp
+	11) switch to supervisor mode
+	12) install the pc of the active task
+
 	Interrupt Handling
 	==================
+	Modifying the context switch as described above let us write an interrupt 
+	context switch that is very similar to the regular context switch:
+	 1) switch to system mode
+	 2) save active task's state {r0-r12, lr, pc}
+		NOTE: pc is useless and will be overwritten shortly
+	 3) temporarily store the user's sp
+	 4) switch back to interrupt mode
+	 5) store the actual pc we want to store (on the user stack) // this is pc-4
+	 6) get the spsr
+	 7) switch to supervisor mode
+	 8) restore the kernel's registers holding the address of TD and Request
+	 9) put the sp, and spsr into the active task
+	10) fill the request with the arguments (request type = HARDWAREINT)bm
+	11) restore the rest of kernel's registers & jump back to the kernel
+		(this returns to where kernelExit would return if it was a normal function)
 
+	Once kernel resumes execution after the interrupt context switch, it proceeds
+	as normally to check the request type, which will be marked as HARDWAREINT.
+	To handle the interrupt we do the folowing
+	 1) Get an index of the actual interrupt
+	 2) Get the driver for the interrupt that happened (This is saved in the TDM)
+	 3) Pass the event to the task waiting for it (if there is one)
+	 4) Turn off interrupts as there is no-one to handle them
+	The notifier tasks by convention are some of the highest priority tasks
+	and so get to run within a short anmount of time after the interrupt.
 
 	Device Drivers
 	==============
-	Each time a task wishes to use an interrupt, it must install a driver so that
+	Before a task can wait on an interrupt, it must install a driver so that
 	the kernel knows how to handle the interrupt. We did this so that the kernel
 	would be portable and doesn't need to know about how to directly talk to the
 	hardware.
 
-	The drivers will usually handle turning off the interrupt that just triggered,
-	reading the data and clearing buffers, etc. Basically, the driver will handle
-	the interrupt once it has been triggered.
+	The drivers must turn off the interrupt and proceed to read and pass the data 
+	and clearing buffers, etc. Basically, the driver will handle the interrupt
+	once it has been triggered. The driver runs in kernel mode, and in a real-world
+	application it would have to be certified before we would allow it to do so.
+	Also, the MMU would be set up to limit the driver's 'reach'.
 	
 	One driver should be written per interrupt type. For this assignment, we are 
-	only using the timers, so only a timer1Driver and tiemr2Driver were implemented.
+	only using the timers, so only a timer1Driver and timer2Driver were implemented.
 	In future assignments, it will be very easy to implement other drivers. 
 	Here is the pseudo code for the timer 1 and 2 drivers:
 		Clear the timer interrupt.
 		Return an empty buffer and NO_ERROR.
 	
 	A user task that will eventually call AwaitEvent() must first call 
-	InstallDriver(). This is another system call that we have implemented. The
+	InstallDriver(). (Unless another tasks has already done so.)
+	This is another system call that we have implemented. The
 	function takes an interrupt type and a pointer to the corresponding driver
 	function. This function is stored in the TD mananger in an array indexed by 
 	the interrupt type it handles. The TD manager has 1 entry for every interrupt
 	type (0->31).
 
+	Another approach of the driver approach is being able to run the driver 
+	directly using the vectored fast interrupts available in the ARM architecture
+	if we wish to do so in the future.
 
 	Await Event
 	===========
@@ -87,13 +143,13 @@ Question 2
 	single argument.
 	
 	Here is the pseudo code for kernel code of awaitEvent():
-		Ensure that the arguments are correct.
-			Event Id is valid.
-			The driver for this event id has been installed.
-		Turn on the interrupt for this particular event.
-		Change the state of the active task to AWAITING_EVT.
-		Push the task on the interrupt blocked queues.
-		Signal no error.
+	 1)	Ensure that the arguments are correct.
+	 2)		Event Id is valid.
+	 3)		The driver for this event id has been installed.
+	 4)	Turn on the interrupt for this particular event.
+	 5)	Change the state of the active task to AWAITING_EVT.
+	 6)	Push the task on the interrupt blocked queues.
+	 7)	Signal no error.
 
 	For this kernel, user tasks can only wait on TIMER1 or TIMER2. This will cause
 	the task to wait until a timer interrupt has occurred. 
@@ -146,8 +202,8 @@ Question 2
 
 	Delay
 	=====
-	Delay() can be called by a user task to cause it to wait for a given amount
-	of ticks. Here is the pseudocode:
+	Delay() is a wrapper for send to the Clockserver and can be called by a user 
+	task to cause it to wait for a given amount	of ticks. Here is the pseudocode:
 
 		Grab an unused sleeper struct.
 		Store the tid in the sleeper struct.
@@ -162,7 +218,7 @@ Question 2
 	DelayUntil
 	==========
 	DelayUntil() can be called by a user task to delay until the given end time.
-	Here is the pseudo code:
+	It is a wrapper for a Send() to the ClockServer that does the following:
 
 		Grab an unused sleeper struct.
 		Store the tid in the sleeper struct.
@@ -177,6 +233,7 @@ Question 2
 	This function will return the current time in ticks since the clock server
 	started. To convert the raw CPU ticks to 50ms ticks, we grab the current time
 	from a timer that is running at 2000Hz and divide it by 100.
+	It is also implemented as a wrapper for Send() to the ClockServer.
 	
 	Clock Notifier
 	==============
