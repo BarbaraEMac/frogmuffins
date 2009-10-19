@@ -15,7 +15,7 @@
 #include "task.h"
 
 #define FOREVER     for( ; ; )
-#define INPUT_LEN   256
+#define INPUT_LEN   60
 #define INPUT_HIST  1
 
 #define output(args...) bwputstr(COM2, "\033[36m"); bwprintf(COM2, args); bwputstr(COM2,"\033[37m")
@@ -49,7 +49,7 @@ void shell_run ( ) {
 
 		if( bwreadc( COM2, &(input[i]), 0 ) ) {
             if( input[i] == '\r' ) {        // Enter was pressed
-				output ("\n\r");
+				bwputstr ( COM2, "\n\r");
                 input[i+1] = 0;
                 
 				shell_exec( input );		// This may call Exit();
@@ -61,15 +61,19 @@ void shell_run ( ) {
 				output ("\r > "); 
             } else if( input[i] == '\b'
                     || input[i] == 127) {	// Backspace was pressed
-                output ("%s", "\b \b");
-                
-				input[i] = 0;
-                i --; if( i < 0 ) i = 0;
+				if( i > 0 ) {
+					bwputstr ( COM2, "\b \b");
+    	            
+					input[i] = 0;
+            	    i --;
+				}
             } else {                        // Update the position in the command string
                 output ("%c", input[i]);
+				if( input[i] < 32 || input[i] > 126 ) {
+					output("%d", input[i]);
+				}
 				i ++;
             }
-            //bwprintf( COM2, "\n\rCODE(%d)\n\r", input[i-1] );
         }
         if( i == INPUT_LEN ) {
             output( "Too many characters.\r\n" );
