@@ -243,7 +243,60 @@ Question 3
 
 	Here are the md5 hashes for each file:
 
-	
+	1bbdde0f9272ce27b26219b36a56b28e  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	e661fa70dcc47cc6cae2ee8571cf1f19  ./documentation/k3.txt
+
+	4dec653ff77c6c60245b50034e1cd2a8  ./driver/drivers.c
+
+	b47ec772c9587d700caaf495ebc0cdd6  ./include/math.h
+	8b8513f4d8acfc7c286791873724de02  ./include/error.h
+	8edbd0d3c6f3b9a913ed70ba64b93929  ./include/clock.h
+	8cbe0128c7a89ad94a7d5542a758d743  ./include/syscalls.h
+	79420f3c0b2224c9731b40c7e2882138  ./include/ts7200.h
+	284f5809b261c65bf4298f5707c6890e  ./include/bwio.h
+	1f636a0caf7a3b085550e06e9bf4f204  ./include/gameserver.h
+	7362b29957ddfbbb258d656689368acd  ./include/switch.h
+	145507954bf66a4cc19fe0753a820940  ./include/task.h
+	f12dba7c03ed2d309d83f0c603bdf00a  ./include/string.h
+	20779ceb04fffabc5d97ba646d30bcf5  ./include/shell.h
+	3e1dc5f50f86a983d38c232fa247bac4  ./include/td.h
+	aa9eeaa5e108edefedbdfc9610abcea6  ./include/nameserver.h
+	2646bd05f7a8791a4799f7ecc05cfb83  ./include/requests.h
+	845aa0a01f752a1fb41cf2766293e48b  ./include/drivers.h
+	2b98d4e1e0bd5603872c6139dbac0874  ./include/clockserver.h
+	4cdafbed0b30d282fa12007097533e5a  ./include/globals.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	49d6b686a32e30509085d69fade0562d  ./include/debug.h
+
+	a70af2931fa4a98a497be405d27b8641  ./main/main.c
+	9ec86426ab6e6cb316ed575b049bea0c  ./main/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./main/orex.ld
+	6daab6fcb9f20a5abf535f1a087f7a98  ./main/syscalls.c
+
+	2f0b2ebc09094503ec50a74229f98a6d  ./Makefile
+
+	a4741f6aa92cc98a01c18cc3414a0107  ./server/clockserver.c
+	b35e3488258bd1e32debc848c4aa6280  ./server/nameserver.c
+
+	307f9f9d74c14f53c14e1bb805d18964  ./src/bwio.c
+	408c442d786f9436b969b27b5d934cd7  ./src/debug.c
+	97a527897e5be8082b52809db93aa68e  ./src/string.c
+	f75fdbf20b0775f6572773da7b216a50  ./src/math.c
+	9b56cb4928b99c9d2cdb435f0f0f66c0  ./src/clock.c
+	1e207d4c06aadc16e7ca20b25f540924  ./src/Makefile
+
+	2a680012f3698e3f29e0571a0926a49e  ./task/gameserver.c
+	0620c3a4f1ba615a24f32ae60f781684  ./task/task.c
+	67176ab15a6023cb97879874dcb0c3b3  ./task/gameplayer.c
+	18952f38ccb0a1e6026e880ce9f58a85  ./task/shell.c
+	9f457ee9157b6c11499cc9242fcafc48  ./task/requests.c
+
 Question 4
 ==========
 	Here is a listing of all submitted files:
