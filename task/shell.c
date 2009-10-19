@@ -34,6 +34,12 @@ void shell_run ( ) {
 	debug ("Creating the name server. \r\n");
 	Create (1, &ns_run);
 	
+	// Create the clock server
+	debug ("Creating the clock server. \r\n");
+	Create (2, &cs_run);
+	
+	output ("Type 'h' for a list of commands.\r\n");
+
 	// Main loop
     input = history[h++];
 	output ("\r > "); 
@@ -81,26 +87,34 @@ void shell_exec( char *command ) {
     if ( sscanf(command, "q\r") >= 0 ) {
         Exit();
         
-    } else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
+    } 
+	else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
 		Create (0, &k1_firstUserTask);
 		output( "K1 is done executing.\r\n" );
-    } else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
+    }
+	else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
 		Create (0, &k2_firstUserTask);
 		output( "K2 is done executing.\r\n" );
-    } else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
-		// Create the clock server
-		debug ("Creating the clock server. \r\n");
-		Create (2, &cs_run);
-
+    }
+	else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
 		Create (0, &k3_firstUserTask);
-		output( "K3 is done executing.\r\n" );
-	} else if( sscanf(command, "ua %x\r", &mask) >=0 ) {
+		
+		// K3 is asynchronous so we don't know when it will end
+		//output( "K3 is done executing.\r\n" );
+	}
+	else if( sscanf(command, "ua %x\r", &mask) >=0 ) {
         output( "Changing UART1 to %04x.\n\r", mask );
         int *flag = (int *)( UART1_BASE + UART_LCRH_OFFSET );
         *flag = mask;
         output( "UART1 SETTINGS: 0x%04x\n\r", *flag );
-    } else if( sscanf(command, "h\r") >=0 ) {	// Get help!
-		output( "\tk1 = kernel 1\r\n\tk2 = kernel 2\r\n\tk3 = kernel 3\r\n\tua = Change the UART\r\n\th = Help\r\n");
+    }
+	else if( sscanf(command, "h\r") >=0 ) {	// Get help!
+		output( "\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n", 
+				"h = Help!", 
+				"k1 = Execute kernel 1 user tasks.", 
+				"k2 = Execute kernel 2 user tasks.", 
+				"k3 = Execute kernel 3 user tasks.", 
+				"ua = Change the UART." );
 	}
 }
 
