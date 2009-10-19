@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "error.h"
 #include "requests.h"
+#include "shell.h"
 #include "switch.h"
 #include "syscalls.h"
 #include "task.h"
@@ -99,6 +100,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case INSTALLDRIVER:
+			debug ("INSTALLING\r\n");
 			td->returnValue = mgr_installDriver(mgr, 
 				req->a->installDriver.eventId, req->a->installDriver.driver);
 			break;
@@ -111,6 +113,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
+			debug ("\t\t\t\tHARDWARE INTERRRUPT\r\n");
 			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
 			// fall through
 		case PASS:
@@ -172,7 +175,8 @@ int main( int argc, char* argv[] ) {
 	// Create the first task and set it as the active one
 	//active = td_create ( 1, &receiverTask, -1, &mgr );
 	// Set priority = 0 to ensure that this task completes
-	active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
+	active = td_create ( NUM_PRIORITY-1, &shell_run, -1, &mgr );
+	//active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
 
 	if ( active < NO_ERROR ) {
 		error ( (int) active, "Initializing the first task");

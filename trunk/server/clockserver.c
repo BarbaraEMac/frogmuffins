@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG
+//#define DEBUG
 
 #include <bwio.h>
 #include <clock.h>
@@ -35,9 +35,6 @@ void cs_run () {
 	// Initialize the Clock Server
 	cs_init (&sleepersQ);
 
-	// Install the clock driver
-	InstallDriver( TIMER1, &timer1Driver );
-
 	FOREVER {
 		// Receive a server request
 		debug ("cs: is about to Receive. \r\n");
@@ -58,7 +55,7 @@ void cs_run () {
 		// Handle the request
 		switch (req.type) {
 			case DELAY:
-				debug ("cs: task %d delays %d ticks.\r\n", senderTid, req.ticks);
+				debug ("cs: task %d delays %d ticks. (currently: %d)\r\n", senderTid, req.ticks, ticks);
 				sleeper = &memSleepers[numSleepers++];
 	
 				assert( numSleepers < NUM_SLEEPERS );
@@ -103,7 +100,6 @@ void cs_run () {
 					debug("cs: waking up tid: %d time: %d currentT: %d\r\n", sleeper->tid, sleeper->endTime, ticks);
 
 					// Wake it up!
-					debug ("cs: Replying to wake up %d\r\n", sleeper->tid);
 					Reply (sleeper->tid, (char*) &ticks, sizeof(int));
 
 					// Increment iterator pointer
@@ -128,7 +124,7 @@ void cs_init (Sleeper **sleepersQ) {
 	RegisterAs (CLOCK_NAME);
 	
 	// Spawn a notifying helper task
-	if ( (err = Create( 0, &notifier_run )) < NO_ERROR ) {
+	if ( (err = Create( 1, &notifier_run )) < NO_ERROR ) {
 		error (err, "Cannot create the clock notifier.\r\n");
 	}
 
@@ -143,6 +139,7 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 
 	// The empty list
 	if ( *head == 0 ) {
+		debug ("	cs: add %d %d as head \r\n", toAdd->tid,toAdd->endTime);
 		toAdd->next = toAdd;
 		toAdd->prev = toAdd;
 
@@ -153,6 +150,7 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 		Sleeper *oldHead = *head;
 		Sleeper *tail    = oldHead->prev;
 
+		debug("		cs: add as new head %d %d (old: %d %d) \r\n", toAdd->tid, toAdd->endTime, oldHead->tid, oldHead->endTime);
 		toAdd->next = oldHead;
 		toAdd->prev = tail;
 
@@ -173,6 +171,7 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 			itr = itr->next;
 		}
 	
+		debug("		cs: add in middle to: %d %d prev: %d %d, next: %d %d\r\n", toAdd->tid, toAdd->endTime, itr->prev->tid, itr->prev->endTime, itr->prev->next->tid, itr->prev->next->endTime);
 		// Insert in the middle
 		toAdd->next = itr;
 		toAdd->prev = itr->prev;
@@ -184,7 +183,7 @@ void list_insert ( Sleeper **head, Sleeper *toAdd ) {
 
 	debug ("\tcs: added tid: %d time: %d\r\n", toAdd->tid, toAdd->endTime);
 
-	assert ( *head != 0 );
+	assert( *head != 0 );
 	assert( toAdd->next != 0 );
 	assert( toAdd->prev != 0 );
 }
@@ -226,19 +225,19 @@ void notifier_run() {
 	notifier_init ();
 	
 	FOREVER {
-		bwprintf (COM2, "Notifier is awaiting an event\r\n");
+	//	bwprintf (COM2, "Notifier is awaiting an event\r\n");
 		// Wait for 1 "tick" (50ms) to pass
 		if ( (err = AwaitEvent( TIMER1, awaitBuffer, sizeof(char)*10 )) 
 				< NO_ERROR ) {
 			// Handle errors
-		
+			assert ('a'=='b');
 		}
 	
 		// Check the return buffer?
 
 
 		// Tell the Clock Server 1 tick has passed
-		bwprintf (COM2, "Notifier->ClockServer\r\n");
+//		bwprintf (COM2, "Notifier->ClockServer\r\n");
 		if ( (err = Send( clockServerId, (char*) &req, sizeof(CSRequest),
 					      (char *) &reply, sizeof(int) )) < NO_ERROR ) {
 			// Handle errors
@@ -257,6 +256,11 @@ void notifier_init () {
 	// Register with the Name Server
 	RegisterAs ("ClkNotifier");
 	
+	// Install the clock driver
+	if ( InstallDriver( TIMER1, &timer1Driver ) < NO_ERROR ) {
+		assert (1==0);
+	}
+
 	// Init clock stuff
-	clock_init ( TIMER1_BASE, 1, 1, 200 );
+	clock_init ( TIMER1_BASE, 1, 1, 100 );
 }	
