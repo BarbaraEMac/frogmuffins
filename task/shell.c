@@ -41,12 +41,14 @@ void shell_run ( ) {
 	output ("Type 'h' for a list of commands.\r\n");
 
 	// Main loop
+	int k =0, l = 0;
     input = history[h++];
 	output ("\r > "); 
     FOREVER {
 
         input[i] = 0;						// Clear the next character
-
+		k++; l++;
+		if( k!=l ) { bwputstr(COM2, "\r\n GOTCHA \r\n"); }
 		if( bwreadc( COM2, &(input[i]), 0 ) ) {
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");

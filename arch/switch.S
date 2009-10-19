@@ -10,6 +10,8 @@ kernelExit:
 	stmfd	sp!, {r0, r1, r4-r10, fp, lr}
 	#; fetch the active tasks's sp and spsr
 	ldmia 	r0, {r2, r3}
+	#; read the addres tp return to
+	ldr		lr, [r3, #56]
 	#; install the spsr
 	msr 	SPSR_cxsf, r2
 	#; put the return value in r0
@@ -20,18 +22,13 @@ kernelExit:
 	add 	sp,	r3, #4
 	#; ldmfd	sp, {r1-r12, lr}
 	#; mov		r0, #1
+	#; ldr		r1, [r3, #56]
 	#; mov		r1, ip
 	#; mrs		r1, SPSR
 	#; bl		bwputr(PLT)
 	ldmfd	sp!, {r1-r12, lr}
-	#; switch to supervisor mode
-	msr 	CPSR_c, #0xD3
-	#; copy the pc to be restored
-	mov		lr, ip
-	#; switch to system mode
-	msr 	CPSR_c, #0xDF
-	#; restore the ip
-	ldmfd	sp!, {ip}
+	#; we didn't read the pc, so add to the sp
+	add		sp, sp, #4
 	#; switch to supervisor mode
 	msr 	CPSR_c, #0xD3
 	#; install the pc of the active task
@@ -43,19 +40,17 @@ kernelExit:
 kernelEnter:
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 1, uses_anonymous_args = 0
-	#; copy the lr, NOTE: ip is scratch
-	mov 	ip, lr
 	#; switch to system mode
 	msr 	CPSR_c, #0xDF
 	#; save active task's state 
-	#; NOTE: ip holds the pc to restore
-	#; NOTE2:pc is where the ip would be save to if we were doing an
-	#; 		 interrupt, but ip is scratch in swi so we don't care
+	#; NOTE: pc is useless for now but will be overwritten shortly
 	stmfd	sp!, {r0-r12, lr, pc}
 	#; temporarily store the user's sp
 	mov 	ip, sp
-	#; switch to supervisor mode
+	#; switch to back supervisor mode
 	msr 	CPSR_c, #0xD3
+	#; store the actual pc we want to store (on the user stack)
+	str		lr, [ip, #56]
 	#; restore the kernel's registers holding the address of TD and Request
 	ldmfd	sp!, {r0, r1}
 	#; put the sp, and spsr into the active task
@@ -79,26 +74,19 @@ kernelEnter:
 interruptHandler:
 	@ args = 0, pretend = 0, frame = 0
 	@ frame_needed = 1, uses_anonymous_args = 0
-	#; save the active task's lr
-	#; switch to system mode
-	msr 	CPSR_c, #0xDF
-	#; store the ip
-	stmfd	sp!, {ip}
-	#; switch back to interrupt mode
-	msr 	CPSR_c, #0xD2
-	#; copy the lr
-	#; NOTE: we just made ip scratch
-	#; NOTE2: lr is 4 bytes ahead of what we need to return it to
-	sub 	ip, lr, #4
 	#; switch to system mode
 	msr 	CPSR_c, #0xDF
 	#; save active task's state 
-	#; NOTE: ip holds the pc to restore
-	stmfd	sp!, {r0-r12, lr}
+	#; NOTE: pc is useless for now but will be overwritten shortly
+	stmfd	sp!, {r0-r12, lr, pc}
 	#; temporarily store the user's sp
 	mov 	ip, sp
-	#; switch back to interrupt mode to get the spsr
+	#; switch back to interrupt mode
 	msr 	CPSR_c, #0xD2
+	#; store the actual pc we want to store (on the user stack)
+	sub 	lr, lr, #4
+	str		lr, [ip, #56]
+	#; get the spsr
 	mrs 	r6, SPSR
 	#; switch to supervisor mode
 	msr 	CPSR_c, #0xD3
