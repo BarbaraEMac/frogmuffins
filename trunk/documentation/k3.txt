@@ -55,10 +55,30 @@ Question 2
 
 	Device Drivers
 	==============
+	Each time a task wishes to use an interrupt, it must install a driver so that
+	the kernel knows how to handle the interrupt. We did this so that the kernel
+	would be portable and doesn't need to know about how to directly talk to the
+	hardware.
+
+	The drivers will usually handle turning off the interrupt that just triggered,
+	reading the data and clearing buffers, etc. Basically, the driver will handle
+	the interrupt once it has been triggered.
 	
+	One driver should be written per interrupt type. For this assignment, we are 
+	only using the timers, so only a timer1Driver and tiemr2Driver were implemented.
+	In future assignments, it will be very easy to implement other drivers. 
+	Here is the pseudo code for the timer 1 and 2 drivers:
+		Clear the timer interrupt.
+		Return an empty buffer and NO_ERROR.
 	
-	How do they work? What do they do? Why do we have them?
-	
+	A user task that will eventually call AwaitEvent() must first call 
+	InstallDriver(). This is another system call that we have implemented. The
+	function takes an interrupt type and a pointer to the corresponding driver
+	function. This function is stored in the TD mananger in an array indexed by 
+	the interrupt type it handles. The TD manager has 1 entry for every interrupt
+	type (0->31).
+
+
 	Await Event
 	===========
 	AwaitEvent() can be called by a user task to block the task until a particular 
@@ -86,6 +106,7 @@ Question 2
 	here. However, we designed our kernel to be as flexible as possible with as 
 	little rewriting of code in the future.
 	
+
 	Clock Server
 	============
 	The clock server is a user task that keeps track of the current time since 
@@ -125,23 +146,83 @@ Question 2
 
 	Delay
 	=====
+	Delay() can be called by a user task to cause it to wait for a given amount
+	of ticks. Here is the pseudocode:
 
-	Time
-	====
+		Grab an unused sleeper struct.
+		Store the tid in the sleeper struct.
+		Compute the end time by adding the current time to the ticks.
+		Store the endTime in the sleeper struct.
+		Insert the sleeper struct into the queue of sleepers in sorted order. 
+
+	Note that the insert places the new sleeper in the queue in sorted order.
+	It is not a FIFO queue! The sleepers are organized by endTime with the soonest
+	end time closest as the head of the queue.
 
 	DelayUntil
 	==========
+	DelayUntil() can be called by a user task to delay until the given end time.
+	Here is the pseudo code:
 
+		Grab an unused sleeper struct.
+		Store the tid in the sleeper struct.
+		Store the endTime in the sleeper struct.
+		Insert the sleeper struct into the queue of sleepers in sorted order. 
+	
+	DelayUntil() and Delay() are very similar in functionality.
+
+	Time
+	====
+	A user task can query the clock server for the current time by calling Time().
+	This function will return the current time in ticks since the clock server
+	started. To convert the raw CPU ticks to 50ms ticks, we grab the current time
+	from a timer that is running at 2000Hz and divide it by 100.
+	
 	Clock Notifier
 	==============
+	When the ClockServer initializes, it spawns a working task called the Notifier.
+	The ClockServer operates by calling Receive() and blocking until it is passed a 
+	message from either another user task or the notifier. Since the ClockServer
+	needs to keep track of the current time, we need to make sure it doesn't block
+	for more than 1 tick. Hence, we see the need to have a notifier task.
 
+	It is the notifier that listens for the TIMER1 interrupts and acts 
+	accordingly. Here is the pseudo code for the notifier:
+		Initialize the hardware and notifier.
+		FOREVER {
+			AwaitEvent ( Timer Interrupt );
+			Check for errors during await.
+			Send a message to the ClockServer to wake it up.
+			Check for send errors.
+		}
+
+	Every 50 ms, a hardware interrupt is triggered from TIMER1. The notifier is 
+	asleep waiting for this interrupt to occur. When it does, the notifier is 
+	woken up and sends a message to the ClockServer to wake it up if is blocked 
+	on Receive(). The notifier then awaits the next hardware interrupt.
+
+	Right now, the notifier is specific to helping the ClockServer. It will be
+	made more generic for future kernel assignments so that any task can spawn
+	a notifier task.
+
+	The priority of a notifier task is sufficiently important. It must be able to
+	catch an interrupt as soon as it occurs and handle it appropriately. Hence,
+	the notifier is made at priority 1, making it the second highest priority task
+	behind the first user task for Kernel 3. Once this first task exits, the
+	notifier has the highest priority and will always run if an interrupt has
+	occurred. The Name and Clock servers are created with priority 2.
+
+
+	Shell
+	=====
+	
 
 	User Tasks for Kernel 3
 	==========================
 	Since the assignment only asked for a description of the changes to the
 	kernel, we will not include a description of the user tasks. The
 	code is heavily documented and easy to read, if needed. Or, we will be happy
-	to provide written details.
+	to provide written details, if required.
 
 Question 3
 ==========
