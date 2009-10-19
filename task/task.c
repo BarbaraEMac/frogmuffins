@@ -6,7 +6,7 @@
  * User task stuff goes in here.
  */
 
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 

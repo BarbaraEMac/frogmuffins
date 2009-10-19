@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
@@ -210,6 +210,7 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 
 int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 	debug ("awaitEvent: tid:%d @(%x) eventId: %d\r\n", td->id, td, eventId);
+	
 	// Check that this is a valid event id
 	if( eventId < 0 || eventId >= NUM_INTERRUPTS ) {
 		return INVALID_EVENTID;
@@ -217,13 +218,15 @@ int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 
 	// Check that the driver for this event is installed
 	if( mgr->intDriver[eventId] == 0 ) {
+		debug ("awaitEvent: NO DRIVER HAS BEEN INSTALLED FOR THIS.\r\n");
+		assert (1==0);
 		return NO_DRIVER;
 	}
 
 	// Turn on this interrupt
 	int *handler = (int *) (VIC1_BASE + VIC_INT_ENABLE);
 	*handler |= (1 << eventId);	
-	
+
 	// Change task state
 	td->state = AWAITING_EVT;
 	
@@ -235,10 +238,11 @@ int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 }
 
 void handleInterrupt( TDM *mgr, int intStatus ) {
-
+	
 	// Get an index of the actual interrupt
 	int eventId = ctz( intStatus );
 	debug( "handleInterrupt #%d status=%x\r\n", eventId, intStatus );
+	assert (0==1);
 	assert( eventId < 32 );
 
 	// Get the driver for the interrupt that happened

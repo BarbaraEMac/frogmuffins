@@ -93,6 +93,9 @@ int mgr_installDriver( TDM *this, int eventId, Driver driver ) {
 	if( eventId >= NUM_INTERRUPTS || eventId < 0) {
 		return INVALID_EVENTID;
 	}
+	// Make sure we haven't already installed a driver for this yet.
+	assert ( this->intDriver[eventId] == 0 );
+
 	this->intDriver[eventId] = driver;
 	return NO_ERROR;	// success
 }

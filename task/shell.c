@@ -1,7 +1,7 @@
  /*
  * dgoc_a1.c
  */
-#define DEBUG
+//#define DEBUG
 
 #include <bwio.h>
 #include <string.h>
