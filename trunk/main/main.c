@@ -110,6 +110,8 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			td->state = DEFUNCT;
 			td_destroy( td, mgr );
 			debug( "Exiting task,\r\n");
+			
+			bwprintf (COM2, "task %d EXITED\r\n",td->id);
 			break;
 
 		case HARDWAREINT:
@@ -139,7 +141,7 @@ TD *schedule ( TD *oldTask, TDM *mgr ) {
 	mgr_insert ( mgr, oldTask );
 
 	// Pop new task off the ready queue
-	// if 0 is returned, then we have no more tasks to run.
+	// If 0 is returned, then we have no more tasks to run.
 	TD *newActive = mgr_popReady ( mgr );
 
 	// Set the state to active since this task is going to run
@@ -166,14 +168,13 @@ int main( int argc, char* argv[] ) {
 	bwprintf( COM2, "Initialized interrupt handlers.\r\n");
 	
 	// Turn off interrupts 
-	writeMemory(VIC1_BASE + VIC_INT_ENABLE, 0 );
+	writeMemory( VIC1_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
 
 	// Create the first task and set it as the active one
-	//active = td_create ( 1, &receiverTask, -1, &mgr );
 	// Set priority = 0 to ensure that this task completes
 	active = td_create ( NUM_PRIORITY-1, &shell_run, -1, &mgr );
 	//active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
@@ -198,6 +199,10 @@ int main( int argc, char* argv[] ) {
 		service (active, &nextRequest, &mgr);
 	}
 
+	// Turn off interrupts 
+	bwputstr( COM2, "Turning off interrupts.\r\n");
+	writeMemory( VIC1_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
+	
 	bwputstr( COM2, "Exiting normally.\r\n" );
 	
 	return 0;
