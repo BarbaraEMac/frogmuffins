@@ -193,10 +193,25 @@ void list_remove ( Sleeper **head, Sleeper *toRm ) {
 	
 	// Remove the head - this is the last element
 	if ( *head == toRm ) {
-		*head = 0;	
+		Sleeper *newHead = toRm->next;
+		Sleeper *tail = toRm->prev;
+
+		// This is the last element
+		if ( newHead == toRm ) {
+			debug ("\tcs: removing last element (head).\r\n");
+			*head = 0;	
+		}
+		else {
+			debug ("\tcs: removing head. Adding next as new head.\r\n");
+			newHead->prev = tail;
+			tail->next    = newHead;
+
+			*head = newHead;
+		}
 	}
 	// Remove another element, not the head
 	else {
+		debug("\tcs: removing middle element\r\n");
 		Sleeper *next = toRm->next;
 		Sleeper *prev = toRm->prev;
 
