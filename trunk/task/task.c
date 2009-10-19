@@ -17,6 +17,11 @@
 #include "nameserver.h"
 #include "requests.h"
 #include "task.h"
+
+typedef struct {
+	char delayLen;
+	char numDelays;
+} clientMsg;
 //-------------------------------------------------------------------------
 //---------------------------Kernel 3--------------------------------------
 //-------------------------------------------------------------------------
@@ -25,7 +30,7 @@ void k3_firstUserTask () {
 	int len;
 	TID id;
 	char req;
-	char ret[4][2];
+	clientMsg msgs[4];
 
 	// Create the name server
 	debug ("Creating the name server. \r\n");
@@ -42,14 +47,14 @@ void k3_firstUserTask () {
 	Create (6, &k3_client);
 	
 	// Initialize the return values for each client
-	ret[0][0] = 10;
-	ret[0][2] = 20;
-	ret[1][0] = 23;
-	ret[1][2] = 9;
-	ret[2][0] = 33;
-	ret[2][2] = 6;
-	ret[3][0] = 71;
-	ret[3][2] = 3;
+	msgs[0].delayLen = 10;
+	msgs[0].numDelays = 20;
+	msgs[1].delayLen = 23;
+	msgs[1].numDelays = 9;
+	msgs[2].delayLen = 33;
+	msgs[2].numDelays = 6;
+	msgs[3].delayLen = 71;
+	msgs[3].numDelays = 3;
 
 	// Receive from the clients
 	debug ("First user task is receiving.\r\n");
@@ -58,7 +63,7 @@ void k3_firstUserTask () {
 		len = Receive (&id, (char*) &req, sizeof(char));
 		assert ( len == sizeof(char) );
 	
-		Reply ( id, (char *) &ret[i], sizeof(char)*2 );
+		Reply ( id, (char *) &msgs[i], sizeof(clientMsg) );
 	}
 	
 	// Quit since this task is done
@@ -69,8 +74,8 @@ void k3_firstUserTask () {
 
 void k3_client () {
 	debug ("Client %d is starting.\r\n", MyTid());
-	char replyBuffer[2];
-	char msg;
+	clientMsg msg;
+	char blank = 0;
 	int csTid = WhoIs (CLOCK_NAME);
 	int i;
 
@@ -78,17 +83,14 @@ void k3_client () {
 	RegisterAs ("Client" + MyTid());
 	
 	// Send to your parents
-	Send ( MyParentTid(), &msg, sizeof(char), 
-		   replyBuffer, sizeof(char)*2 );
+	Send( MyParentTid(), &blank, 1, (char*) &msg, sizeof(clientMsg) );
 	
 	// Delay the returned number of times and print.
-	int delayLen = (int) replyBuffer[0];
-	int numDelays = (int) replyBuffer[1];
-	debug("delayLen= %d, numDelays = %d\r\n", delayLen, numDelays );
-	for ( i = 0; i < numDelays; i ++ ) {
-		Delay (delayLen, csTid);
+	debug("delayLen= %d, numDelays = %d\r\n", msg.delayLen, msg.numDelays );
+	for ( i = 0; i < msg.numDelays; i ++ ) {
+		Delay (msg.delayLen, csTid);
 		bwprintf (COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
-				   MyTid(), delayLen, i);
+				MyTid(), msg.delayLen, i+1);
 	}
 
 	// Exit!

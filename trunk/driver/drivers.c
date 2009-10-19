@@ -8,8 +8,9 @@
 #include <ts7200.h>
 
 #include "drivers.h"
+#include "error.h"
 
-void timer1Driver (char *retbuf, int buflen) {
+int timer1Driver (char *retBuf, int buflen) {
 	// Get clear location
 	int *clearLoc = (int *)(TIMER1_BASE + CLR_OFFSET);
 
@@ -18,9 +19,10 @@ void timer1Driver (char *retbuf, int buflen) {
 
 	// Return timer data
 	*retBuf = 0;
+	return NO_ERROR;
 }
 
-void timer2Driver (char *retbuf, int buflen) {
+int timer2Driver (char *retBuf, int buflen) {
 	// Get clear location
 	int *clearLoc = (int *)(TIMER2_BASE + CLR_OFFSET);
 
@@ -29,4 +31,5 @@ void timer2Driver (char *retbuf, int buflen) {
 
 	// Return timer data
 	*retBuf = 0;
+	return NO_ERROR; 
 }
