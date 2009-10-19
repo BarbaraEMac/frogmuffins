@@ -27,18 +27,12 @@ typedef struct {
 //-------------------------------------------------------------------------
 void k3_firstUserTask () {
 	debug ("First task started. \r\n");
-	int len;
-	TID id;
-	char req;
+	int 	  len;
+	TID 	  id;
+	char 	  req;
 	clientMsg msgs[4];
 
-	// Create the name server
-	debug ("Creating the name server. \r\n");
-	Create (1, &ns_run);
-
-	// Create the clock server
-	debug ("Creating the clock server. \r\n");
-	Create (1, &cs_run);
+	// The Shell will make the Name and Clock servers
 
 	// Create the clients
 	Create (3, &k3_client);
@@ -73,7 +67,7 @@ void k3_firstUserTask () {
 }
 
 void k3_client () {
-	debug ("Client %d is starting.\r\n", MyTid());
+	debug ("Client%d is starting.\r\n", MyTid());
 	clientMsg msg;
 	char blank = 0;
 	int csTid = WhoIs (CLOCK_NAME);
@@ -82,14 +76,14 @@ void k3_client () {
 	// Register with the name server
 	RegisterAs ("Client" + MyTid());
 	
-	// Send to your parents
+	// Send to your parent
 	Send( MyParentTid(), &blank, 1, (char*) &msg, sizeof(clientMsg) );
 	
 	// Delay the returned number of times and print.
 	debug("delayLen= %d, numDelays = %d\r\n", msg.delayLen, msg.numDelays );
 	for ( i = 0; i < msg.numDelays; i ++ ) {
 		Delay (msg.delayLen, csTid);
-		bwprintf (COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
+		bwprintf(COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
 				MyTid(), msg.delayLen, i+1);
 	}
 
@@ -105,14 +99,11 @@ void k3_client () {
 void k2_firstUserTask () {
 	debug ("First task started. \r\n");
 
-	// Create the name server
-	debug ("Creating the name server. \r\n");
-	Create (1, &ns_run);
+	// The Shell will make the Name Server
 
 	// Create the game server for Rock Paper Scissors
 	debug ("Creating the Rock Paper Scissors server. \r\n");
 	Create (1, &gs_run);
-//	Send( 1, 2, 3, 4, 5 );
 
 	// Create players for the game server
 	debug ("Creating 8 players. \r\n");
@@ -121,17 +112,17 @@ void k2_firstUserTask () {
 	Create (2, &rockPlayer);
 	Create (2, &clonePlayer);
 	
-/*	Create (2, &paperPlayer);
+	Create (2, &paperPlayer);
 	Create (2, &clonePlayer);
-*/	
+	
 	// 2 at same priority
 	Create (1, &scissorsPlayer);
 	Create (1, &clonePlayer);
 	
 	// 2 at different priorities
-/*	Create (3, &clonePlayer);
+	Create (3, &clonePlayer);
 	Create (4, &clonePlayer);
-*/
+/*
 	int *i = (int *) (VIC1_BASE + VIC_SOFT_INT);
 	int k, a=0;
 	for(k = 0; k < 25; k++ ) {
@@ -151,8 +142,8 @@ void k2_firstUserTask () {
 		bwprintf(COM2, "sent a software int. waiting for input, a=%x\r\n", a);
 		bwgetc(COM2);
 	}
+*/
 
-/*
 	// Let's make 50 players to test the td recycling
 	debug ("Creating 50 players at the lowest priority. \r\n");
 	int i;
@@ -163,7 +154,7 @@ void k2_firstUserTask () {
 		Create ((i%5)+5, &clonePlayer);
 		Create ((i%5)+5, &robinPlayer);
 	}
-*/
+
 	// Quit since our work is done.
 	debug ("First user task exiting. Enjoy the games!\r\n");
 	Exit();
@@ -172,9 +163,8 @@ void k2_firstUserTask () {
 void k2_registerTask1 () {
 	debug ("First task started. \r\n");
 
-	// Create the name server
-	debug ("Creating the name server. \r\n");
-	Create (1, &ns_run);
+	// The Shell will make the Name Server
+	
 	Create (2, &k2_registerTask2);
 	Create (1, &k2_registerTask2);
 
@@ -240,7 +230,7 @@ void k2_receiverTask () {
 /*
  * The first user task runs this function.
  */
-void k1_firstTaskStart () {
+void k1_firstUserTask () {
 	debug( "First task started. \r\n");
 
     // Create low priority
