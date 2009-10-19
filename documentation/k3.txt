@@ -30,6 +30,7 @@ Question 2
 	Weaknesses in Previous Kernel That We Fixed
 	===========================================
 	context switch
+	td
 
 
 	TD and TD Manager
@@ -54,6 +55,8 @@ Question 2
 
 	Device Drivers
 	==============
+	
+	
 	How do they work? What do they do? Why do we have them?
 	
 	Await Event
@@ -150,34 +153,40 @@ Question 3
 Question 4
 ==========
 	Here is a listing of all submitted files:
+	
+	.:
+	arch           driver   lib   Makefile  src      task
+	documentation  include  main  server    syscall
 
-	arch/switch.c              include/td.h
-	arch/switch.S              include/ts7200.h
-	documentation/k1.txt       lib/libbwio.a
-	documentation/k2.out       lib/libclock.a
-	documentation/k2.txt       lib/libdebug.a
-	documentation/k3.txt       lib/libmath.a
-	documentation/syscall.txt  lib/libstring.a
-	driver/drivers.c           main/main.c
-	include/bwio.h             main/orex.ld
-	include/clock.h            main/syscalls.c
-	include/clockserver.h      main/td.c
-	include/debug.h            server/clockserver.c
-	include/drivers.h          server/nameserver.c
-	include/error.h            src/bwio.c
-	include/gameplayer.h       src/clock.c
-	include/gameserver.h       src/debug.c
-	include/globals.h          src/Makefile
-	include/math.h             src/math.c
-	include/nameserver.h       src/string.c
-	include/requests.h         task/gameplayer.c
-	include/shell.h            task/gameserver.c
-	include/string.h           task/requests.c
-	include/switch.h           task/shell.c
-	include/syscalls.h         task/task.c
-	include/task.h
+	./arch:
+	switch.c  switch.S
 
+	./documentation:
+	k1.txt  k2.out  k2.txt  k3.txt  syscall.txt
 
+	./driver:
+	drivers.c
+
+	./include:
+	bwio.h         drivers.h     globals.h     shell.h     task.h
+	clock.h        error.h       math.h        string.h    td.h
+	clockserver.h  gameplayer.h  nameserver.h  switch.h    ts7200.h
+	debug.h        gameserver.h  requests.h    syscalls.h
+
+	./lib:
+	libbwio.a  libclock.a  libdebug.a  libmath.a  libstring.a
+
+	./main:
+	main.c  orex.ld  syscalls.c  td.c
+
+	./server:
+	clockserver.c  nameserver.c
+
+	./src:
+	bwio.c  clock.c  debug.c  Makefile  math.c  string.c
+
+	./task:
+	gameplayer.c  gameserver.c  requests.c  shell.c  task.c
 
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
 
