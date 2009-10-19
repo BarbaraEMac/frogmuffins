@@ -153,9 +153,6 @@ int main( int argc, char* argv[] ) {
 	TD		*active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
 
-	// Reset the screen
-	bwputstr( COM2, "\33[24d");
-
 	// Initialize the printing connection
 	bwsetfifo( COM2, OFF );
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
