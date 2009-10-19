@@ -20,9 +20,12 @@
 #define NAME_LEN	12
 
 typedef char TaskName[NAME_LEN];
+
+// A Driver function needs this signature.
 typedef int (* Driver) (char * event, size_t eventlen);
 
-// You can Await Event on these
+// User tasks can AwaitEvent() on these.
+// ie. These are the eventId's.
 enum INTERRUPTS {
 	UART1 = 23,	
 	UART2 = 25,
@@ -30,11 +33,13 @@ enum INTERRUPTS {
 	TIMER2 = 5
 } interruptTypes;
 
+// User tasks can request the following things from a Name Server:
 enum NSRequestCode {
 	REGISTERAS = 1,
 	WHOIS,
 };
 
+// User tasks can request the following things from a Clock Server:
 enum CSRequestCode {
 	DELAY = 1,
 	TIME,
@@ -42,17 +47,19 @@ enum CSRequestCode {
 	NOTIFY
 };
 
+// Any request made to the NameServer needs to be of this form.
 typedef struct {
 	enum NSRequestCode type;
 	TaskName name;
 } NSRequest;
 
+// Any request made to the ClockServer needs to be of this form.
 typedef struct {
 	enum CSRequestCode type;
 	int  ticks;
 } CSRequest;
 
-// More to be added later
+// NOTE: These must match with the SWI() in requests.c.
 enum RequestCode {
     CREATE = 1,
     MYTID = 2,
@@ -67,7 +74,7 @@ enum RequestCode {
 	HARDWAREINT = 99
 };
 
-// A Neat holder that lets us reference arguments based on the syscall
+// A Neat holder that lets us reference arguments based on the syscall.
 typedef volatile const union {
 	struct {
 		int priority;
@@ -105,9 +112,9 @@ typedef volatile const union {
 } ReqArgs;
 
 typedef struct {
-	enum RequestCode volatile type; 	// The type of the request 
-							// Includes the number of arguments.
-	ReqArgs * volatile a;				// Place in user memory where arguments are stored.
+	enum RequestCode volatile type; // The type of the request 
+									// Includes the number of arguments.
+	ReqArgs * volatile a;			// Place in user memory where arguments are stored.
 	
 } Request;
 
