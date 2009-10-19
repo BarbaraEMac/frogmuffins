@@ -215,7 +215,20 @@ Question 2
 
 	Shell
 	=====
-	
+	We decided to reuse code from assignment 0 to implement a shell/command prompt
+	for this assignment. This shell lets us easily run the k1, k2, and k3 user
+	tasks from the command line. When we are changing the context switch code,
+	it is extremely useful to re-run the first kernel assignments to ensure they
+	are still running.
+
+	The shell is technically the first user task and can be used to initialize 
+	servers and the state of the kernel. It is created with the lowest priority 
+	possible and will only run when there are no higher priority tasks on the 
+	ready queues.
+
+	Type 'h' at the command prompt to get a list of valid commands. Nothing happens
+	for invalid commands. 
+
 
 	User Tasks for Kernel 3
 	==========================
