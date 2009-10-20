@@ -29,8 +29,10 @@ Question 2
 	
 	Weaknesses in Previous Kernel That We Fixed
 	===========================================
-	context switch
-	td
+	We fixed our context switch to handle hardwares interrupts and made some small
+	changes to our TD. Overall, our kernel seems to be robust and able to handle
+	all of the new modifications. We have many assert and debug statements 
+	throughout the code that immediately notify us when a module breaks.
 
 
 	TD and TD Manager
@@ -44,6 +46,7 @@ Question 2
 	called PQ since it just held priority queue operations for the ready queue.
 	Now that it has device drive information, the ready queues and the 
 	await event queues, we've changed the name to TDM (which stands for TD Manager).
+
 
 	Context Switch
 	==============
@@ -396,5 +399,69 @@ Question 4
 
 Question 5
 ==========
+	Here is the output from our kernel 3 user tasks:
 
-	Output and an explanation
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 1 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 2 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 1 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 3 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 1 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 4 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 2 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 5 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 6 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 2 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 3 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 7 
+A->	Tid: 8 	 Delay Interval: 71 	 Num of Completed Delays: 1 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 8 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 9 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 4 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 3 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 10 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 11 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 5 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 12 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 13 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 4 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 6 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 14 
+	Tid: 8 	 Delay Interval: 71 	 Num of Completed Delays: 2 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 15 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 16 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 7 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 5 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 17 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 18 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 8 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 19 
+	Tid: 7 	 Delay Interval: 33 	 Num of Completed Delays: 6 
+	Tid: 5 	 Delay Interval: 10 	 Num of Completed Delays: 20 
+	Tid: 6 	 Delay Interval: 23 	 Num of Completed Delays: 9 
+	Tid: 8 	 Delay Interval: 71 	 Num of Completed Delays: 3 
+	Exiting normally.
+
+	Let's explain the output until the line pointed at by A (added for the 
+	purposes of this discussion) and assume that our time starts at 0.
+
+	Within the first 20 ticks, task 5 is able to delay and wake up twice since
+	it is delaying for only 10 ticks. After around 23 ticks, task 3 will be woken
+	up. After the next 10 ticks, task 5 is able to wake up again and then task 7,
+	delaying for 33 ticks, will wake up since our total number of ticks is around 
+	30-ish. Now, task 6 will not be the next to wake up since 23+23 = 46 and task
+	5 is able to delay and wake up once more in between then. After this, task 5
+	can wake up twice until we reach a time around 66 ticks and task 7 can wake up.
+	Since 23*3 = 69, task 6 will be the next task to wake up. At the 70 tick mark,
+	task 5 will wake up for the 7th time. Finally, task 8, who has been delaying
+	for 71 ticks, will be woken up and can output.
+
+	Due to their priorities, when task 5 awakes, it will be the first client 
+	task to run, task 6 is second, etc.
+
+	This pattern continues until each task has delayed for the given amount of
+	times and output its data. I am omitting the description since it is fairly 
+	straightforward to follow. 
+
+	At the end, we can see that task 5 delays 20 times, task 6 delays 9 times,
+	task 7 delays 6 times, and task 8 delays 3 times. This corresponds to the 
+	numbers given in the assignment.
