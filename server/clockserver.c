@@ -17,30 +17,6 @@
 
 #define NUM_SLEEPERS	1024
 
-
-typedef struct {
-	int			 ticks;						// current time in ticks
-	Sleeper		*sleepersQ;					// A queue of all sleeping user tasks
-	Sleeper		 memSleepers[NUM_SLEEPERS]; // For allocating memory
-	int			 numSleepers;				// number of sleepers already allocated
-} CS;
-
-
-void cs_addSleeper( CS *this, int endTime, TID senderTid ) {
-
-	debug ("cs_addSleeper: task %d endTime %d ticks.\r\n", senderTid, endTime);
-	Sleeper *sleeper = &this->memSleepers[this->numSleepers++];
-
-	assert( this->numSleepers < NUM_SLEEPERS );
-	assert( sleeper != 0 );
-		
-	sleeper->endTime = endTime;
-	sleeper->tid	 = senderTid;
-	
-	list_insert ( &(this->sleepersQ), sleeper );
-
-}
-
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
 	
