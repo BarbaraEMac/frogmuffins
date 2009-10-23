@@ -153,6 +153,7 @@ TD * td_init ( int priority, Task start, TID parentId, TDM *mgr ) {
 	
 	td->parentId = parentId;
 	td->priority = priority;
+	td->returnValue = 0;
 
 	// Tasks start as READY
 	td->state = READY;
