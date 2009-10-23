@@ -180,3 +180,8 @@ char ctox( char ch ) {
 	if ( (ch <= 9) ) return '0' + ch;
 	return 'a' + ch - 10;
 }
+
+// zero-fill a char array
+void memoryset( char *str, int value, size_t len ) {
+    while( (--len) >= 0 ) str[len] = value;
+}
