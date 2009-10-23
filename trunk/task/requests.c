@@ -3,14 +3,14 @@
  * becmacdo
  * dgoc
  */
-
+#define DEBUG
 #include <string.h>
+
+#include "debug.h"
 #include "requests.h"
 #include "switch.h"
 
 #define SWI(n) asm("swi #" #n)
-
-
 
 int Create (int priority, Task code ) {
 	SWI(1);
@@ -79,15 +79,16 @@ int InstallDriver (int eventid, Driver driver) {
 	SWI(10);
 }
 
-
 int Delay (int ticks, TID csTid) {
-	char ret[5];
+	int		  err;
+	int		  currentTime;
 	CSRequest req;
+	
 	req.type  = DELAY;
 	req.ticks = ticks;
-	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
-
-	return ret;
+	
+	err = Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &currentTime, 			   sizeof(int));
+	return err;
 }
 
 int Time (TID csTid) {
@@ -95,26 +96,81 @@ int Time (TID csTid) {
 	CSRequest req;
 	req.type  = TIME;
 	req.ticks = 0;
-	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	Send(csTid, (char*)&req, sizeof(CSRequest), (char*)&time, sizeof(int));
 
 	return time;
 }
 
 int DelayUntil (int ticks, TID csTid) {
-	char ret[5];
+	int		  err;
+	int 	  currentTime;
 	CSRequest req;
+	
 	req.type  = DELAYUNTIL;
 	req.ticks = ticks;
-	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) ret, sizeof(char)*5);
+	
+	err = Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &currentTime,
+		 	   sizeof(int));
+	return err;
+}
+
+int Getc (int channel,  TID iosTid) {
+	char      ret;
+	IORequest req;
+	
+	req.type    = GETC;
+	req.channel = channel;
+	req.data[0] = 0;
+
+	Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&ret, 
+		 sizeof(char));
 	
 	return ret;
 }
 
-int Getc (int channel) {
+int Putc (int channel, char ch, TID iosTid) {
+	int       err;
+	char 	  reply;
+	IORequest req;
+	
+	req.type    = PUTC;
+	req.channel = channel;
+	req.data[0] = ch;
+
+	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
+			   sizeof(char));
+	
+	return err;
+}
+
+int GetStr (int channel, char *retBuf, int retBufLen, TID iosTid) {
+	int err;
+	IORequest req;
+	
+	req.type    = GETSTR;
+	req.channel = channel;
+	req.data[0] = 0;
+
+	err = Send (iosTid, (char*)&req, sizeof(IORequest), (char*)&retBuf, 
+		        sizeof(char)*retBufLen);
+	
+	return err;
 
 }
 
-int Putc (int channel, char ch) {
+int PutStr (int channel, const char *str, int strLen, TID iosTid) {
+	assert ( strLen <= 80 );
+	
+	int		  err;
+	char 	  reply;
+	IORequest req;
+	
+	req.type    = PUTSTR;
+	req.channel = channel;
+	strncpy ( req.data, str, strLen );
 
-
+	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
+		       sizeof(char));
+	
+	return err;
 }

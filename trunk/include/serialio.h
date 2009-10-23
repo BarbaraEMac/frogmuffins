@@ -13,18 +13,6 @@
 
 #include "globals.h"
 
-typedef enum {
-	GETC = 1,
-	PUTC,
-	GETSTR,
-	PUTSTR
-} IORequestTypes;
-
-typedef struct {
-	IORequestTypes  type;
-	char 			data[ENTRY_LEN];
-} IORequest;
-
 typedef struct {
 	char sendBuffer[NUM_ENTRIES][ENTRY_LEN];
 	char recvBuffer[NUM_ENTRIES][ENTRY_LEN];
