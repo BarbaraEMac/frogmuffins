@@ -26,7 +26,13 @@ enum ERROR {
 	NOT_FOUND,				// Name Server could not locate the corresponding task
 	NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
 	CS_INVALID_REQ_TYPE,	// Invalid Clock Server request type
-	IOS_INVALID_REQ_TYPE	// Invalid Serial IO request type
+	IOS_INVALID_REQ_TYPE,	// Invalid Serial IO request type
+	TC_INVALID_REQ_TYPE,	// Invalid Train Controller request type
+	INVALID_TRAIN,			// Invalid train number sent to train controller
+	INVALID_DIR,			// Invalid direction for a train
+	INVALID_SWITCH,			// Invalid switch number
+	CONNECTION_TIMEOUT,		// Connection to the train controller failed
+	CANNOT_INIT_SWITCHES	// Switch initialization failed
 } error;
 
 #endif
