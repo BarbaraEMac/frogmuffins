@@ -4,7 +4,7 @@
  * dgoc
  */
 
-#define DEBUG
+//#define DEBUG
 #include <bwio.h>
 #include <ts7200.h>
 #include <math.h>
@@ -48,9 +48,9 @@ void getNextRequest ( TD *td, Request *req ) {
 	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
-	/*debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
+	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
 			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
-			req->a->send.reply,req->a->send.rpllen );*/
+			req->a->send.reply,req->a->send.rpllen );
 }
 
 /**
@@ -65,9 +65,6 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( mgr != 0 );
 	
 	TD *child;
-	debug( "service: %x type:%d args:%x %x %x %x %x \r\n", td, req->type, 
-			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
-			req->a->send.reply,req->a->send.rpllen );
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -75,35 +72,35 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			child = td_create(req->a->create.priority, req->a->create.code, td->id, mgr);
 			
 			// Save an error code if there was one
-			td->a->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
+			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
 			break;
 		
 		case MYTID:
-			td->a->returnValue = td->id;
+			td->returnValue = td->id;
 			break;
 		
 		case MYPARENTTID:
-			td->a->returnValue = td->parentId;
+			td->returnValue = td->parentId;
 			break;
 
 		case SEND:
-			td->a->returnValue = send (td, mgr, req->a->send.tid);
+			td->returnValue = send (td, mgr, req->a->send.tid);
 			break;
 		
 		case RECEIVE:
-			td->a->returnValue = receive (td, req->a->receive.tid);
+			td->returnValue = receive (td, req->a->receive.tid);
 			break;
 
 		case REPLY:
-			td->a->returnValue = reply (td, mgr, req->a->reply.tid, 
+			td->returnValue = reply (td, mgr, req->a->reply.tid, 
 						req->a->reply.reply, req->a->reply.rpllen);
 			break;
 		case AWAITEVENT:
-			td->a->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
+			td->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
 			break;
 
 		case INSTALLDRIVER:
-			td->a->returnValue = mgr_installDriver(mgr, 
+			td->returnValue = mgr_installDriver(mgr, 
 				req->a->installDriver.eventId, req->a->installDriver.driver);
 			break;
 
@@ -114,7 +111,6 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
-			debug("HANDLING INTERRUPT type=%d\r\n", req->type);
 			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
 			// fall through
 		case PASS:
@@ -189,8 +185,8 @@ int main( int argc, char* argv[] ) {
 		if ( active == 0 ) {
 			break;
 		}
-		if ( active->a->returnValue < NO_ERROR ) {
-			error( active->a->returnValue, "Kernel request failed.");
+		if ( active->returnValue < NO_ERROR ) {
+			error( active->returnValue, "Kernel request failed.");
 			bwgetc(COM2);
 		}
 		getNextRequest (active, &nextRequest);
