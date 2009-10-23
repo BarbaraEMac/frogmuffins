@@ -77,6 +77,7 @@ enum RequestCode {
 	REPLY = 8,
 	AWAITEVENT = 9,
 	INSTALLDRIVER = 10,
+	DESTROY = 11,
 	HARDWAREINT = 99
 };
 
@@ -116,6 +117,9 @@ typedef volatile union {
 		int eventId;
 		Driver driver;
 	} installDriver;
+	const struct {
+		TID tid;
+	} destroy;
 	int retVal;						// the return value of a syscall
 } ReqArgs;
 
@@ -191,6 +195,11 @@ int AwaitEvent (int eventid, char *event, size_t eventlen);
  * interrupt occurs, and MUST turn off the source of the interrupt
  */
 int InstallDriver (int eventid, Driver driver);
+
+/*
+ * Destroys a  task killing preventing it from running again
+ */
+int Destroy (TID tid);
 
 /** 
  * Wait for the given time.

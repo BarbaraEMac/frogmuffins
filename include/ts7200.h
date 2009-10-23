@@ -4,6 +4,9 @@
  * Specific to the TS-7200 ARM evaluation board
  *
  */
+#ifndef __TS7200_H__
+#define __TS7200_H__
+
 
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020
@@ -128,3 +131,5 @@ typedef enum _interrupt {
 } Interrupt;
 
 
+
+#endif

@@ -160,4 +160,12 @@ void queue_push (Queue *head, TD *newTail);
  * RETURN: The newly popped head TD.
  */
 TD * queue_pop  (Queue *head);
+
+/**
+ * Given a pointer to the head ofa a queue, and an entry in the queue
+ * remove the entry from the queue and update the queue
+ * head - A pointer to the head of the queue.
+ * toRm - The TD to remove from the queue.
+ */
+void queue_remove ( Queue *head, TD *toRm );
 #endif

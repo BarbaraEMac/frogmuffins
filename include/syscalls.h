@@ -28,4 +28,6 @@ int awaitEvent (TD *td, TDM *mgr, int eventId);
 
 void handleInterrupt( TDM *mgr, int intStatus );
 
+int destroy( TDM *mgr, TID tid );
+
 #endif

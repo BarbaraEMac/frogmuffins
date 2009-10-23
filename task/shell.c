@@ -57,7 +57,6 @@ void shell_run ( ) {
 	tcTid = Create (2, &tc_run);
 	
 	output ("Type 'h' for a list of commands.\r\n");
-
 	// Main loop
 	int k =0, l = 0;
     input = history[h++];
@@ -125,6 +124,7 @@ void shell_exec( char *command, TID tcTid ) {
     }
 	else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
 		Create (0, &k2_firstUserTask);
+		Destroy (WhoIs("GameServer"));
 		output( "K2 is done executing.\r\n" );
     }
 	else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3

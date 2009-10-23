@@ -20,15 +20,16 @@
 
 #define WAIT	 for( i=0; i<200000; i++) {}
 
-
-int readMemory (int addr) {
+inline int readMemory (int addr) {
 	int volatile *mem = (int *) (addr);
 	return *mem;
 }
-void writeMemory (int addr, int value) {
+inline void writeMemory (int addr, int value) {
 	int volatile *mem = (int *) (addr);
 	*mem = value;
 }
+
+
 /**
  * Perform a context switch.
  * Gets the request from a user task.
@@ -46,6 +47,8 @@ void getNextRequest ( TD *td, Request *req ) {
 	td->a->retVal = td->returnValue;
 	// Context Switch!
 	kernelExit (td, req);
+	// Reset the return value
+	//td->returnValue = NO_ERROR;
 
 	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
@@ -108,9 +111,12 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 				req->a->installDriver.eventId, req->a->installDriver.driver);
 			break;
 
+		case DESTROY:
+			td->returnValue = destroy (mgr, td->a->destroy.tid);
+			break;
+
 		case EXIT:
 			// Set the state to defunct so it never runs again
-			td->state = DEFUNCT;
 			td_destroy( td, mgr );
 			break;
 
@@ -123,6 +129,10 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 		default:
 			// For now, do nothing
 			break;
+	}
+	if ( td->returnValue < NO_ERROR ) {
+		error( td->returnValue, "Kernel request failed.");
+		bwgetc(COM2);
 	}
 }
 
@@ -140,15 +150,11 @@ TD *schedule ( TD *oldTask, TDM *mgr ) {
 	// Push the old active task back on to a queue - ready, blocked, (defunct?)
 	mgr_insert ( mgr, oldTask );
 
+	TD *newActive; 
 	// Pop new task off the ready queue
 	// If 0 is returned, then we have no more tasks to run.
-	TD *newActive = mgr_popReady ( mgr );
+	newActive = mgr_popReady ( mgr );
 
-	// Set the state to active since this task is going to run
-	if ( newActive != 0 ) {
-		newActive->state = ACTIVE;
-	}
-	
 	debug ("schedule: scheduled %d @%x\r\n", newActive->id, newActive);
 	return newActive;
 }
@@ -189,10 +195,6 @@ int main( int argc, char* argv[] ) {
 		// Run out of tasks to run
 		if ( active == 0 ) {
 			break;
-		}
-		if ( active->returnValue < NO_ERROR ) {
-			error( active->returnValue, "Kernel request failed.");
-			bwgetc(COM2);
 		}
 		getNextRequest (active, &nextRequest);
 		
