@@ -94,4 +94,7 @@ void itoa( int num, char *bf );
  */
 char ctox( char ch );
 
+
+void memoryset (char *source, int value, int length);
+
 #endif
