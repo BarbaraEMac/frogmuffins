@@ -13,10 +13,11 @@
 
 void ns_run () {
 	debug ("ns_run: The Name Server is about to start. \r\n");	
-	NameServer ns;
-	int 	   senderTid;
-	NSRequest  req;
-	int 	   ret, len;
+	NameServer	ns;
+	int			senderTid;
+	NSRequest	req;
+	int			ret, len;
+	NSEntry	   *match;
 
 	// Initialize the Name Server
 	ns_init (&ns);
@@ -37,11 +38,16 @@ void ns_run () {
 				assert ( ns_lookup(&ns, req.name)->tid == senderTid );
 				break;
 			case WHOIS:
-				ret = ns_lookup(&ns, req.name)->tid;
+				match = ns_lookup(&ns, req.name);
+				if( (int) match < NO_ERROR ) {
+					ret = (int) match;
+				} else {
+					ret = match->tid;
+				}
 				break;
 			default:
 				ret = NS_INVALID_REQ_TYPE;
-				debug (1, "Nameserver request type is not valid.");
+				error (1, "Nameserver request type is not valid.");
 				break;
 		}
 
