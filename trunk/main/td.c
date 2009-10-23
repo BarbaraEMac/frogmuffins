@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-//#define DEBUG
+#define DEBUG
 #include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
@@ -152,8 +152,6 @@ TD * td_init ( int priority, Task start, TID parentId, TDM *mgr ) {
 	asm( "#; but before this");
 	
 	td->parentId = parentId;
-	
-	td->returnValue = 0;
 	td->priority = priority;
 
 	// Tasks start as READY
