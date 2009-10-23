@@ -265,7 +265,7 @@ void notifier_run() {
 	FOREVER {
 	//	bwprintf (COM2, "Notifier is awaiting an event\r\n");
 		// Wait for 1 "tick" (50ms) to pass
-		if ( (err = AwaitEvent( TIMER1, awaitBuffer, sizeof(char)*10 )) 
+		if ( (err = AwaitEvent( TC1UI, awaitBuffer, sizeof(char)*10 )) 
 				< NO_ERROR ) {
 			// Handle errors
 			assert ('a'=='b');
@@ -295,7 +295,7 @@ void notifier_init () {
 	RegisterAs ("ClkNotifier");
 	
 	// Install the clock driver
-	if ( InstallDriver( TIMER1, &timer1Driver ) < NO_ERROR ) {
+	if ( InstallDriver( TC1UI, &timer1Driver ) < NO_ERROR ) {
 		assert (1==0);
 	}
 
