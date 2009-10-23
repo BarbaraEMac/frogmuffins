@@ -25,8 +25,8 @@ enum ERROR {
 	NO_DRIVER,				// No driver is installed
 	NOT_FOUND,				// Name Server could not locate the corresponding task
 	NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
-	CS_INVALID_REQ_TYPE		// Invalid Clock Server request type
-
+	CS_INVALID_REQ_TYPE,	// Invalid Clock Server request type
+	IOS_INVALID_REQ_TYPE	// Invalid Serial IO request type
 } error;
 
 #endif
