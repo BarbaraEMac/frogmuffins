@@ -58,12 +58,12 @@ int send (TD *sender, TDM *mgr, TID tid) {
 		assert ( sender->state == RCV_BLKD );
 		assert ( receiver->state == SEND_BLKD );
 		
-		// Pass the sender tid to the receiver
-		*receiver->a->receive.tid = sender->id;
-
 		// Pass the message
 		ret = passMessage ( sender, receiver, SEND_2_RCV );
 		assert (sender->state == RPLY_BLKD);
+
+		// Pass the sender tid to the receiver
+		*receiver->a->receive.tid = sender->id;
 
 		// Unblock the receiver
 		mgr_insert(mgr, receiver);
