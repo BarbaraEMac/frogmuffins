@@ -1,0 +1,627 @@
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
+
+	@@@  @@@  @@@@@@@@  @@@@@@@   @@@  @@@  @@@@@@@@  @@@               @@@   
+	@@@  @@@  @@@@@@@@  @@@@@@@@  @@@@ @@@  @@@@@@@@  @@@              @@@@   
+	@@!  !@@  @@!       @@!  @@@  @@!@!@@@  @@!       @@!             @@!@!   
+	!@!  @!!  !@!       !@!  @!@  !@!!@!@!  !@!       !@!            !@!!@!   
+	@!@@!@!   @!!!:!    @!@!!@!   @!@ !!@!  @!!!:!    @!!           @!! @!!   
+	!!@!!!    !!!!!:    !!@!@!    !@!  !!!  !!!!!:    !!!          !!!  !@!   
+	!!: :!!   !!:       !!: :!!   !!:  !!!  !!:       !!:          :!!:!:!!:  
+	:!:  !:!  :!:       :!:  !:!  :!:  !:!  :!:        :!:         !:::!!:::  
+	 ::  :::   :: ::::  ::   :::   ::   ::   :: ::::   :: ::::          :::   
+	 :   :::  : :: ::    :   : :  ::    :   : :: ::   : :: : :          :::   
+
+Question 1
+==========
+	The executable is located at: /u8/becmacdonald/cs452/a4/handin/main/main.elf.
+
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a4.elf
+
+	To load the program, type 'load ARM/becmacdo_a4.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
+
+Question 2 
+==========
+	
+	PREAMBLE
+	========
+
+	Main Kernel Loop
+	================
+	 FOREVER {
+		  activeTask = schedule (activeTask, &priorityQueues);
+		  getNextRequest    	  (activeTask, &nextRequest);
+		  service 			  (activeTask, &nextRequest, &priorityQueues);
+	 }
+
+	 schedule() puts the active task on the ready queue for its priority. If the active task
+	 is blocked or called Exit(), then it is added to the blocked queue or not added to
+	 any queue, respectively. Then we grab the highest priority task from a ready queue and 
+	 set it as the active task. If there are no remaining tasks on any ready queue, a null
+	 active task is returned. We check this null task to determine when to stop running.
+
+	 The only issue with this scheduling algorithm is that there is possibility of starvation
+	 for the lower priority tasks. If a high priority task always has work to do and never calls
+	 Exit(), this task will always be scheduled and any lower priority tasks will never run. This
+	 is obviously unfair to low priority tasks, but this is the algorithm Professor Cowan gave 
+	 in class.
+
+	 getNextRequest() is a wrapper for the assembly function kernelExit() and they both take in 2
+	 parameters: the active task and a structure holding the request.
+	 The reason we have this wrapper is for debug statements. If this were production code,
+	 all debug statements would be optimized away using precompiler directives.
+
+
+	Hardware Dependent Code
+	======================
+
+		Context Switch
+		==============
+		Inside kernelExit(), the kernel state is saved first. Next, the active task's sp and spsr are
+	copied from its task descriptor. The spsr is then installed. The return value is put into r0.
+		We switch to system mode and restore the active task, carefully skipping r0.
+		We switch back to supervisor mode so that we can install the pc of the active task, 
+		while switching to the spsr.
+
+		When the task performs a system request, swi with the appropriate immediate value is executed.
+		This effectively calls kernelEntry(). KernelEntry() saves the active task's lr, clobbering the ip
+		register, then switches to system mode, so that we can save active task's state. 
+		We then switch back to supervisor mode and restore the kernel's registers holding 
+		the address of active task's TD and Request. We put the sp, and spsr into the active task.
+		We get the request type using VERY COOL bit masking arithmentic, behold:
+			bic		r6,	r6, #0xFF000000 #; this line is MAGIC (I think the assembler is really smart)
+		Then we fill the request with the arguments, restore the rest of kernel's registers and
+		jump back to the kernel.
+		Note: This returns to where kernelExit would return to if it was a normal function.
+
+		The context switch was slightly changed from the one used in K1 and K2 to
+		make sure we aren't overwriting scratch register. Here is how it works now:
+		1) switch to system mode
+		2) save active task's state {r0-r12, lr, pc}
+			NOTE: pc is useless and will be overwritten shortly
+		3) temporarily store the user's sp
+		4) switch to back supervisor mode
+		5) store the actual pc we want to store (on the user stack)
+		6) restore the kernel's registers holding the address of TD and Request
+		7) put the sp, and read and put the spsr into the active task
+		8) get the request type
+		9) read the immediate value of swi
+		10) fill the request with the arguments
+		11) restore the rest of kernel's registers & jump back to the kernel
+			(this returns to where kernelExit would return if it was a normal function)
+
+		The Kernel exit routine was appropriately modified to be:
+		1) store the kernel state
+		2) fetch the active tasks's sp and spsr
+		3) read the address to return to (the active tasks's pc)
+		4) install the spsr in supervisor's spsr
+		5) put the return value in r0
+		6) switch to system mode
+		9) restore the active task {r1-r12, lr} NOTE: r0 is skipped 
+		10) we didn't read the pc, so add to the sp
+		11) switch to supervisor mode
+		12) install the pc of the active task
+
+		Interrupt Handling
+		==================
+		Modifying the context switch as described above let us write an interrupt 
+		context switch that is very similar to the regular context switch:
+		1) switch to system mode
+		2) save active task's state {r0-r12, lr, pc}
+			NOTE: pc is useless and will be overwritten shortly
+		3) temporarily store the user's sp
+		4) switch back to interrupt mode
+		5) store the actual pc we want to store (on the user stack) // this is pc-4
+		6) get the spsr
+		7) switch to supervisor mode
+		8) restore the kernel's registers holding the address of TD and Request
+		9) put the sp, and spsr into the active task
+		10) fill the request with the arguments (request type = HARDWAREINT)bm
+		11) restore the rest of kernel's registers & jump back to the kernel
+			(this returns to where kernelExit would return if it was a normal function)
+
+		Once kernel resumes execution after the interrupt context switch, it proceeds
+		as normally to check the request type, which will be marked as HARDWAREINT.
+		To handle the interrupt we do the folowing
+		1) Get an index of the actual interrupt
+		2) Get the driver for the interrupt that happened (This is saved in the TDM)
+		3) Pass the event to the task waiting for it (if there is one)
+		4) Turn off interrupts as there is no-one to handle them
+		The notifier tasks by convention are some of the highest priority tasks
+		and so get to run within a short anmount of time after the interrupt.
+
+		Device Drivers
+		==============
+		Before a task can wait on an interrupt, it must install a driver so that
+		the kernel knows how to handle the interrupt. We did this so that the kernel
+		would be portable and doesn't need to know about how to directly talk to the
+		hardware.
+
+		The drivers must turn off the interrupt and proceed to read and pass the data 
+		and clearing buffers, etc. Basically, the driver will handle the interrupt
+		once it has been triggered. The driver runs in kernel mode, and in a real-world
+		application it would have to be certified before we would allow it to do so.
+		Also, the MMU would be set up to limit the driver's 'reach'.
+		
+		One driver should be written per interrupt type. For this assignment, we are 
+		only using the timers, so only a timer1Driver and timer2Driver were implemented.
+		In future assignments, it will be very easy to implement other drivers. 
+		Here is the pseudo code for the timer 1 and 2 drivers:
+			Clear the timer interrupt.
+			Return an empty buffer and NO_ERROR.
+		
+		A user task that will eventually call AwaitEvent() must first call 
+		InstallDriver(). (Unless another tasks has already done so.)
+		This is another system call that we have implemented. The
+		function takes an interrupt type and a pointer to the corresponding driver
+		function. This function is stored in the TD mananger in an array indexed by 
+		the interrupt type it handles. The TD manager has 1 entry for every interrupt
+		type (0->31).
+
+		Another approach of the driver approach is being able to run the driver 
+		directly using the vectored fast interrupts available in the ARM architecture
+		if we wish to do so in the future.
+
+
+
+	Structures & Objects
+	====================
+
+		TD 
+		==
+		volatile int spsr;						// Saved Processor State Register
+		union {
+			int volatile * volatile sp;	// Stack Pointer
+			ReqArgs * volatile a;			// request arguments in a neatly avaiable union
+		};
+		int returnValue;						// the value to return after syscall
+		int *sb;									// Stack base
+		TID id;			 						// A unique identifying id
+		TID parentId;							// The unique id of the parent
+
+		int priority;							// A priority value (ranges from 0->10)
+							
+		enum TASK_STATE state;				// State of the task - see enum above
+
+		TD *nextTD; 								// Link to the next TD in the TDM
+		TD *prevTD; 								// Link to the prev TD in the TDM
+
+		Queue sendQ;								// A circularly linked list of TDs that 
+													// have called send() this TD a message
+
+		TD Manager
+		==========
+		TD tdArray[NUM_TDS]; 					// Stores all the TDs
+
+		TID lastId;								// Last id to used
+
+		BitField empty[NUM_BITFIELD];		// Bitfield mask signifying which td's are used
+
+		Queue ready[NUM_PRIORITY]; 			// The ready queue
+		int highestPriority;					// The highest non-empty bucket in readyQ
+
+		Queue intBlocked[NUM_INTERRUPTS];	// A queue of blkd tasks awaiting interrupts
+		Driver intDriver[NUM_INTERRUPTS];	// An array of drivers to handler each interrupt
+
+
+
+		The highest priority pointer keeps track of the highest priority of all 
+		tasks in the ready queue. When it is time to schedule a new active task,
+		we simply look at the head of the queue at this highest priority and return
+		it. It means we have to do more management of this pointer, but we can 
+		schedule the highest priority task in O(1) time. 
+
+	System Calls
+	============
+		Types
+		=====
+			The system call types are all stored in an enum so that we can use a 
+		switch statement to easily determine how to handle the call. 
+		At this point of our kernel, this is the enum: 
+			enum RequestCode {
+				CREATE = 1,
+				MYTID = 2,
+				MYPARENTTID = 3,
+				PASS = 4,
+				EXIT = 5,
+				SEND = 6,
+				RECEIVE = 7,
+				REPLY = 8,
+				AWAITEVENT = 9
+			};
+		As we implement more system calls, they will be added to this enum. 
+		Note: We specify the integer value of the enum here to remind ourselves to
+		match up the code for the SWI instruction (in the following paragraph).
+
+		Syscall Handler
+		===============
+			When a user task makes a system call, all we do is execute the assembly
+		instruction 'swi' with a single argument. We do not perform any error checking
+		at this point. We chose to implement system calls this way since it is faster 
+		for calls that do no actual work, ie. Pass(). The argument passed to 'swi' is an 
+		integer value corresponding to the system call type. For example, if Create 
+		was called, then '1' would be the argument. These arguments correspond to 
+		the integer values of the enum. To determine which system call to handle for 
+		the active task, we switch on the argument value. 
+
+		Syscall Implementation
+		======================
+			
+		Create
+		======
+		If Create was called, then the kernel executes td_create() with all of
+		Create()'s arguments. To get a new td, we pull the next unused one from an
+		array of tds in our TD manager, PQ. We initialize it with the supplied values,
+		a fresh new stack pointer, a default PSR, and add it to a ready queue.
+		We return the task id of this new task to the parent TD. It stores this value
+		as the returnValue in the TD and the system call is completed.
+
+		MyTid
+		=====
+		If MyTid() was called, the kernel looks at the active task's task id and 
+		stores it into the TD's returnValue member. At this point, the system call is
+		completed.
+
+		MyParentTid()
+		=============
+		If MyParentTid() was called, the kernel places the parent's task id into the
+		active task's returnValue member and completes the system call.
+
+		Pass
+		====
+		If Pass() was called, the kernel does nothing to handle and system call and
+		allows the scheduler to run.
+
+**		Exit 
+		====
+		If Exit() was called, the kernel sets the active task's state to DEFUNCT and
+		calls the scheduler. The scheduler will not place this task on a ready queue, so
+		it will never be scheduled to run again.
+
+		Send
+		====
+		Send() can be called by a user task to pass a message to another user task.
+		Note the Send() does not have to be called before the receiving task calls
+		Receive(). The code can handle the case where the receiving task calls 
+		Receive() before the sending task calls Send().
+
+		The pseudo-code for the Send() function is:
+
+		1. Error check all arguments.
+		2. Fetch the receiver task using the supplied task id. 		(in O(1) time)
+		3. Set the sender state to RECEIVE_BLOCKED.
+		4. If the receiver is SEND_BLOCKED,
+		5.		Copy the message to the receiver's address space.
+		6.		Set the sender's state to REPLY_BLOCKED.
+		7.		Give the sender's id to the receiver.
+		8.		Unblock the receiver by putting it on a ready queue.
+		9. Otherwise,
+		10.		Push the sending task onto the receiving task's send queue.
+		11.		Wait for the receiver to call Receive().
+
+		If any errors occur during the execution of Send(), they are caught and
+		returned to the calling code. The overall execution time (ignoring the time
+		the senders spends on the send queue) is O(1 + sizeof(message)).
+
+		Receive
+		=======
+		Receive() can be called by a user task to receive a message from another user
+		task. Note that Receive() does not need to be called after the other task
+		has called Send(). The code can handle the case where Receive() is called
+		first.
+
+		The pseudo-code for the Receive() function is:
+
+		1. Error check all arguments.
+		2. Set the receiver's state to SEND_BLOCKED.
+		3. Check if a task is waiting on the send queue.
+		4. If so,
+		5.		Ensure the sender is RECEIVE_BLOCKED.
+		6.		Copy the message to the receiver's address space.
+		7. 		Store the task id of the sender to be returned.
+		8.		Set the sender's state to REPLY_BLOCKED.
+		9. Otherwise, wait for the sender to call Send().
+
+		If any errors occur during the execution of Receive(), they are caught and
+		returned to the calling code.
+
+		Reply
+		=====
+		Reply() will be called by the receiving task to unblock the sending task and 
+		acknowledge it received the message. Note that Reply() should be called after
+		a message has been passed since it reverts the message passing states and 
+		unblocks tasks.
+
+		The pseudo-code for the Reply() function is:
+
+		1. Fetch the sender to reply to.
+		2. Ensure the sender is REPLY_BLOCKED.
+		3. Verify the memory addresses are valid.
+		4. Copy the reply to the sender's address space.
+		5. Set the state of the replier and sender to READY.
+		6. Push the sender and replier on to the ready queues.
+
+		If any errors occur during the execution of Reply(), they are caught and
+		returned to the calling code.
+	
+		RegisterAs
+		==========
+
+		WhoIs
+		=====
+
+		Await Event
+		===========
+		AwaitEvent() can be called by a user task to block the task until a particular 
+		event has occurred. Since this is a system call, the handler for AwaitEvent()
+		calls swi with the corresponding code (9) for this type of system call as a 
+		single argument.
+		
+		Here is the pseudo code for kernel code of awaitEvent():
+		1)	Ensure that the arguments are correct.
+		2)		Event Id is valid.
+		3)		The driver for this event id has been installed.
+		4)	Turn on the interrupt for this particular event.
+		5)	Change the state of the active task to AWAITING_EVT.
+		6)	Push the task on the interrupt blocked queues.
+		7)	Signal no error.
+
+		For this kernel, user tasks can only wait on TIMER1 or TIMER2. This will cause
+		the task to wait until a timer interrupt has occurred. 
+
+		The interrupt blocked queues are stored as a single array of queues within the 
+		TD Manager. The interrupt type (0 -> 31) is used as an index into the array 
+		pointing to the head of each FIFO queue. If no task has called AwaitEvent() for
+		an interrupt type, that queue has a null (0) value. We recognize that we will
+		probably not turn on all 32 interrupt types and there may be some wastedspace
+		here. However, we designed our kernel to be as flexible as possible with as 
+		little rewriting of code in the future.
+		
+		InstallDriver
+		=============
+
+		Delay
+		=====
+		Delay() is a wrapper for send to the Clockserver and can be called by a user 
+		task to cause it to wait for a given amount	of ticks. Here is the pseudocode:
+
+			Grab an unused sleeper struct.
+			Store the tid in the sleeper struct.
+			Compute the end time by adding the current time to the ticks.
+			Store the endTime in the sleeper struct.
+			Insert the sleeper struct into the queue of sleepers in sorted order. 
+
+		Note that the insert places the new sleeper in the queue in sorted order.
+		It is not a FIFO queue! The sleepers are organized by endTime with the soonest
+		end time closest as the head of the queue.
+
+		DelayUntil
+		==========
+		DelayUntil() can be called by a user task to delay until the given end time.
+		It is a wrapper for a Send() to the ClockServer that does the following:
+
+			Grab an unused sleeper struct.
+			Store the tid in the sleeper struct.
+			Store the endTime in the sleeper struct.
+			Insert the sleeper struct into the queue of sleepers in sorted order. 
+		
+		DelayUntil() and Delay() are very similar in functionality.
+
+		Time
+		====
+		A user task can query the clock server for the current time by calling Time().
+		This function will return the current time in ticks since the clock server
+		started. To convert the raw CPU ticks to 50ms ticks, we grab the current time
+		from a timer that is running at 2000Hz and divide it by 100.
+		It is also implemented as a wrapper for Send() to the ClockServer.
+		
+		Getc
+		====
+
+		Putc
+		====
+
+		GetStr
+		======
+
+		PutStr
+		======
+
+		Destroy
+		=======
+	
+	User Tasks
+	==========
+		Name Server
+		==========
+		The name server is an array of {char name[], int tid} structs. There is
+		nothing fancy about the array. To register a new name and tid, we traverse
+		the array looking for an identical string. If one is found, the tid is 
+		updated. Otherwise, the new entry is appended to the end of the array.
+
+		To look up an item by name, the array is linearly traversed until a
+		matching string is found OR the end of the elements has been reached.
+		If a name is not in the array, the WhoIs() call does not block. Instead,
+		it returns a NOT_FOUND error code and we let the calling user task handle
+		the error.
+
+		The pseudo-code for the Name Server run() function is:
+
+		1. Initialize the Name Server
+		2. FOREVER {
+		3. 	Receive a request from another user task.
+		4. 	Copy the request into this memory space.
+		5.	switch ( request type ) {
+		6.		case RegisterAs:
+		7.			Store the {name, tid} in the Name Server entries array.
+		8.		case WhoIs:
+		9.			Retrieve the tid from the given task name.
+		10.			If the task has never registered, return an error.
+		11.			Otherwise, return the tid.
+		12.		default:
+		13.			Error since this Name Server cannot handle other requests.
+		14.		}
+		15.	Reply to the other user task appropriately.
+		16.	}
+
+		Clock Server
+		============
+		The clock server is a user task that keeps track of the current time since 
+		the kernel was started. It operates much like the name server and rock,
+		paper, scissors server. Here is the pseudo code:
+
+			Initialize the server by:
+				Registering with the Name Server.
+				Creating a helper Notifer task.
+				Clearing the buffer of sleeping user tasks.
+
+			FOREVER {
+				Receive a query from another user task.
+
+				If the query was Delay (ticks),
+					Put the user task to sleep for at least ticks amount of time.
+				If the query was DelayUntil (ticks),
+					Put the user task to sleep until the current time is ticks.
+				If the query was Time(),
+					Return the current time to the user task.
+				If the query was Notify(),
+					Record the current time.
+					Wake up any user tasks that should be woken up by Reply().
+				If you received another query,
+					Error!
+			}
+
+		The ClockServer mainly consists of a single queue of Sleeper structs,
+		where Sleeper is of the form:
+			TID tid;
+			int endTime;
+
+			Sleeper *nextSleepingUserTask;
+			Sleeper *previousSleepingUserTask;
+
+		This queue is a circular, doubly-linked list. 
+
+		Clock Notifier
+		==============
+		When the ClockServer initializes, it spawns a working task called the Notifier.
+		The ClockServer operates by calling Receive() and blocking until it is passed a 
+		message from either another user task or the notifier. Since the ClockServer
+		needs to keep track of the current time, we need to make sure it doesn't block
+		for more than 1 tick. Hence, we see the need to have a notifier task.
+
+		It is the notifier that listens for the TIMER1 interrupts and acts 
+		accordingly. Here is the pseudo code for the notifier:
+			Initialize the hardware and notifier.
+			FOREVER {
+				AwaitEvent ( Timer Interrupt );
+				Check for errors during await.
+				Send a message to the ClockServer to wake it up.
+				Check for send errors.
+			}
+
+		Every 50 ms, a hardware interrupt is triggered from TIMER1. The notifier is 
+		asleep waiting for this interrupt to occur. When it does, the notifier is 
+		woken up and sends a message to the ClockServer to wake it up if is blocked 
+		on Receive(). The notifier then awaits the next hardware interrupt.
+
+		Right now, the notifier is specific to helping the ClockServer. It will be
+		made more generic for future kernel assignments so that any task can spawn
+		a notifier task.
+
+		The priority of a notifier task is sufficiently important. It must be able to
+		catch an interrupt as soon as it occurs and handle it appropriately. Hence,
+		the notifier is made at priority 1, making it the second highest priority task
+		behind the first user task for Kernel 3. Once this first task exits, the
+		notifier has the highest priority and will always run if an interrupt has
+		occurred. The Name and Clock servers are created with priority 2.
+	
+		Serial IO
+		=========
+
+
+
+
+		Shell
+		=====
+		We decided to reuse code from assignment 0 to implement a shell/command prompt
+		for this assignment. This shell lets us easily run the k1, k2, and k3 user
+		tasks from the command line. When we are changing the context switch code,
+		it is extremely useful to re-run the first kernel assignments to ensure they
+		are still running.
+
+		The shell is technically the first user task and can be used to initialize 
+		servers and the state of the kernel. It is created with the lowest priority 
+		possible and will only run when there are no higher priority tasks on the 
+		ready queues.
+
+		Type 'h' at the command prompt to get a list of valid commands. Nothing happens
+		for invalid commands. 
+
+
+	Error Codes
+	===========
+	We have a file in include/ named error.h. This file holds all of the error
+	codes for both the kernel and user tasks. The errors are stored as an enum and
+	all of the values are negative so that we can distinguish between valid return
+	codes (positive) and errors (negative). At this point, returning an error code
+	of 0 signifies that no error occurred.
+
+		Here is the current enum: 
+		enum ERROR {
+			NO_ERROR = 0,			// Everything ran smoothly!
+			NEG_TID = -10000,		// The task id is negative
+			DEFUNCT_TID,			// The corresponding td is defunct
+			OLD_TID, 				// Not from the current generation
+			INVALID_TID,			// The task id is not valid
+			OUT_OF_BOUNDS,			// The addr is not within the task's addr space
+			RCV_BUFFER_FULL,		// The Receive() buffer is full
+			RPLY_BUFFER_FULL,		// The Reply() buffer is full
+			NULL_ADDR,				// A buffer address is 0 (null)
+			SNDR_NOT_RPLY_BLKD,		// The Sender is in a bad state
+			INVALID_PRIORITY,		// The given priority is invalid
+			NO_TDS_LEFT,			// No more useable TDs - Cannot "create" more
+			NOT_FOUND,				// Name Server could not locate the task
+			NS_INVALID_REQ_TYPE,	// Invalid Name Server request type
+			CS_INVALID_REQ_TYPE		// Invalid Clock Server request type
+		} error;
+
+	The error names are pretty self explanatory and the comments help. Since
+	NEG_TID is -10000 and enums assign values by incrementing by 1 for each 
+	subsequent entry, each following entry will be negative. 
+	The value for DEFUNCT_TID is -9999, OLD_TID is -9998, etc.  
+
+	We were as specific as we could with the error codes so that we would
+	always know the exact error that was triggered. For example, there are 4
+	different error codes for checking a task id. We also separated the buffer
+	full errors to determine if the receive OR reply buffer is full. This makes
+	debugging much easier.
+
+	Since we are using C and cannot throw exceptions back at calling code, we
+	simply pass errors back up through the calling code. It is the calling code's
+	responsibility to check for these errors and act appropriately. For example,
+	if a task tries to send a message to task id -4, we would detect this error and
+	return the error code all of the way back to the sender task. This sender task
+	should check the error code before it continues with the rest of its execution.
+	For this reason, the error codes must be shared between the kernel and user
+	tasks.
+
+Question 3
+==========
+	The	All source code is located in: /u8/becmacdonald/cs452/a3/handin.
+
+	Here are the md5 hashes for each file:
+ 
+
+Question 4 
+==========
+	Here are all of the files we are submitting:
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
+	
