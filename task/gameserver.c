@@ -30,7 +30,7 @@ void gs_run () {
 	
 	// Initialize the Rock, Paper, Scissors Server
 	gs_init (&server);
-	assert ( WhoIs ("GameServer") == MyTid() );
+	assert ( WhoIs (GAMESERVER_NAME) == MyTid() );
 
 	FOREVER {
 		// Receive a message from a player!
@@ -133,7 +133,7 @@ void gs_init (GameServer *server) {
 	debug ("gs_init: s: %x \r\n", server);
 
 	// Register with the Name Server
-	RegisterAs ("GameServer");
+	RegisterAs (GAMESERVER_NAME);
 	debug ("    GAME SERVER HAS REGISTERED. \r\n");
 	
 	server->matchCount = 0;
