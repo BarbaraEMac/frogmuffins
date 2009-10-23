@@ -109,3 +109,12 @@ int DelayUntil (int ticks, TID csTid) {
 	
 	return ret;
 }
+
+int Getc (int channel) {
+
+}
+
+int Putc (int channel, char ch) {
+
+
+}
