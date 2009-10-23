@@ -4,7 +4,7 @@
  * dgoc
  */
 
-#define DEBUG
+//#define DEBUG
 #include <ts7200.h>
 
 #include "debug.h"
