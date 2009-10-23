@@ -38,6 +38,10 @@ void tc_run () {
 				senderTid, req.type, req.arg1, req.arg2, len);
 	
 		assert( len == sizeof(TCRequest) );
+		
+		debug ("tc: about to Reply to %d. \r\n", senderTid);
+		Reply ( senderTid, (char *) &ret, sizeof(int) );
+		debug ("tc: returned from Replying to %d. \r\n", senderTid);
 
 		// TODO: Poll the sensors
 
@@ -96,12 +100,6 @@ void tc_run () {
 				error (ret, "Train Controller request type is not valid.");
 				break;
 		}
-
-		debug ("tc: about to Reply to %d. \r\n", senderTid);
-		Reply ( senderTid, (char *) &ret, sizeof(int) );
-		debug ("tc: returned from Replying to %d. \r\n", senderTid);
-
-		// No need to clear out req, it's completely overwritten by Receive
 	}
 }
 
