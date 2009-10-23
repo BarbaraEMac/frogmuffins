@@ -7,7 +7,7 @@
 #ifndef __SERIAL_IO_SERVER_H__
 #define __SERIAL_IO_SERVER_H__
 
-#define SERIAL_IO_NAME "SerialIoServer"
+#define SERIAL_IO_NAME "IOServer"
 #define NUM_ENTRIES		32
 #define	ENTRY_LEN		80
 
