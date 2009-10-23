@@ -268,3 +268,18 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 	*i = 0xFFFFFFFF;
 	*/
 }
+int destroy( TDM *mgr, TID tid ) {
+	TD * victim = mgr_fetchById (mgr, tid);
+	debug ("destroy: task @%x (%d)\r\n", victim, tid);
+
+	// Check the tid
+	if ( (int) victim < NO_ERROR ) {
+		return (int) victim;
+	}
+
+	// Destroy the victim
+	td_destroy( victim, mgr );
+
+
+	return NO_ERROR;
+}

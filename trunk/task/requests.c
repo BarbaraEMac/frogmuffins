@@ -79,6 +79,10 @@ int InstallDriver (int eventid, Driver driver) {
 	SWI(10);
 }
 
+int Destroy (TID tid) {
+	SWI(11);
+}
+
 int Delay (int ticks, TID csTid) {
 	int		  err;
 	int		  currentTime;

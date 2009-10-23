@@ -58,6 +58,16 @@ int mgr_getUnused ( const TDM *this ) {
 	return n;
 }
 
+void mgr_updatePriority( TDM*this, int p ) {
+
+	// If the queue is now empty, change the highest priority pointer.
+	if ( this->ready[p] == 0 ) {
+		// Find the next highest non-empty slot
+		for ( p += 1; p < NUM_PRIORITY && this->ready[p] == 0 ; p++ ) {;}
+		debug("		updating priority to %d\r\n", p);	
+		this->highestPriority = p;	// This might be off the end by 1
+	}
+}
 
 /*
  * PUBLIC FUNCTIONS
@@ -168,14 +178,58 @@ TD * td_init ( int priority, Task start, TID parentId, TDM *mgr ) {
 }
 
 void td_destroy (TD *td, TDM *mgr) {
-	assert( td->state == DEFUNCT );
+	debug( "td_destroy TD at idx:%d\r\n", idx);
 	int idx = (td->id) % NUM_TDS; 
 
 	// Mark the td as unused
 	mgr_setUsed( mgr, idx, 0 );
-	/*bwprintf( COM2, "empty=%08x %08x \r\n", mgr->empty[1], mgr->empty[0] );
-	bwprintf( COM2, "destroying TD at idx:%d\r\n", idx);
-	bwgetc(COM2);*/
+
+
+	int p = td->priority, eventId, *handler;
+	TD *waitOn;
+	switch ( td->state ) {
+
+		case READY:
+			// Remove the TD from the ready queue
+			queue_remove ( &mgr->ready[p], td );
+			
+			// Update the priority if needed
+			mgr_updatePriority( mgr, p );
+			break;
+
+		case RCV_BLKD:
+			waitOn = mgr_fetchById( mgr, td->a->send.tid );
+			assert( (int) waitOn >= NO_ERROR );
+			// Remove the TD from the send queue
+			queue_remove ( &waitOn->sendQ, td );
+			break;
+		case AWAITING_EVT:
+			eventId = td->a->awaitEvent.eventId;
+			// Remove the TD from the interrupt queue
+			queue_remove ( &mgr->intBlocked[eventId], td );
+			// TODO clean this up!
+			if( mgr->intBlocked[eventId] == 0 ) {
+				// Turn off interrupts as there is no-one to handle them
+				handler = (int *) (VIC1_BASE + VIC_INT_EN_CLR);
+				*handler |= (1 << eventId);	
+			}
+			break;
+
+		case ACTIVE:
+			// Fall through
+		case RPLY_BLKD:
+			// Fall through
+		case SEND_BLKD:
+			// Fall through
+		case DEFUNCT:
+			// Nothing to do
+			break;
+		default:
+			error(0, "Don't know what to do with this task state." );
+			break;
+	}
+
+	td->state = DEFUNCT;
 }
 
 void mgr_insert ( TDM *this, TD *td ) {
@@ -186,7 +240,6 @@ void mgr_insert ( TDM *this, TD *td ) {
 
 	int p = td->priority;
 	switch ( td->state ) {
-		
 		case ACTIVE:
 			// Active tasks should be made ready and put on a ready queue.
 			td->state = READY;
@@ -243,14 +296,12 @@ TD *mgr_popReady ( TDM *this ) {
 
 	// Pop off the top of the queue.
 	TD *top = queue_pop ( &this->ready[p] );
-	
-	// If the queue is now empty, change the highest priority pointer.
-	if ( this->ready[p] == 0 ) {
-		// Find the next highest non-empty slot
-		for ( p += 1; p < NUM_PRIORITY && this->ready[p] == 0 ; p++ ) {;}
-		debug("		updating priority to %d\r\n", p);	
-		this->highestPriority = p;	// This might be off the end by 1
-	}
+
+	// Update the priority if needed
+	mgr_updatePriority( this, p );
+
+	// Set the task to active since it's going to run
+	top->state = ACTIVE;
 
 	// Return the top of the queue
 	return top;
@@ -344,4 +395,28 @@ TD *queue_pop (Queue *head) {
 
 	// Return the old top of the queue
 	return top; 
+}
+void queue_remove ( Queue *q, TD *toRm ) {
+	debug ( "queue_push head=%x, toRm=%x \r\n", *q, toRm );
+	assert ( q != 0 );
+	assert ( toRm != 0 );
+	assert ( toRm->nextTD != 0 && toRm->prevTD != 0 );
+
+	TD *prev = toRm->prevTD; // Cannot be 0; Can be itself
+	TD *next = toRm->nextTD; // Cannot be 0; Can be itself
+
+	// Remove the element from the queue
+	prev->nextTD = next;
+	next->prevTD = prev;
+
+	// Update the removed element's pointers
+	toRm->prevTD = 0;
+	toRm->nextTD = 0;
+
+	// If this the first item, queue will have to be updated
+	if ( *q  == toRm ) {
+		// Update the queue
+		*q = prev->nextTD;
+	}
+
 }
