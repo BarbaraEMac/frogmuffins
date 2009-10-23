@@ -21,7 +21,21 @@
 #define output(args...) bwputstr(COM2, "\033[36m"); bwprintf(COM2, args); bwputstr(COM2,"\033[37m")
 
 void shell_run ( ) {
+/*
+ * TESTING WEIRD ASSEMBLER?? bug
+ *
+ * char o;
+	if( bwreadc( COM2, &o, 0 ) ) { o = 1;}
+
+//	asm(".WORD 0xDEADDEAD");
+	asm("#; stop looking here");
+	asm("mov r0, #1");
+	asm("mrs r1, SPSR");
+	asm("bl bwputr(PLT)");
+ */
     debug ("shell_run\r\n");
+
+
 
 	// Initialize variables
     char *input, history[INPUT_HIST][INPUT_LEN];
