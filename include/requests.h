@@ -39,6 +39,13 @@ enum CSRequestCode {
 	NOTIFY
 };
 
+enum IORequestCode {
+	GETC = 1,
+	PUTC,
+	GETSTR,
+	PUTSTR
+};
+
 // Any request made to the NameServer needs to be of this form.
 typedef struct {
 	enum NSRequestCode type;
@@ -50,6 +57,13 @@ typedef struct {
 	enum CSRequestCode type;
 	int  ticks;
 } CSRequest;
+
+// Any request made to the SerialIO Server has this form.
+typedef struct {
+	enum IORequestCode  type;
+	int					channel;
+	char 			    data[80];	//TODO: replace 80 with ENTRY_LEN in serialio.h
+} IORequest;
 
 // NOTE: These must match with the SWI() in requests.c.
 enum RequestCode {
@@ -179,30 +193,52 @@ int InstallDriver (int eventid, Driver driver);
 
 /** 
  * Wait for the given time.
+ * csTid - The task id of the clock server
  */
 int Delay (int ticks, TID csTid);
 
 /**
  * Return the time since the clock server started.
+ * csTid - The task id of the clock server
  */
 int Time (TID csTid);
 
 /**
  * Wait until the given time.
+ * csTid - The task id of the clock server
  */
 int DelayUntil (int ticks, TID csTid);
 
 /**
  * Get a character from the given channel.
  * channel - COM1 for train controller; COM2 for keyboard/monitor
+ * iosTid - The task id of the serial io server
  */
-int Getc (int channel);
+int Getc (int channel, TID iosTid);
 
 /**
  * Send the given character over the specified UART.
  * channel - COM1 for train controller; COM2 for keyboard/monitor
  * ch - The character to send
+ * iosTid - The task id of the serial io server
  */
-int Putc (int channel, char ch);
+int Putc (int channel, char ch, TID iosTid);
 
+/**
+ * Gets a string of bytes from a given channel.
+ * channel - COM1 for train controller; COM2 for keyboard/monitor
+ * retBuf - The buffer for the bytes
+ * retBufLen - The length of the character buffer.
+ * iosTid - The task id of the serial io server
+ */
+int GetStr (int channel, char *retBuf, int retBufLen, TID iosTid);
+
+/**
+ * Sends a string of bytes to a given channel.
+ * channel - COM1 for train controller; COM2 for keyboard/monitor
+ * str - The bytes to send.
+ * strLen - The number of bytes to send.
+ * iosTid - The task id of the serial io server
+ */
+int PutStr (int channel, const char *str, int strLen, TID iosTid);
 #endif
