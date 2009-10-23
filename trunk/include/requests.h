@@ -24,14 +24,6 @@ typedef char TaskName[NAME_LEN];
 // A Driver function needs this signature.
 typedef int (* Driver) (char * event, size_t eventlen);
 
-// User tasks can AwaitEvent() on these.
-// ie. These are the eventId's.
-enum INTERRUPTS {
-	UART1 = 23,	
-	UART2 = 25,
-	TIMER1 = 4,
-	TIMER2 = 5
-} interruptTypes;
 
 // User tasks can request the following things from a Name Server:
 enum NSRequestCode {
@@ -75,40 +67,41 @@ enum RequestCode {
 };
 
 // A Neat holder that lets us reference arguments based on the syscall.
-typedef volatile const union {
-	struct {
+typedef volatile union {
+	const struct {
 		int priority;
 		Task code;
 	} create;
-	struct {
+	const struct {
 		TID tid;
 		char *msg;
 		size_t msglen;
 		char *reply;
-		int dummy[FRAME_SIZE - 4]; // this is a filler since we use the
-								 // arguments as they are passed in to the
-								 // system request
+		// We need a filler since we use the arguments as 
+		// they are passed in to the system request
+		int DUMMY[FRAME_SIZE - 4];	
 		size_t rpllen;
 	} send;
-	struct {
+	const struct {
 		TID *tid;
 		char *msg;
 		size_t msglen;
 	} receive;
-	struct {
+	const struct {
 		TID tid;
 		char *reply;
 		size_t rpllen;
 	} reply;
-	struct {
+	const struct {
 		int eventId;
 		char *event;
 		size_t eventLen;
 	} awaitEvent;
-	struct {
+	const struct {
 		int eventId;
 		Driver driver;
 	} installDriver;
+	int returnValue;				// the return value of a syscall
 } ReqArgs;
 
 typedef struct {
