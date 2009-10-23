@@ -82,7 +82,7 @@
 #define UART_HDLCSTS_OFFSET	0x21c
 
 
-// Vectored interrupts
+// Specific to Vectored interrupts
 #define VIC1_BASE			0x800B0000
 #define VIC2_BASE			0x800C0000
 #define VIC_RAW_INTR		0x8
@@ -92,5 +92,39 @@
 #define VIC_SOFT_INT_CLR 	0x1C
 
 
+typedef enum _interrupt {
+	// -		 =  0,	// Unused
+	// -		 =  1,	// Unused
+	COMMRX		 =  2,	// ARM Communication Rx for Debug
+	COMMTX		 =  3,	// ARM Communication Tx for Debug
+	TC1UI		 =  4,	// TC1 under flow interrupt (Timer Counter 1)
+	TC2UI		 =  5,	// TC2 under flow interrupt (Timer Counter 2)
+	AACINTR		 =  6,	// Advanced Audio Codec interrupt
+	DMAM2P0		 =  7,	// DMA Memory to Peripheral Interrupt 0
+	DMAM2P1		 =  8,	// DMA Memory to Peripheral Interrupt 1
+	DMAM2P2		 =  9,	// DMA Memory to Peripheral Interrupt 2
+	DMAM2P3		 = 10,	// DMA Memory to Peripheral Interrupt 3
+	DMAM2P4		 = 11,	// DMA Memory to Peripheral Interrupt 4
+	DMAM2P5		 = 12,	// DMA Memory to Peripheral Interrupt 5
+	DMAM2P6		 = 13,	// DMA Memory to Peripheral Interrupt 6
+	DMAM2P7		 = 14,	// DMA Memory to Peripheral Interrupt 7
+	DMAM2P8		 = 15,	// DMA Memory to Peripheral Interrupt 8
+	DMAM2P9		 = 16,	// DMA Memory to Peripheral Interrupt 9
+	DMAM2M0		 = 17,	// DMA Memory to Memory Interrupt 0
+	DMAM2M1		 = 18,	// DMA Memory to Memory Interrupt 1
+	// -		 = 19,	// Reserved
+	// -		 = 20,	// Reserved
+	// -		 = 21,	// Reserved
+	// -		 = 22,	// Reserved
+	UART1RXINTR1 = 23,	// UART 1 Receive Interrupt
+	UART1TXINTR1 = 24,	// UART 1 Transmit Interrupt
+	UART2RXINTR2 = 25,	// UART 2 Receive Interrupt
+	UART2TXINTR2 = 26,	// UART 2 Transmit Interrupt
+	UART3RXINTR3 = 27,	// UART 3 Receive Interrupt
+	UART3TXINTR3 = 28,	// UART 3 Transmit Interrupt
+	INT_KEY		 = 29,	// Keyboard Matrix Interrupt
+	NT_TOUCH	 = 30	// Touch Screen Controller Interrupt
+
+} Interrupt;
 
 
