@@ -45,7 +45,7 @@ int send (TD *sender, TDM *mgr, TID tid) {
 	
 	TD *receiver = mgr_fetchById (mgr, tid);
 	// mgr_fetchById error checks the tid
-	if ( receiver < NO_ERROR ) {
+	if ( (int) receiver < NO_ERROR ) {
 		return (int) receiver;
 	}
 	
@@ -58,17 +58,17 @@ int send (TD *sender, TDM *mgr, TID tid) {
 		assert ( sender->state == RCV_BLKD );
 		assert ( receiver->state == SEND_BLKD );
 		
-		ret = passMessage ( sender, receiver, SEND_2_RCV );
-		assert (sender->state == RPLY_BLKD);
-
 		// Pass the sender tid to the receiver
 		*receiver->a->receive.tid = sender->id;
+
+		// Pass the message
+		ret = passMessage ( sender, receiver, SEND_2_RCV );
+		assert (sender->state == RPLY_BLKD);
 
 		// Unblock the receiver
 		mgr_insert(mgr, receiver);
 	} else {
 		// Put yourself on the other task's send queue.
-		//	debug ("PUSHING %x ON A SEND Q st=%d\r\n", sender, sender->state);
 		queue_push ( &receiver->sendQ, sender );
 	}
 
@@ -93,7 +93,6 @@ int receive (TD *receiver, TID *tid) {
 	// If someone is on the send queue, complete the transaction.
 	if ( receiver->sendQ != 0 ) {
 		TD *sender = queue_pop ( &receiver->sendQ );
-		//debug ("POPPING %x OFF A SEND Q st=%d\r\n", sender, sender->state);
 
 		// Verify sender and receiver states
 		assert ( sender->state == RCV_BLKD );
@@ -109,8 +108,8 @@ int receive (TD *receiver, TID *tid) {
 	return ret;
 }
 
-int reply (TD *from, TDM *mgr, TID tid, char *reply, int rpllen) {
-	debug ("rply: from=%x (%d) to=%x (%d) \r\n", from, from->id, mgr_fetchById(mgr, tid), tid);
+int reply (TD *from, TDM *mgr, TID tid) {
+	debug ("rply: from @%x (%d) to (%d) \r\n", from, from->id, tid);
 	assert ( from != 0 );
 	assert ( mgr != 0 );
 	assert ( from->id != tid ); // Do not reply to yourself.
@@ -122,7 +121,7 @@ int reply (TD *from, TDM *mgr, TID tid, char *reply, int rpllen) {
 	// Update the TD states
 	TD *to = mgr_fetchById ( mgr, tid );
 	// mgr_fetchById error checks the tid
-	if ( to < NO_ERROR ) {
+	if ( (int) to < NO_ERROR ) {
 		return (int) to;
 	}
 	
@@ -157,6 +156,7 @@ int reply (TD *from, TDM *mgr, TID tid, char *reply, int rpllen) {
  * Updates the states of the tasks
  */
 int passMessage ( TD *from, TD *to, MsgType type ) {
+	debug("passMessage: from @%x to @%x type=%d\r\n", from, to, type);
 	assert ( to != from );
 	// Get the message buffers and lengths
 	char  *source = from->a->send.msg;
@@ -241,8 +241,7 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 	
 	// Get an index of the actual interrupt
 	int eventId = ctz( intStatus );
-	debug( "handleInterrupt #%d status=%x\r\n", eventId, intStatus );
-	assert (0==1);
+	debug( "handleInterrupt: #%d status=%x\r\n", eventId, intStatus );
 	assert( eventId < 32 );
 
 	// Get the driver for the interrupt that happened
