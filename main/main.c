@@ -42,15 +42,17 @@ void getNextRequest ( TD *td, Request *req ) {
 	debug( "KERNEL EXIT: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	
+	// Pass the return value
+	td->a->retVal = td->returnValue;
 	// Context Switch!
 	kernelExit (td, req);
 
 	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
-	debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
-			req->a->send.tid, req->a->send.msg, req->a->send.msglen, 
-			req->a->send.reply,req->a->send.rpllen );
+	/*debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
+		req->a->arg[0], req->a->arg[1], req->a->arg[2], 
+		req->a->arg[3], req->a->arg[FRAME_SIZE] );*/
 }
 
 /**
@@ -65,6 +67,9 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( mgr != 0 );
 	
 	TD *child;
+	debug( "service: %x type:%d args:%x %x %x %x %x \r\n", td, req->type, 
+		req->a->arg[0], req->a->arg[1], req->a->arg[2], 
+		req->a->arg[3], req->a->arg[FRAME_SIZE] );
 	
 	// Determine the request type and handle the call
 	switch ( req->type ) {
@@ -92,8 +97,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case REPLY:
-			td->returnValue = reply (td, mgr, req->a->reply.tid, 
-						req->a->reply.reply, req->a->reply.rpllen);
+			td->returnValue = reply (td, mgr, req->a->reply.tid);
 			break;
 		case AWAITEVENT:
 			td->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
@@ -111,6 +115,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
+			debug("HANDLING INTERRUPT type=%d\r\n", req->type);
 			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
 			// fall through
 		case PASS:

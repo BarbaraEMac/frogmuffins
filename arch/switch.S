@@ -14,19 +14,17 @@ kernelExit:
 	ldr		lr, [r3, #56]
 	#; install the spsr
 	msr 	SPSR_cxsf, r2
-	#; put the return value in r0
-	ldr		r0, [r0, #8]
 	#; switch to system mode
 	msr 	CPSR_c, #0xDF
-	#; restore the active task NOTE: r0 is skipped
-	add 	sp,	r3, #4
+	#; restore the active task
+	mov 	sp,	r3
 	#; ldmfd	sp, {r1-r12, lr}
 	#; mov		r0, #1
 	#; ldr		r1, [r3, #56]
 	#; mov		r1, ip
 	#; mrs		r1, SPSR
 	#; bl		bwputr(PLT)
-	ldmfd	sp!, {r1-r12, lr}
+	ldmfd	sp!, {r0-r12, lr}
 	#; we didn't read the pc, so add to the sp
 	add		sp, sp, #4
 	#; switch to supervisor mode
