@@ -199,4 +199,17 @@ int Time (TID csTid);
  */
 int DelayUntil (int ticks, TID csTid);
 
+/**
+ * Get a character from the given channel.
+ * channel - COM1 for train controller; COM2 for keyboard/monitor
+ */
+int Getc (int channel);
+
+/**
+ * Send the given character over the specified UART.
+ * channel - COM1 for train controller; COM2 for keyboard/monitor
+ * ch - The character to send
+ */
+int Putc (int channel, char ch);
+
 #endif
