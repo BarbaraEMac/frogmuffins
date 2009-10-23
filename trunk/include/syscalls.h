@@ -20,7 +20,7 @@ int send (TD *sender, TDM *mgr, TID tid);
 
 int receive (TD *receiver, TID *tid);
 
-int reply (TD *sender, TDM *mgr, TID tid, char *reply, int rpllen);
+int reply (TD *sender, TDM *mgr, TID tid);
 
 int passMessage (TD *sender, TD *receiver, MsgType reply);
 

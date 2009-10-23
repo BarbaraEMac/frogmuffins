@@ -82,6 +82,7 @@ enum RequestCode {
 
 // A Neat holder that lets us reference arguments based on the syscall.
 typedef volatile union {
+	const int arg[FRAME_SIZE];
 	const struct {
 		int priority;
 		Task code;
@@ -115,7 +116,7 @@ typedef volatile union {
 		int eventId;
 		Driver driver;
 	} installDriver;
-	int returnValue;				// the return value of a syscall
+	int retVal;						// the return value of a syscall
 } ReqArgs;
 
 typedef struct {

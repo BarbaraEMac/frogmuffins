@@ -48,11 +48,10 @@ typedef int BitField;
 struct taskdesc {
 	volatile int spsr;		// Saved Processor State Register
 	union {
-		int volatile * volatile sp;		// Stack Pointer
-		ReqArgs * volatile a;			// request arguments in a neatly avaiable union
+		int volatile * volatile sp;	// Stack Pointer
+		ReqArgs * volatile a;	// request arguments in a neatly avaiable union
 	};
-	int returnValue;		// Value to pass to asm if we need to 
-							// return anything to a syscall
+	int returnValue;		// the value to return after syscall
 	int *sb;				// Stack base
 	TID id;			 		// A unique identifying id
 	TID parentId;			// The unique id of the parent
