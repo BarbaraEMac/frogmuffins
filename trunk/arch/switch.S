@@ -8,7 +8,7 @@ kernelExit:
 	@ frame_needed = 1, uses_anonymous_args = 0
 	#; store the kernel state
 	stmfd	sp!, {r0, r1, r4-r10, fp, lr}
-	#; fetch the active tasks's sp and spsr
+	#; fetch the active tasks's spsr and sp
 	ldmia 	r0, {r2, r3}
 	#; read the addres tp return to
 	ldr		lr, [r3, #56]
