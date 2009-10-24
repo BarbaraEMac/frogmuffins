@@ -4,7 +4,7 @@
  * dgoc
  */
 
-//#define DEBUG
+#define DEBUG 1
 #include <bwio.h>
 #include <ts7200.h>
 #include <math.h>
@@ -48,14 +48,11 @@ void getNextRequest ( TD *td, Request *req ) {
 	// Context Switch!
 	kernelExit (td, req);
 	// Reset the return value
-	//td->returnValue = NO_ERROR;
+	td->returnValue = td->a->retVal;
 
 	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
-	/*debug( "Request type:%x args:%x %x %x %x %x \r\n", req->type, 
-		req->a->arg[0], req->a->arg[1], req->a->arg[2], 
-		req->a->arg[3], req->a->arg[FRAME_SIZE] );*/
 }
 
 /**
@@ -70,7 +67,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( mgr != 0 );
 	
 	TD *child;
-	debug( "service: %x type:%d args:%x %x %x %x %x \r\n", td, req->type, 
+	debug( "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n", td->id, td, req->type, 
 		req->a->arg[0], req->a->arg[1], req->a->arg[2], 
 		req->a->arg[3], req->a->arg[FRAME_SIZE] );
 	
@@ -132,6 +129,9 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	}
 	if ( td->returnValue < NO_ERROR ) {
 		error( td->returnValue, "Kernel request failed.");
+		bwprintf( COM2, "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n", td->id, td, 
+			req->type, req->a->arg[0], req->a->arg[1], 
+			req->a->arg[2], req->a->arg[3], req->a->arg[FRAME_SIZE] );
 		bwgetc(COM2);
 	}
 }
