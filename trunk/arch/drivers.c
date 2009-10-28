@@ -36,12 +36,44 @@ int timer2Driver (char *retBuf, int buflen) {
 	return NO_ERROR; 
 }
 
-int comOneDriver (char *retBuf, int bufLen) {
+inline int comHandler ( UART *uart, char *data, int len ) {
+	// TODO: Return overrun errors - we already lost the data!
+	
+
+	if ( uart->intc & MIS_MASK ) {
+
+		if ( uart->flag & CTS_MASK ) {
 
 
+		} 
+		//else if ( uart->flag & ) {
+
+
+//		}
+	
+	} else if ( uart->intc & RIS_MASK ){
+		// return character if you were told one came in
+		return uart->data;
+	
+	} else if ( uart->intc & TIS_MASK ){
+	
+		int i;
+		for ( i = 0; i < len; i ++ ) {
+			// TODO: Wait 52 instructions
+			
+			uart->data = data[i];
+		}
+		return NO_ERROR;
+	}
+	// Never gets here ...
 }
 
-int comTwoDriver (char *retBuf, int bufLen) {
+int comOneDriver (char *data, int len) {
+	UART uart = (UART*) (UART1_BASE);
+	return comHandler( &uart, data, len );
+}
 
-
+int comTwoDriver (char *data, int len) {
+	UART uart = (UART*) (UART2_BASE);
+	return comHandler( &uart, data, len );
 }
