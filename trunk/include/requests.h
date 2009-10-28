@@ -24,49 +24,8 @@ typedef char TaskName[NAME_LEN];
 // A Driver function needs this signature.
 typedef int (* Driver) (char * event, size_t eventlen);
 
-
-// User tasks can request the following things from a Name Server:
-enum NSRequestCode {
-	REGISTERAS = 1,
-	WHOIS,
-};
-
-// User tasks can request the following things from a Clock Server:
-enum CSRequestCode {
-	DELAY = 1,
-	TIME,
-	DELAYUNTIL,
-	NOTIFY
-};
-
-enum IORequestCode {
-	GETC = 1,
-	PUTC,
-	GETSTR,
-	PUTSTR
-};
-
-// Any request made to the NameServer needs to be of this form.
-typedef struct {
-	enum NSRequestCode type;
-	TaskName name;
-} NSRequest;
-
-// Any request made to the ClockServer needs to be of this form.
-typedef struct {
-	enum CSRequestCode type;
-	int  ticks;
-} CSRequest;
-
-// Any request made to the SerialIO Server has this form.
-typedef struct {
-	enum IORequestCode  type;
-	int					channel;
-	char 			    data[80];	//TODO: replace 80 with ENTRY_LEN in serialio.h
-} IORequest;
-
 // NOTE: These must match with the SWI() in requests.c.
-enum RequestCode {
+enum SysCallCode {
     CREATE = 1,
     MYTID = 2,
     MYPARENTTID = 3,
@@ -124,7 +83,7 @@ typedef volatile union {
 } ReqArgs;
 
 typedef struct {
-	enum RequestCode volatile type; // The type of the request 
+	enum SysCallCode volatile type; // The type of the request 
 									// Includes the number of arguments.
 	ReqArgs * volatile a;			// Place in user memory where arguments are stored.
 	
@@ -251,4 +210,5 @@ int GetStr (int channel, char *retBuf, int retBufLen, TID iosTid);
  * iosTid - The task id of the serial io server
  */
 int PutStr (int channel, const char *str, int strLen, TID iosTid);
+
 #endif

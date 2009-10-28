@@ -9,11 +9,11 @@
 #include <clock.h>
 #include <ts7200.h>
 
-#include "clockserver.h"
 #include "debug.h"
 #include "drivers.h"
 #include "error.h"
 #include "requests.h"
+#include "servers.h"
 
 #define NUM_SLEEPERS	1024
 

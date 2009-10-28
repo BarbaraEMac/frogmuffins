@@ -11,20 +11,22 @@
 #include <ts7200.h>
 
 #include "debug.h"
-#include "clockserver.h"
 #include "gameplayer.h"
 #include "gameserver.h"
-#include "nameserver.h"
 #include "requests.h"
+#include "servers.h"
 #include "task.h"
 
+// NOTE: Kernel 4 is all located with in shell.c
+
+//-------------------------------------------------------------------------
+//---------------------------Kernel 3--------------------------------------
+//-------------------------------------------------------------------------
 typedef struct {
 	char delayLen;
 	char numDelays;
 } clientMsg;
-//-------------------------------------------------------------------------
-//---------------------------Kernel 3--------------------------------------
-//-------------------------------------------------------------------------
+
 void k3_firstUserTask () {
 	debug ("First task started. \r\n");
 	int 	  len;

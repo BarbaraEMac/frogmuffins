@@ -43,6 +43,6 @@ void interruptHandler();
 
 // This is not currently used.
 // We might change this in the future if needed.
-//int syscall(int arg0, int arg1, int arg3, enum RequestCode type);
+//int syscall(int arg0, int arg1, int arg3, enum SysCallCode type);
 
 #endif
