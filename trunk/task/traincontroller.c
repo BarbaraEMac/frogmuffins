@@ -1,7 +1,7 @@
 /*
  * CS 452: Train Controller User Task
  */
-#define DEBUG
+#define DEBUG 2
 
 #include <bwio.h>
 #include <string.h>
