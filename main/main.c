@@ -155,7 +155,7 @@ int main( int argc, char* argv[] ) {
 	Request  nextRequest;	// The next request to service
 
 	// Initialize the printing connection
-	bwsetfifo( COM2, OFF );
+	uart_setfifo( COM2, OFF );
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
@@ -164,7 +164,7 @@ int main( int argc, char* argv[] ) {
 	bwprintf( COM2, "Initialized interrupt handlers.\r\n");
 	
 	// Turn off interrupts 
-	interruptAllOff();
+	intr_allOff();
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Initialize the priority queues
@@ -193,7 +193,7 @@ int main( int argc, char* argv[] ) {
 
 	// Turn off interrupts 
 	bwputstr( COM2, "Turning off interrupts.\r\n");
-	interruptAllOff();
+	intr_allOff();
 	
 	bwputstr( COM2, "Exiting normally.\r\n" );
 	

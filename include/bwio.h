@@ -20,12 +20,6 @@ typedef char *va_list;
 #define ON	1
 #define	OFF	0
 
-void wait( int ms );
-
-int bwsetfifo( int channel, int state );
-
-int bwsetspeed( int channel, int speed );
-
 int bwsendc( int channel, char c, int timeout );
 
 int bwputc( int channel, char c );

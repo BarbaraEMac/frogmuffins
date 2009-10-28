@@ -176,8 +176,11 @@ inline int readMemory(int addr) ;
 
 inline void writeMemory(int addr, int value) ;
 
-void interruptOn( Interrupt eventId ) ;
-void interruptOff( Interrupt eventId ) ;
-void interruptAllOff() ;
+void intr_on( Interrupt eventId ) ;
+void intr_off( Interrupt eventId ) ;
+void intr_allOff() ;
+
+int uart_setfifo( int channel, int state ) ;
+int uart_setspeed( int channel, int speed ) ;
 
 #endif
