@@ -47,6 +47,7 @@ typedef struct {
 	enum SvrRequest type;
 	int				channel;
 	char 		    data[ENTRY_LEN];
+	int				len;
 } IORequest;
 
 //-----------------------------------------------------------------------------
@@ -146,10 +147,14 @@ void notifier_init();
 //-----------------------------------------------------------------------------
 typedef struct {
 	char sendBuffer[NUM_ENTRIES][ENTRY_LEN];
-	char recvBuffer[NUM_ENTRIES][ENTRY_LEN];
+	char recvBuffer[NUM_ENTRIES];
 	
+	int sendPtr;
 
-	TD *queue;
+	int sEmpPtr;
+	int sFulPtr;
+	int rEmpPtr;
+	int rFulPtr;
 } SerialIOServer;
 
 /**

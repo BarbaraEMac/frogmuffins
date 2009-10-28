@@ -146,7 +146,7 @@ void notifier_run() {
 		only send if you are clear to send
 		do not tell server if it is cts
 		
-	
+		assert dtr to say you want to send. wait for cts
 
 
 
