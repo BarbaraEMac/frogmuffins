@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-//#define DEBUG
+#define DEBUG 1
 
 #include <bwio.h>
 #include <clock.h>
@@ -32,7 +32,7 @@ void cs_run () {
 	Sleeper		*sleeper;					// tmp ptr
 
 	// Initialize the Clock Server
-	cs_init (&sleepersQ);
+	int notifierTid = cs_init (&sleepersQ);
 
 	FOREVER {
 		// Receive a server request
@@ -42,14 +42,14 @@ void cs_run () {
 				senderTid, req.type, len);
 	
 		assert( len == sizeof(CSRequest) );
-		assert( senderTid > 0 );
+		assert( senderTid >= 0 );
 		assert( req.ticks >= 0 );
 		
 		// Calculate the current time in ticks in case a task wants to know
 		ticks  = 0 - *time; // since the timer counts down
 		ticks /= 100;	// convert to ticks (where 50ms = 1 tick)
 		debug ("cs: time is %d\r\n", ticks);
-		assert( ticks > 0 );
+		assert( ticks >= 0 );
 
 		// Handle the request
 		switch (req.type) {
@@ -87,8 +87,9 @@ void cs_run () {
 				break;
 
 			case NOTIFY:
+				assert( notifierTid == senderTid );
 				// Now wake up the Notifier!
-				Reply (senderTid, (char*)&ticks, 0);
+				Reply (senderTid, (char*) &ticks, 0);
 
 				sleeper = sleepersQ; // Can be 0 if nothing has delayed
 				while ( sleeper != 0 && ticks >= sleeper->endTime ) {
@@ -116,7 +117,7 @@ void cs_run () {
 	Exit(); // This will never be called.
 }
 
-void cs_init (Sleeper **sleepersQ) {
+int cs_init (Sleeper **sleepersQ) {
 	int err;
 
 	// Register with the Name Server
@@ -124,11 +125,13 @@ void cs_init (Sleeper **sleepersQ) {
 	
 	// Spawn a notifying helper task
 	if ( (err = Create( 1, &notifier_run )) < NO_ERROR ) {
-		error (err, "Cannot create the clock notifier.\r\n");
+		error (err, "Cannot create the clock notifier.");
 	}
 
 	// No tasks are currently waiting
 	*sleepersQ = 0;
+
+	return err;
 }
 
 void list_insert ( Sleeper **head, Sleeper *toAdd ) {

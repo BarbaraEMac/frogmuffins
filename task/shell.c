@@ -1,7 +1,7 @@
  /*
  * dgoc_a1.c
  */
-#define DEBUG
+#define DEBUG 2
 
 #include <bwio.h>
 #include <string.h>
@@ -27,7 +27,7 @@ void shell_run ( ) {
 
 	// Initialize variables
     char *input, history[INPUT_HIST][INPUT_LEN];
-    int i = 0, h = 0, time;
+    int i = 0, h = 0;
 	TID nsTid;
 	TID csTid;
 	TID iosTid;
@@ -50,25 +50,41 @@ void shell_run ( ) {
 
 	// Create the Serial I/O server
 	debug ("Creating the serial io server. \r\n");
-	iosTid = Create (2, &ios_run);
+	//iosTid = Create (2, &ios_run);
 
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
 	tcTid = Create (2, &tc_run);
 	
 	output ("Type 'h' for a list of commands.\r\n");
-	// Main loop
+
+
 	int k =0, l = 0;
     input = history[h++];
-	
-	time = Time(csTid);
-	output ("\r%02d:%02d:%02d> ", (((time*50)/1000)/60), (((time*50)/1000)%60),
-		    ((time*50)%1000)); 
+	int	time, tens, secs, mins;
+ 
+	time = Time(csTid)/2;
+	tens = time % 10;
+	secs = (time / 10) % 60;
+	mins = time / 600;
+	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+
+	// Main loop
     FOREVER {
 
         input[i] = 0;						// Clear the next character
+
+
+		// Check for interrupt errors
 		k++; l++;
-		if( k!=l ) { bwputstr(COM2, "\r\n GOTCHA \r\n"); }
+		if( (k-l) ) { bwputstr(COM2, "\r\n GOTCHA YOU HORRIBLE CONTEXT SWITCH BUG \r\n"); }
+
+		time = Time(csTid)/2;
+		tens = time % 10;
+		secs = (time / 10) % 60;
+		mins = time / 600;
+
+	
 		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");
@@ -80,11 +96,8 @@ void shell_run ( ) {
                 //input = history[h++];
                 //h++; h &= INPUT_HIST;
                 i = 0;
-				time = Time(csTid);
-				output ("\r%02d:%02d:%02d> ", (((time*50)/1000)/60),
-						(((time*50)/1000)%60), ((time*50)%1000));
-            } else if( input[i] == '\b'
-                    || input[i] == 127) {	// Backspace was pressed
+				output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+            } else if( input[i] == '\b' || input[i] == 127) {	// Backspace was pressed
 				if( i > 0 ) {
 					bwputstr ( COM2, "\b \b");
     	            
@@ -99,66 +112,61 @@ void shell_run ( ) {
 				i ++;
             }
         }
-        if( i == INPUT_LEN ) {
-            output( "\r\nToo many characters.\r\n" );
-            i = 0;
-			
-			time = Time(csTid);
-			output ("\r%02d:%02d:%02d> ", (((time*50)/1000)/60),
-					(((time*50)/1000)%60), ((time*50)%1000));
-		}
+        if( i == INPUT_LEN ) {	i-- ; }
     }
+}
+
+
+// Execute a train command
+int trainCmd ( TCRequest *tcReq, int tcTid ) {
+	int	  rpl;
+	Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int)); 
+	return rpl;
 }
 
 // Execute the command passed in
 void shell_exec( char *command, TID tcTid ) {
 	TCRequest tcReq;
-	int	  rpl;
 
+	// Quit
     if ( sscanf(command, "q\r") >= 0 ) {
         Exit();
-    } 
-	else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
+	// k1
+    } else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
 		Create (0, &k1_firstUserTask);
 		output( "K1 is done executing.\r\n" );
-    }
-	else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
+    // k2
+	} else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
 		Create (0, &k2_firstUserTask);
 		Destroy (WhoIs("GameServer"));
 		output( "K2 is done executing.\r\n" );
-    }
-	else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
+    // k3
+	} else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
 		Create (0, &k3_firstUserTask);
-		
 		// K3 is asynchronous so we don't know when it will end
 		//output( "K3 is done executing.\r\n" );
-	}
-	else if( sscanf(command, "rv %d\r", &tcReq.arg1) >=0 ) {
+	// rv
+	} else if( sscanf(command, "rv %d\r", &tcReq.arg1) >=0 ) {
     	tcReq.type = RV;
-		
-		Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int));
-    } 
-	else if( sscanf(command, "st %d\r", &tcReq.arg1) >=0 ) {
+		trainCmd( &tcReq, tcTid );
+	// st
+    } else if( sscanf(command, "st %d\r", &tcReq.arg1) >=0 ) {
 		tcReq.type = ST;
-		
-		Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int));
-    }
-	else if( sscanf(command, "sw %d %c\r", &tcReq.arg1, (char*)&tcReq.arg2) >=0 ) {
+		trainCmd( &tcReq, tcTid );
+	// sw
+    } else if( sscanf(command, "sw %d %c\r", &tcReq.arg1, (char*)&tcReq.arg2) >=0 ) {
 		tcReq.type = SW;
-		
-		Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int));
-	}
-	else if( sscanf(command, "tr %d %d\r", &tcReq.arg1, &tcReq.arg2) >= 0 ) {
+		trainCmd( &tcReq, tcTid );
+	// tr
+	} else if( sscanf(command, "tr %d %d\r", &tcReq.arg1, &tcReq.arg2) >= 0 ) {
     	tcReq.type = TR;
-
-		Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int));
-    } 
-	else if( sscanf(command, "wh\r") >=0 ) {
+		trainCmd( &tcReq, tcTid );
+	// wh
+    } else if( sscanf(command, "wh\r") >=0 ) {
 		tcReq.type = WH;
-		
-		Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int));
-    }
-	else if( sscanf(command, "h\r") >=0 ) {	// Get help!
+		trainCmd( &tcReq, tcTid );
+    // Help
+	} else if( sscanf(command, "h\r") >=0 ) {	// Get help!
 		output( "\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n", 
 				"h = Help!", 
 				"k1 = Execute kernel 1 user tasks.", 
@@ -170,9 +178,11 @@ void shell_exec( char *command, TID tcTid ) {
 				"\t sw switch_num dir = Switch the switch in the sepcified direction.",
 				"\t tr train_num speed = Set the speed of the specified train.",
 				"\t wh = Display the last modified sensor.");
-	}
-	else {
-		output("\r\nUnknown command: %s\r\n", command);
+	// Nothing was entered
+	} else if( command[0] == '\r' ) {
+	// Unkknown command
+	} else {
+		output("Unknown command: %s\r\n", command);
 	}
 }
 

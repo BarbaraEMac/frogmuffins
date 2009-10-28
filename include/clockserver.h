@@ -23,7 +23,6 @@ struct sleeper {
 
 void cs_run ();
 
-void cs_init (Sleeper **sleepersQ);
 
 // List operators
 void list_insert ( Sleeper **head, Sleeper *toAdd );
