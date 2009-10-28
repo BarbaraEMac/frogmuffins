@@ -27,4 +27,18 @@ int timer1Driver (char *retBuf, int bufLen);
  */
 int timer2Driver (char *retBuf, int bufLen);
 
+/*
+ * The driver for the UART
+ * retBuf - The buffer to return data to.
+ * bufLen - The length of the return buffer.
+ */
+int comOneDriver (char *retBuf, int bufLen);
+
+/*
+ * The driver for the UART
+ * retBuf - The buffer to return data to.
+ * bufLen - The length of the return buffer.
+ */
+int comTwoDriver (char *retBuf, int bufLen);
+
 #endif

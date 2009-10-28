@@ -35,3 +35,13 @@ int timer2Driver (char *retBuf, int buflen) {
 	*retBuf = 0;
 	return NO_ERROR; 
 }
+
+int comOneDriver (char *retBuf, int bufLen) {
+
+
+}
+
+int comTwoDriver (char *retBuf, int bufLen) {
+
+
+}
