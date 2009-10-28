@@ -94,7 +94,7 @@
 #define VIC_SOFT_INT		0x18
 #define VIC_SOFT_INT_CLR 	0x1C
 
-typedef struct _uart {
+typedef volatile struct _uart {
 	int data;
 	int rsr;
 	int lcrh;
@@ -136,7 +136,39 @@ typedef enum _interrupt {
 	UART3RXINTR3 = 27,	// UART 3 Receive Interrupt
 	UART3TXINTR3 = 28,	// UART 3 Transmit Interrupt
 	INT_KEY		 = 29,	// Keyboard Matrix Interrupt
-	NT_TOUCH	 = 30	// Touch Screen Controller Interrupt
+	NT_TOUCH	 = 30,	// Touch Screen Controller Interrupt
+	INT_EXT0	 = 32,	// External Interrupt 0
+	INT_EXT1	 = 33,	// External Interrupt 1
+	INT_EXT2	 = 34,	// External Interrupt 2
+	TINTR		 = 35,	// 64 Hz Tick Interrupt
+	WEINT		 = 36,	// Watchdog Expired Interrupt
+	INT_RTC		 = 37,	// RTC Interrupt
+	INT_IrDA	 = 38,	// IrDA Interrupt
+	INT_MAC		 = 39,	// Ethernet MAC Interrupt
+	// -		 = 40,	// Reserved
+	INT_PROG	 = 41,	// Raster Programmable Interrupt
+	CLK1HZ		 = 42,	// 1 Hz Clock Interrupt
+	V_SYNC		 = 43,	// Video Sync Interrupt
+	INT_VIDEO_FIFO = 44,	// Raster Video FIFO Interrupt
+	INT_SSP1RX	 = 45,	// SSP Receive Interrupt
+	INT_SSP1TX	 = 46,	// SSP Transmit Interrupt
+	// -		 = 47,	// Reserved
+	// -		 = 48,	// Reserved
+	// -		 = 49,	// Reserved
+	// -		 = 50,	// Reserved
+	TC3UI		 = 51,	// TC3 under flow interrupt (Timer Counter 3)
+	INT_UART1	 = 52,	// UART 1 Interrupt
+	SSPINTR		 = 53,	// Synchronous Serial Port Interrupt
+	INT_UART2	 = 54,	// UART 2 Interrupt
+	INT_UART3	 = 55,	// UART 3 Interrupt
+	USHINTR		 = 56,	// USB Host Interrupt
+	INT_PME		 = 57,	// Ethernet MAC PME Interrupt
+	INT_DSP		 = 58,	// ARM Core Interrupt
+	GPIOINTR	 = 59,	// GPIO Combined interrupt
+	I2SINTR		 = 60	// I2S Block Combined interrupt
+	// -		 = 61,	// Unused
+	// -		 = 62,	// Unused
+	// -		 = 63	// Unused
 
 } Interrupt;
 

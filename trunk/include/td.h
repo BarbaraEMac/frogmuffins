@@ -21,7 +21,7 @@
 #define NUM_PRIORITY 	10	// For now, we will use 10 priorities [0,9]
 #define NUM_TDS	 		64
 #define NUM_BITFIELD	NUM_TDS/32
-#define NUM_INTERRUPTS	32
+#define NUM_INTERRUPTS	64
 
 enum TASK_STATE {
 	ACTIVE = 0,		 	// Only 1 task will ever be active
