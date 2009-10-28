@@ -94,6 +94,16 @@
 #define VIC_SOFT_INT		0x18
 #define VIC_SOFT_INT_CLR 	0x1C
 
+typedef struct _uart {
+	int data;
+	int rsr;
+	int lcrh;
+	int lcrm;
+	int lcrl;
+	int ctlr;
+	int flag;
+	int intr;
+} UART;
 
 typedef enum _interrupt {
 	// -		 =  0,	// Unused
