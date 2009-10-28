@@ -20,16 +20,6 @@
 
 #define WAIT	 for( i=0; i<200000; i++) {}
 
-inline int readMemory (int addr) {
-	int volatile *mem = (int *) (addr);
-	return *mem;
-}
-inline void writeMemory (int addr, int value) {
-	int volatile *mem = (int *) (addr);
-	*mem = value;
-}
-
-
 /**
  * Perform a context switch.
  * Gets the request from a user task.
@@ -174,7 +164,7 @@ int main( int argc, char* argv[] ) {
 	bwprintf( COM2, "Initialized interrupt handlers.\r\n");
 	
 	// Turn off interrupts 
-	writeMemory( VIC1_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
+	interruptAllOff();
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Initialize the priority queues
@@ -203,7 +193,7 @@ int main( int argc, char* argv[] ) {
 
 	// Turn off interrupts 
 	bwputstr( COM2, "Turning off interrupts.\r\n");
-	writeMemory( VIC1_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
+	interruptAllOff();
 	
 	bwputstr( COM2, "Exiting normally.\r\n" );
 	

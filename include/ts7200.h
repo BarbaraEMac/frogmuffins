@@ -130,6 +130,12 @@ typedef enum _interrupt {
 
 } Interrupt;
 
+inline int readMemory(int addr) ;
 
+inline void writeMemory(int addr, int value) ;
+
+void interruptOn( Interrupt eventId ) ;
+void interruptOff( Interrupt eventId ) ;
+void interruptAllOff() ;
 
 #endif
