@@ -224,7 +224,7 @@ int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 	}
 
 	// Turn on this interrupt
-	interruptOn( eventId );
+	intr_on( eventId );
 
 	// Change task state
 	td->state = AWAITING_EVT;
@@ -258,7 +258,7 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 
 	if( mgr->intBlocked[eventId] == 0 ) {
 		// Turn off interrupts as there is no-one to handle them
-		interruptOff( eventId );
+		intr_off( eventId );
 	}
 	/*
 	// Turn off software interrupts

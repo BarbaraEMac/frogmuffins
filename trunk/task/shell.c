@@ -35,9 +35,6 @@ void shell_run ( ) {
 	csReq.type  = TIME;
 	csReq.ticks = 0;
 
-    // Set up the communication ports
-	bwsetfifo( COM2, OFF );
-    
 	// Create the name server
 	debug ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
