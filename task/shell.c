@@ -7,11 +7,9 @@
 #include <string.h>
 #include <ts7200.h>
 
-#include "clockserver.h"
 #include "debug.h"
-#include "nameserver.h"
 #include "requests.h"
-#include "serialio.h"
+#include "servers.h"
 #include "shell.h"
 #include "task.h"
 #include "traincontroller.h"

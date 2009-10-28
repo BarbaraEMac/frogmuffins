@@ -9,7 +9,7 @@
 
 #include "debug.h"
 #include "error.h"
-#include "nameserver.h"
+#include "servers.h"
 
 void ns_run () {
 	debug ("ns_run: The Name Server is about to start. \r\n");	

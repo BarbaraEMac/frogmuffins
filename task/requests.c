@@ -8,6 +8,7 @@
 
 #include "debug.h"
 #include "requests.h"
+#include "servers.h"
 #include "switch.h"
 
 #define SWI(n) asm("swi #" #n)

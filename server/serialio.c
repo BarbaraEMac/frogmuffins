@@ -1,5 +1,5 @@
 /**
- * IO 452: Kernel
+ * CS 452: Kernel
  * becmacdo
  * dgoc
  */
@@ -12,7 +12,7 @@
 #include "drivers.h"
 #include "error.h"
 #include "requests.h"
-#include "serialio.h"
+#include "servers.h"
 
 void ios_run () {
 	debug ("ios_run: The Serial IO Server is about to start. \r\n");	
