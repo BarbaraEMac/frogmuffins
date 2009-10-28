@@ -148,6 +148,8 @@ typedef struct {
 	char sendBuffer[NUM_ENTRIES][ENTRY_LEN];
 	char recvBuffer[NUM_ENTRIES][ENTRY_LEN];
 	
+
+	TD *queue;
 } SerialIOServer;
 
 /**
