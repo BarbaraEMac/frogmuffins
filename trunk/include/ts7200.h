@@ -7,6 +7,8 @@
 #ifndef __TS7200_H__
 #define __TS7200_H__
 
+#define ON	1
+#define	OFF	0
 
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020
@@ -225,8 +227,7 @@ inline int readMemory( int addr ) ;
 
 inline void writeMemory( int addr, int value ) ;
 
-void intr_on( Interrupt eventId ) ;
-void intr_off( Interrupt eventId ) ;
+void intr_set( Interrupt eventId, int state ) ;
 void intr_allOff() ;
 
 
