@@ -194,15 +194,6 @@ int Getc (int channel, TID iosTid);
 int Putc (int channel, char ch, TID iosTid);
 
 /**
- * Gets a string of bytes from a given channel.
- * channel - COM1 for train controller; COM2 for keyboard/monitor
- * retBuf - The buffer for the bytes
- * retBufLen - The length of the character buffer.
- * iosTid - The task id of the serial io server
- */
-int GetStr (int channel, char *retBuf, int retBufLen, TID iosTid);
-
-/**
  * Sends a string of bytes to a given channel.
  * channel - COM1 for train controller; COM2 for keyboard/monitor
  * str - The bytes to send.
