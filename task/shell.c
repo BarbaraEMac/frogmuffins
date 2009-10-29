@@ -45,7 +45,7 @@ void shell_run ( ) {
 
 	// Create the Serial I/O server
 	debug ("Creating the serial io server. \r\n");
-	//iosTid = Create (2, &ios_run);
+	iosTid = Create (2, &ios_run);
 
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
@@ -122,6 +122,19 @@ int trainCmd ( TCRequest *tcReq, int tcTid ) {
 // Execute the command passed in
 void shell_exec( char *command, TID tcTid ) {
 	TCRequest tcReq;
+	char *commands[] = {
+		"h = Help!", 
+		"k1 = Execute kernel 1 user tasks.", 
+		"k2 = Execute kernel 2 user tasks.", 
+		"k3 = Execute kernel 3 user tasks.", 
+		"cache ON/OFF = turn the instruction cache on/off respectively",
+		"++ Train Controller Commands ++",
+		"\t rv train_num  = Reverse specified train.",
+		"\t st switch_num = Display status of switch.",
+		"\t sw switch_num dir = Switch the switch in the sepcified direction.",
+		"\t tr train_num speed = Set the speed of the specified train.",
+		"\t wh = Display the last modified sensor." };
+	int i;
 
 	// Quit
     if ( sscanf(command, "q\r") >= 0 ) {
@@ -160,19 +173,17 @@ void shell_exec( char *command, TID tcTid ) {
     } else if( sscanf(command, "wh\r") >=0 ) {
 		tcReq.type = WH;
 		trainCmd( &tcReq, tcTid );
+	// cache ON
+	} else if( sscanf(command, "cache ON\r") >= 0 ) {
+		cache_on();
+	// cache OFF
+	} else if( sscanf(command, "cache OFF\r") >= 0 ) {
+		cache_off();
     // Help
 	} else if( sscanf(command, "h\r") >=0 ) {	// Get help!
-		output( "\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n\t%s\r\n", 
-				"h = Help!", 
-				"k1 = Execute kernel 1 user tasks.", 
-				"k2 = Execute kernel 2 user tasks.", 
-				"k3 = Execute kernel 3 user tasks.", 
-				"++ Train Controller Commands ++",
-				"\t rv train_num  = Reverse specified train.",
-				"\t st switch_num = Display status of switch.",
-				"\t sw switch_num dir = Switch the switch in the sepcified direction.",
-				"\t tr train_num speed = Set the speed of the specified train.",
-				"\t wh = Display the last modified sensor.");
+		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
+			output( "\t%s\r\n", commands[i] );
+		}
 	// Nothing was entered
 	} else if( command[0] == '\r' ) {
 	// Unkknown command
