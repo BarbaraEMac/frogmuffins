@@ -10,8 +10,8 @@
 #define CLOCK_NAME 		"ClockServer"
 #define SERIAL_IO_NAME  "IOServer"
 
-#define NUM_ENTRIES		32
-#define	ENTRY_LEN		80
+#define NUM_ENTRIES		256
+#define ENTRY_LEN		80
 #define NUM_NS_ENTRIES	256
 
 #include "globals.h"
@@ -75,6 +75,8 @@ void cs_run ();
 /**
  * All of the Serial IO work is done in here.
  */
-void ios_run ();
+void ios1_run ();
+
+void ios2_run ();
 
 #endif
