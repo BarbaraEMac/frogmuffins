@@ -22,13 +22,14 @@
 
 void shell_run ( ) {
     debug ("shell_run\r\n");
+	char ch;
 
 	// Initialize variables
     char *input, history[INPUT_HIST][INPUT_LEN];
     int i = 0, h = 0;
 	TID nsTid;
 	TID csTid;
-	TID iosTid;
+	TID ios1Tid, ios2Tid;
 	TID tcTid;
 	CSRequest csReq;
 
@@ -45,7 +46,8 @@ void shell_run ( ) {
 
 	// Create the Serial I/O server
 	debug ("Creating the serial io server. \r\n");
-	iosTid = Create (2, &ios_run);
+	ios1Tid = Create (2, &ios1_run);
+//	ios2Tid = Create (2, &ios2_run);
 
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
@@ -53,8 +55,6 @@ void shell_run ( ) {
 	
 	output ("Type 'h' for a list of commands.\r\n");
 
-
-	int k =0, l = 0;
     input = history[h++];
 	int	time, tens, secs, mins;
  
@@ -69,23 +69,17 @@ void shell_run ( ) {
 
         input[i] = 0;						// Clear the next character
 
-
-		// Check for interrupt errors
-		k++; l++;
-		if( (k-l) ) { bwputstr(COM2, "\r\n GOTCHA YOU HORRIBLE CONTEXT SWITCH BUG \r\n"); }
-
 		time = Time(csTid)/2;
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
 
-	
 		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");
                 input[i+1] = 0;
                 
-				shell_exec( input, tcTid );	// This may call Exit();
+				shell_exec( input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
                 
 				// Clear the input for next line
                 //input = history[h++];
@@ -100,14 +94,14 @@ void shell_run ( ) {
             	    i --;
 				}
             } else {                        // Update the position in the command string
-                output ("%c", input[i]);
+				output ("%c", input[i]);
 				if( input[i] < 32 || input[i] > 126 ) {
 					output("%d", input[i]);
 				}
 				i ++;
             }
         }
-        if( i == INPUT_LEN ) {	i-- ; }
+        if( i == INPUT_LEN - 1 ) {	i-- ; }
     }
 }
 
@@ -120,7 +114,7 @@ int trainCmd ( TCRequest *tcReq, int tcTid ) {
 }
 
 // Execute the command passed in
-void shell_exec( char *command, TID tcTid ) {
+void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 	TCRequest tcReq;
 	char *commands[] = {
 		"h = Help!", 
