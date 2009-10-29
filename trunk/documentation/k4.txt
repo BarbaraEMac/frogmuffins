@@ -61,11 +61,27 @@ Question 2
 
 	Hardware Dependent Code
 	======================
+		
+		Hardware Interface
+		==================
+		Talking directly to harware is limited to trusted tasks - mostly the servers and drivers. 
+		Other tasks use the servers and do not access the harware directly. 
+		Thus within the servers we pass around structs that map directly to the memory-mapped
+		hardware. Pointers to these structs are defined as macro constans in <ts7200.h>
+		Thus not only we improve the readability of the code, we also improve the effecienty 
+		two different ways:
+		1) no unnecesary checks of what channel is which harware - the code is trusted and this
+		value is allways precomputed
+		2) as there is only one struct pointer to the hardware (instead of multiple int pointers)
+		the compiler (w/o optimization) produces shorter & faster code.
+
+
 
 		Context Switch
 		==============
-		Inside kernelExit(), the kernel state is saved first. Next, the active task's sp and spsr are
-	copied from its task descriptor. The spsr is then installed. The return value is put into r0.
+		Inside kernelExit(), the kernel state is saved first. Next, the active task's
+		sp and spsr are copied from its task descriptor. The spsr is then installed. 
+		The return value is put into r0.
 		We switch to system mode and restore the active task, carefully skipping r0.
 		We switch back to supervisor mode so that we can install the pc of the active task, 
 		while switching to the spsr.

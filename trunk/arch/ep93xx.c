@@ -48,39 +48,15 @@ void intr_allOff() {
  * 	fifos enabled
  */
 
-int uart_setfifo( int channel, int state ) {
-	UART *uart;
+int uart_setfifo( UART *uart, int state ) {
 	int buf;
-	switch( channel ) {
-		case COM1:
-			uart = (UART*) UART1_BASE;
-			break;
-		case COM2:
-			uart = (UART*) UART2_BASE;
-			break;
-		default:
-			return -1;
-			break;
-	}
 	buf = uart->lcrh;
 	buf = state ? buf | FEN_MASK : buf & ~FEN_MASK;
 	uart->lcrh = buf;
 	return 0;
 }
 
-int uart_setspeed( int channel, int speed ) {
-	UART *uart;
-	switch( channel ) {
-		case COM1:
-			uart = (UART*) UART1_BASE;
-			break;
-		case COM2:
-			uart = (UART*) UART2_BASE;
-			break;
-		default:
-			return -1;
-			break;
-	}
+int uart_setspeed( UART *uart, int speed ) {
 	switch( speed ) {
 	case 115200:
 		uart->lcrm = 0x0;
@@ -95,12 +71,12 @@ int uart_setspeed( int channel, int speed ) {
 	}
 }
 
-inline void uart_write( int uartBase, char ch ) {
-	UART *uart = (UART *) uartBase;
+inline void uart_write( UART *uart, char ch ) {
 	uart->data = ch;
 }
 
 void cache_on() {
+	// TODO
 	// MRC p15, 0, Rd, c0, c0, 1 ; returns Cache Type register
 	asm("mrc	p15, 0, r0, c0, c0, 1");
 	// Enable instruction cache
@@ -109,12 +85,11 @@ void cache_on() {
 
 
 void cache_off() {
-
+	// TODO
 }
 
 
-int *clock_init( int clockBase, int enable, int interrupt, int val ) {
-	Clock * clock = (Clock *) clockBase;
+int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) {
     // set the loader value, first disabling the timer
     clock->ctl = 0;
     clock->ldr = val;
@@ -125,12 +100,12 @@ int *clock_init( int clockBase, int enable, int interrupt, int val ) {
     return &(clock->val);
 }
 
-void clock_stop( int clockBase ) {
-    clock_init( clockBase, 0, 0, 0 );
+void clock_stop( Clock *clock ) {
+    clock_init( clock, 0, 0, 0 );
 }
 
 void clock_bwwait( int ms ) {
-    int * time = clock_init( TIMER1_BASE, 1, 0, ms*2 );// turn on the clock
-    while( *time > 0 ) {}					// wait for the clock to finish 
-    clock_stop( TIMER1_BASE );				// turn off the clock
+    int volatile* time = clock_init( TIMER1, 1, 0, ms*2 );// turn on the clock
+    while( *time > 0 ) {}				// wait for the clock to finish 
+    clock_stop( TIMER1 );				// turn off the clock
 }

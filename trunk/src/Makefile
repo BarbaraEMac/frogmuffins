@@ -17,7 +17,7 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 ARFLAGS = rcs
 
-all:  bwio.a clock.a debug.a string.a math.a
+all:  bwio.a debug.a string.a math.a
 
 %.s: %.c 
 	$(XCC) -S $(CFLAGS) -o $@ $<
@@ -35,9 +35,3 @@ all:  bwio.a clock.a debug.a string.a math.a
 clean:
 	-rm -f *.s *.a *.o
 
-copy:
-	cp bwio.a ../lib/libbwio.a
-	cp clock.a ../lib/libclock.a
-	cp debug.a ../lib/libdebug.a
-	cp string.a ../lib/libstring.a
-	cp math.a ../lib/libmath.a

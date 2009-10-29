@@ -108,6 +108,8 @@ typedef volatile struct _uart {
 	int flag;
 	int intr;
 } UART;
+#define UART1			(UART *) UART1_BASE
+#define UART2			(UART *) UART2_BASE
 
 typedef volatile struct _clock {
 	int ldr;
@@ -115,6 +117,9 @@ typedef volatile struct _clock {
 	int ctl;
 	int clr;
 } Clock;
+#define TIMER1			(Clock *) TIMER1_BASE
+#define TIMER2			(Clock *) TIMER2_BASE
+#define TIMER3			(Clock *) TIMER3_BASE
 
 typedef enum _interrupt {
 	// -		 =  0,	// Unused
@@ -191,15 +196,16 @@ void intr_on( Interrupt eventId ) ;
 void intr_off( Interrupt eventId ) ;
 void intr_allOff() ;
 
-int uart_setfifo( int channel, int state ) ;
-int uart_setspeed( int channel, int speed ) ;
-int uart_write( int uartBase, char ch ) ;
+
+int uart_setfifo( UART *uart, int state ) ;
+int uart_setspeed( UART *uart, int speed ) ;
+inline void uart_write( UART *uart, char ch ) ;
 
 void cache_on() ;
 void cache_off() ;
 
-int *clock_init( int clockBase, int enable, int interrupt, int val ) ;
-void clock_stop( int clockBase ) ;
+int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) ;
+void clock_stop( Clock *clock ) ;
 void clock_bwwait( int ms ) ;
 
 
