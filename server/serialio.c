@@ -14,16 +14,42 @@
 #include "requests.h"
 #include "servers.h"
 
+//-----------------------------------------------------------------------------
+// Private members & Forward Declarations
+
+typedef struct {
+	char sendBuffer[NUM_ENTRIES][ENTRY_LEN];
+	char recvBuffer[NUM_ENTRIES];
+	
+	int sendPtr;
+
+	int sEmpPtr;
+	int sFulPtr;
+	int rEmpPtr;
+	int rFulPtr;
+} SerialIOServer;
+
+/**
+ * Initialize the Serial IO Server structure.
+ */
+void ios_init (SerialIOServer *server);
+
+void ionotifier_run();
+
+void ionotifier_init();
+
+//-----------------------------------------------------------------------------
+
 void ios_run () {
 	debug ("ios_run: The Serial IO Server is about to start. \r\n");	
 	
 	int			 senderTid;		// The task id of the message sender
 	IORequest	 req;			// A serial io server request message
 	int			 len;
-	SerialIOServer	server;
+	SerialIOServer ios;
 
 	// Initialize the Serial IO Server
-	ios_init (&server);
+	ios_init (&ios);
 
 	FOREVER {
 		// Receive a server request
@@ -43,13 +69,13 @@ void ios_run () {
 				// If notifier's send buffer needs more, give it entries
 
 			case GETC:
-				if ( recvBuffer[rFulPtr] != 0 ) {
-					Reply ( &senderTid, (char *)&recvBuffer[rFulPtr], sizeof(char));
+				if ( ios.recvBuffer[ios.rFulPtr] != 0 ) {
+					Reply ( &senderTid, (char *)&ios.recvBuffer[ios.rFulPtr], sizeof(char));
 					// Advance the pointer
-					rFulPtr += 1;
-					rFulPtr %= NUM_ENTRIES;
+					ios.rFulPtr += 1;
+					ios.rFulPtr %= NUM_ENTRIES;
 
-					assert ( rFulPtr <= rEmpPtr );
+					assert ( ios.rFulPtr <= ios.rEmpPtr );
 				}
 
 				break;
@@ -65,13 +91,13 @@ void ios_run () {
 				
 				// Copy the data to our send buffer
 				// TODO: Change this to the notifier's buffer?
-				strncpy ( sendBuffer[sEmpPtr], req.data, req.len );
+				strncpy ( ios.sendBuffer[ios.sEmpPtr], req.data, req.len );
 	
 				// Advance the buffer pointer
-				sEmpPtr += 1;
-				sEmpPtr %= NUM_ENTRIES;
+				ios.sEmpPtr += 1;
+				ios.sEmpPtr %= NUM_ENTRIES;
 				
-				assert ( sFulPtr <= sEmpPtr );
+				assert ( ios.sFulPtr <= ios.sEmpPtr );
 
 				break;
 
@@ -90,14 +116,14 @@ void ios_init (SerialIOServer *s) {
 	int i, j;
 
 	
-	Create ( 1, &notifier_run );
+	Create ( 1, &ionotifier_run );
 		
 
 
 	for (i = 0; i < NUM_ENTRIES; i++) {
+		s->recvBuffer[i] = '\0';
 		for (j = 0; j < ENTRY_LEN; j++) {
-			s->sendBuffer[i][j] = 0;
-			s->recvBuffer[i][j] = 0;
+			s->sendBuffer[i][j] = '\0';
 		}
 	}
 	
@@ -105,23 +131,23 @@ void ios_init (SerialIOServer *s) {
 	RegisterAs (SERIAL_IO_NAME);
 }
 
-void notifier_run() {
+void ionotifier_run() {
 	debug ("notifier_run\r\n");
 
 	int 	  err;
 	int 	  serverId = MyParentTid();
 	int 	  reply;
 	char 	  awaitBuffer[10];
-	IOSRequest req;
+	IORequest req;
 
 	char 		chToSend = 0;
 
-	req.type = NOTIFY;
-	req.data = 0;
-	req.len  = 0;
+	req.type    = NOTIFY;
+	req.data[0] = 0;
+	req.len     = 0;
 
 	// Initialize this notifier
-	notifier_init ();
+	ionotifier_init ();
 	
 	FOREVER {
 	//	bwprintf (COM2, "Notifier is awaiting an event\r\n");
@@ -135,7 +161,7 @@ void notifier_run() {
 		// Check the return buffer?
 
 
-		if ( (err = Send( serverId, (char*) &req, sizeof(IOSRequest),
+		if ( (err = Send( serverId, (char*) &req, sizeof(IORequest),
 					     (char *) &reply, sizeof(int) )) < NO_ERROR ) {
 			// Handle errors
 			
@@ -152,12 +178,14 @@ void notifier_run() {
 
 
 		// The device driver will clear the interrupt
+		//
+*/
 	}
 
 	Exit(); // This will never be called.
 }
 
-void notifier_init () {
+void ionotifier_init () {
 	debug ("notifier_init\r\n");
 	
 	// Install the driver

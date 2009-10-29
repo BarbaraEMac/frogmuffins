@@ -17,6 +17,41 @@
 
 #define NUM_SLEEPERS	1024
 
+//-----------------------------------------------------------------------------
+/**
+ * Any task that is sleeping on the clockserver will use this structure.
+ */
+typedef struct sleeper Sleeper;
+struct sleeper {
+	TID tid;		// The id of the sleeping task
+	int endTime;	// The wake up time
+
+	Sleeper *next;	// Pointer to next sleeper in the queue
+	Sleeper *prev;	// Pointer to the previous sleeper in the queue
+};
+
+/**
+ * Initialize the clock server.
+ */
+int cs_init (Sleeper **sleepersQ);
+
+// List operators
+void list_insert ( Sleeper **head, Sleeper *toAdd );
+
+void list_remove ( Sleeper **head, Sleeper *toAdd );
+
+// Notifier
+/**
+ * All of the Clock Server's notifier's work is done in here.
+ */
+void notifier_run();
+
+/**
+ * Initialize the Clock Server's Notifier.
+ */
+void notifier_init();
+//-----------------------------------------------------------------------------
+
 void cs_run () {
 	debug ("cs_run: The Clock Server is about to start. \r\n");	
 	
