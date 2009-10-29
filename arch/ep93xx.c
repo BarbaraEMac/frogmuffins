@@ -5,7 +5,7 @@
  */
 
 #include <ts7200.h>
-
+#include <math.h>
 
 inline int readMemory(int addr) {
 	int volatile *mem = (int *) (addr);
@@ -33,6 +33,15 @@ void intr_set( Interrupt eventId, int state) {
 		vic->intEnable |= mask;
 	} else {
 		vic->intEnClear |= mask;
+	}
+}
+
+Interrupt intr_get() {
+	VIC *vic1 = VIC1, *vic2 = VIC2;
+	if( vic1->IRQStatus ) {
+		return ctz( vic1->IRQStatus );
+	} else {
+		return ctz( vic2->IRQStatus ) + 32;
 	}
 }
 
