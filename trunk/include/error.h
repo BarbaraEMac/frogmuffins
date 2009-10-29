@@ -37,7 +37,8 @@ enum ERROR {
 	// -9980
 	INVALID_SWITCH,			// Invalid switch number
 	CONNECTION_TIMEOUT,		// Connection to the train controller failed
-	CANNOT_INIT_SWITCHES	// Switch initialization failed
+	CANNOT_INIT_SWITCHES,	// Switch initialization failed
+	SERIAL_OVERRUN			// Serial IO data was overrun
 } error;
 
 #endif

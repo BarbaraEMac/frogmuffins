@@ -71,10 +71,6 @@ int uart_setspeed( UART *uart, int speed ) {
 	}
 }
 
-inline void uart_write( UART *uart, char ch ) {
-	uart->data = ch;
-}
-
 void cache_on() {
 	// TODO
 	// MRC p15, 0, Rd, c0, c0, 1 ; returns Cache Type register
