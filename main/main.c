@@ -56,6 +56,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	assert ( req != 0 );
 	assert ( mgr != 0 );
 	
+	int ret = NO_ERROR;
 	TD *child;
 	debug( "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n", td->id, td, req->type, 
 		req->a->arg[0], req->a->arg[1], req->a->arg[2], 
@@ -67,39 +68,39 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			child = td_create(req->a->create.priority, req->a->create.code, td->id, mgr);
 			
 			// Save an error code if there was one
-			td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
+			ret = td->returnValue = ( (int) child < NO_ERROR ) ? (int) child : child->id;
 			break;
 		
 		case MYTID:
-			td->returnValue = td->id;
+			ret = td->returnValue = td->id;
 			break;
 		
 		case MYPARENTTID:
-			td->returnValue = td->parentId;
+			ret = td->returnValue = td->parentId;
 			break;
 
 		case SEND:
-			td->returnValue = send (td, mgr, req->a->send.tid);
+			ret = td->returnValue = send (td, mgr, req->a->send.tid);
 			break;
 		
 		case RECEIVE:
-			td->returnValue = receive (td, req->a->receive.tid);
+			ret = td->returnValue = receive (td, req->a->receive.tid);
 			break;
 
 		case REPLY:
-			td->returnValue = reply (td, mgr, req->a->reply.tid);
+			ret = td->returnValue = reply (td, mgr, req->a->reply.tid);
 			break;
 		case AWAITEVENT:
-			td->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
+			ret = td->returnValue = awaitEvent (td, mgr, req->a->awaitEvent.eventId );
 			break;
 
 		case INSTALLDRIVER:
-			td->returnValue = mgr_installDriver(mgr, 
+			ret = td->returnValue = mgr_installDriver(mgr, 
 				req->a->installDriver.eventId, req->a->installDriver.driver);
 			break;
 
 		case DESTROY:
-			td->returnValue = destroy (mgr, td->a->destroy.tid);
+			ret = td->returnValue = destroy (mgr, td->a->destroy.tid);
 			break;
 
 		case EXIT:
@@ -117,7 +118,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			// For now, do nothing
 			break;
 	}
-	if ( td->returnValue < NO_ERROR ) {
+	if ( ret < NO_ERROR ) {
 		error( td->returnValue, "Kernel request failed.");
 		bwprintf( COM2, "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n", td->id, td, 
 			req->type, req->a->arg[0], req->a->arg[1], 
@@ -170,7 +171,6 @@ int main( int argc, char* argv[] ) {
 	// Turn on the cache
 	cache_on();
 	bwprintf( COM2, "Initialized instruction cache.\r\n");
-
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
