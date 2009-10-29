@@ -14,23 +14,23 @@
 #include "requests.h"
 #include "servers.h"
 
-#define DUMMY_TID		-1
-#define AWAITBUF_LEN	 1
+#define DUMMY_TID		0xFF
+#define AWAITBUF_LEN	1
 
 
 //-----------------------------------------------------------------------------
 // Private members & Forward Declarations
 
 typedef struct {
-	char sendBuffer[NUM_ENTRIES][ENTRY_LEN];
+	char sendBuffer[NUM_ENTRIES];
 	char recvBuffer[NUM_ENTRIES];
+	char waiting   [NUM_ENTRIES];	// Array of waiting tids (for a char)
 
 	int sEmpPtr;
 	int sFulPtr;
 	int rEmpPtr;
 	int rFulPtr;
 	
-	int waiting[NUM_ENTRIES];		// Array of waiting tids (for a char)
 	int wEmpPtr;					// Points to next EMPTY slot
 	int wFulPtr;					// Points to the first FULL slot
 } SerialIOServer;
@@ -38,7 +38,11 @@ typedef struct {
 /**
  * Initialize the Serial IO Server structure.
  */
-void ios_init (SerialIOServer *server);
+void ios_init (SerialIOServer *server, UART *uart);
+
+void ios_run (UART *uart);
+
+void ios_attemptTransmit (SerialIOServer *ios, UART *uart);
 
 void ionotifier_run();
 
@@ -54,16 +58,40 @@ inline void uart_write( UART *uart, char ch ) {
 
 // Wrapper for UART1 / COM1 / Train Controller!
 void ios1_run () {
+	debug ("ios1: Running 1\r\n");
+	
+	int err;
+	if ( (err = InstallDriver( INT_UART1, &comOneDriver )) < NO_ERROR ) {
+		error(err, "UART1 not installed.");
+	}
+	debug ("ios1: installed the first driver.\r\n");
+	
 	ios_run(UART1);
 }
 
 // Warpper for UART2 / COM2 / Monitor & Keyboard
 void ios2_run () {
+	debug ("ios2: Running 2\r\n");
+	
+	int err;
+	if ( InstallDriver( INT_UART2, &comTwoDriver ) < NO_ERROR ) {
+		error(err, "UART2 not installed.");
+	}
+	debug ("ios2: installed the second driver.\r\n");
+	
 	ios_run(UART2);
 }
 
+//TODO: Delete Me if this code works without me!
 // Advance the buffer pointer
 void advance (int *ptr) {
+	*ptr += 1;
+	*ptr %= NUM_ENTRIES;
+}
+
+// Store the given value in the buffer and increment the pointer
+void storeAndAdvancePtr (char *buf, int *ptr, char ch) {
+	buf[*ptr] = ch;
 	*ptr += 1;
 	*ptr %= NUM_ENTRIES;
 }
@@ -74,10 +102,11 @@ void ios_run (UART *uart) {
 	int			 senderTid;		// The task id of the message sender
 	IORequest	 req;			// A serial io server request message
 	int			 len;
+	int			 i;
 	SerialIOServer ios;
 
 	// Initialize the Serial IO Server
-	ios_init (&ios);
+	ios_init (&ios, uart);
 
 	FOREVER {
 		// Receive a server request
@@ -87,11 +116,13 @@ void ios_run (UART *uart) {
 				senderTid, req.type, len);
 	
 		assert( len == sizeof(IORequest) );
-		assert( senderTid > 0 );
+		assert( senderTid >= 0 );
 		
 		// Handle the request
 		switch (req.type) {
 			case NOTIFY_CH:
+				debug ("ios: notified CH emp=%d ful=%d\r\n", ios.sEmpPtr, ios.sFulPtr);
+				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
@@ -99,78 +130,78 @@ void ios_run (UART *uart) {
 				if ( ios.wEmpPtr != ios.wFulPtr ) {
 					assert (ios.waiting[ios.wFulPtr] != DUMMY_TID);
 
-					Reply (ios.waiting[ios.wFulPtr], (char *)&req.data, sizeof(char));
+					Reply ((int)ios.waiting[ios.wFulPtr], (char *)&req.data, 
+							sizeof(char));
 					
-					// Reset the array
-					ios.waiting[ios.wFulPtr] = DUMMY_TID;
-					advance (&ios.wFulPtr);
+					storeAndAdvancePtr(ios.waiting, &ios.wFulPtr, DUMMY_TID);
 					assert (ios.wFulPtr <= ios.wEmpPtr);
 				}
 				
 				// If we have a character and no one is waiting, store ch
 				else {
-					assert ( ios.recvBuffer[ios.rEmpPtr] == 0 );
+					assert (ios.recvBuffer[ios.rEmpPtr] == 0);
 					
-					ios.recvBuffer[ios.rEmpPtr] = req.data[0];
-					
-					// Advance the pointer
-					advance(&ios.rEmpPtr);
+					storeAndAdvancePtr(ios.recvBuffer, &ios.rEmpPtr, req.data[0]);
 					assert (ios.rFulPtr <= ios.rEmpPtr);
 				}
 			
 				break;
 
 			case NOTIFY_CTS:
+				debug ("ios: notified cts emp=%d ful=%d\r\n", ios.sEmpPtr, ios.sFulPtr);
+				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
-				// If CTS, then put a byte
-				uart_write (uart, ios.sendBuffer[ios.sFulPtr]);
-				ios.sendBuffer[ios.sFulPtr][0] = 0;
-
-				// Advance the pointer
-				advance(&ios.sFulPtr);
-				assert (ios.sFulPtr <= ios.sEmpPtr);
+				// Try to send the data across the UART!
+				if ( ios.sFulPtr != ios.sEmpPtr ) {
+					ios_attemptTransmit(&ios, uart);
+				}
 				break;
 			
 			case GETC:
-				// If we have a character, send it!
+				// If we have a character, send it back!
 				if (ios.recvBuffer[ios.rFulPtr] != 0) {
-					assert (ios.wFulPtr == ios.wEmpPtr);
+					assert (ios.wFulPtr == ios.wEmpPtr);	// Make sure no one else was waiting first ...
+					assert (ios.wFulPtr == DUMMY_TID);
 
 					Reply (senderTid, (char *)&ios.recvBuffer[ios.rFulPtr], 
 						   sizeof(char));
 					
-					// Advance the pointer
-					advance(&ios.rFulPtr);
+					// Empty the slot and advance the pointer
+					storeAndAdvancePtr(ios.recvBuffer, &ios.rFulPtr, 0);
 					assert (ios.rFulPtr <= ios.rEmpPtr);
 				}
 				// Otherwise, store the tid until we get a character
 				else {
 					assert (ios.waiting[ios.wEmpPtr] == DUMMY_TID);
 
-					ios.waiting[ios.wEmpPtr] = senderTid;
-
-					advance(&ios.wEmpPtr);
+					storeAndAdvancePtr(ios.waiting, &ios.wEmpPtr, (char)senderTid);
 					assert (ios.wFulPtr <= ios.wEmpPtr); 
 				}
 
 				break;
 			
 			case PUTC:
+				debug ("ios: putc ch=%c len=%d\r\n", req.data[0], req.len);
 			case PUTSTR:
+				debug ("ios: putstr str=%s len=%d\r\n", req.data, req.len);
 				// Do not let the sender stay blocked for long.
-				Reply (&senderTid, (char*)&req.data, sizeof(char));
-				
-				assert ( ios.sendBuffer[ios.sEmpPtr] == 0 );
+				Reply (senderTid, (char*)&req.data, sizeof(char));
 
 				// Copy the data to our send buffer
-				strncpy ( ios.sendBuffer[ios.sEmpPtr], req.data, req.len );
-	
-				// Advance the buffer pointerp
-				advance(&ios.sEmpPtr);
-				assert ( ios.sFulPtr <= ios.sEmpPtr );
-				
+				for ( i = 0; i < req.len; i ++ ) {
+					assert (ios.sendBuffer[ios.sEmpPtr] == 0);
+					
+					storeAndAdvancePtr (ios.sendBuffer, &ios.sEmpPtr,
+										req.data[i]);
+					
+					assert (ios.sFulPtr <= ios.sEmpPtr);
+				}
+
+				// Try to send some data across the UART
+				ios_attemptTransmit (&ios, uart);
+
 				break;
 			
 			default:
@@ -183,27 +214,64 @@ void ios_run (UART *uart) {
 	Exit(); // This will never be called.
 }
 
-void ios_init (SerialIOServer *s) {
-	int err;
-	int i, j;
+void ios_init (SerialIOServer *s, UART *uart) {
+	int i, err;
+	char c;
 	
-	Create ( 1, &ionotifier_run );
+	// Create the notifier
+	if ( (err = Create (1, &ionotifier_run)) < NO_ERROR) {
+		error (err, "Cannot make IO notifier.\r\n");
+	}
 
+	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
+		s->sendBuffer[i] = 0;
 		s->recvBuffer[i] = 0;
 		s->waiting[i]    = DUMMY_TID;
-		for (j = 0; j < ENTRY_LEN; j++) {
-			s->sendBuffer[i][j] = 0;
+	}
+	// Init array pointers
+	s->sEmpPtr = 0;
+	s->sFulPtr = 0;
+	s->rEmpPtr = 0;
+	s->rFulPtr = 0;
+	s->wEmpPtr = 0;					
+	s->wFulPtr = 0;				
+	
+	// Clear out the uart buffer
+	while ( uart->flag & RXFF_MASK ) {
+		c = (uart->data);
+	}
+
+	// TODO: Register with the Name Server
+}
+
+void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
+	debug("ios: attempting to transmit ful=%d emp=%d ch=%c\r\n", 
+		   ios->sFulPtr, ios->sEmpPtr, ios->sendBuffer[ios->sFulPtr]);
+	
+	// If the transmitter is busy, wait for interrupt
+	if ( uart->flag & TXBUSY_MASK ) {
+		debug ("transmit line is busy\r\n");
+		uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
+	
+	// Otherwise, write a single byte
+	} else {	
+		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulPtr]);
+
+		uart_write ( uart, ios->sendBuffer[ios->sFulPtr] );
+	
+		// Clear buf & advance pointer
+		storeAndAdvancePtr (ios->sendBuffer, &ios->sFulPtr, 0);
+		assert (ios->sFulPtr <= ios->sEmpPtr);
+
+		// If we want to send more, enable the interrupt
+		if ( ios->sFulPtr != ios->sEmpPtr ) {
+			uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
 		}
 	}
-	
-	// Register with the Name Server
-	RegisterAs (SERIAL_IO_NAME);
 }
 
 void ionotifier_run() {
-	debug ("notifier_run\r\n");
-
 	int 	  err;
 	int 	  serverId = MyParentTid();
 	int 	  reply;
@@ -217,8 +285,9 @@ void ionotifier_run() {
 	FOREVER {
 		if((err = AwaitEvent(INT_UART1, &awaitBuffer, sizeof(char))) < NO_ERROR){
 			// TODO: Handle overrun error
-		
-		
+			if ( err == SERIAL_OVERRUN ) {
+
+			}
 		}
 
 		// If we do not have a character, we must be clear to send
@@ -253,12 +322,7 @@ void ionotifier_run() {
 }
 
 void ionotifier_init () {
-	debug ("notifier_init\r\n");
+	debug ("ionotifier_init\r\n");
 	
-	// Install the driver
-	if ( InstallDriver( INT_UART1, &comOneDriver ) < NO_ERROR ) {
-		assert (1==0);
-	}
-
 	// TODO: Register
 }	

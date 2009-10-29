@@ -4,7 +4,8 @@
  * dgoc
  */
 
-//#define DEBUG
+#define DEBUG 2
+#include <bwio.h>
 #include <ts7200.h>
 
 #include "debug.h"
@@ -37,47 +38,54 @@ int timer2Driver (char *retBuf, int buflen) {
 }
 
 inline int comHandler ( UART *uart, char *data, int len ) {
-	// TODO: Return overrun errors - we already lost the data!
-	
-	// A change in the CTS triggers an Modem status interrupt
+	// Return overrun error if we have already lost data!
+	if ( uart->rsr & OE_MASK ) {
+		debug("1\r\n");
+		uart->rsr = 0;			// write to clear memory?
+		return SERIAL_OVERRUN;
+	}
 
+	// A change in the CTS triggers a Modem status interrupt
 	if ( uart->intr & MIS_MASK ) {
+		debug("2\r\n");
+		// Reset this interrupt
+		uart->intr = 0;
 
 		if ( uart->flag & CTS_MASK ) {
-			//TODO: Reset this interrupt
+			debug("3\r\n");
 			*data = 0;
 			return NO_ERROR;
 		} 
-		//else if ( uart->flag & ) {
-
-
-//		}
 	
 	} else if ( uart->intr & RIS_MASK ){
+		debug("4\r\n");
 		// reading should reset the interrupt
 		// return character if you were told one came in
 		//return uart->data;
-		//
+
 		data[0] = uart->data;
 		return NO_ERROR;
 	
 	} else if ( uart->intr & TIS_MASK ){
+		debug("5\r\n");
 		// Implies FIFO is empty
 		
 		// Turn off this interrupt
 		uart->ctlr &= ~(TIEN_MASK);
 
+		*data = 0;
 		return NO_ERROR;
 	}
+	debug("THIS IS BAD. THIS SHOULD NEVER PRINT\r\n");
 	// Never gets here ...
 }
 
 int comOneDriver (char *data, int len) {
-	UART *uart = (UART*) (UART1_BASE);
-	return comHandler( uart, data, len );
+	debug ("com1driver: data=%s @(%x) len=%d\r\n", data, data, len);
+	return comHandler( UART1, data, len );
 }
 
 int comTwoDriver (char *data, int len) {
-	UART *uart = (UART*) (UART2_BASE);
-	return comHandler( uart, data, len );
+	debug ("com2driver: data=%s @(%x) len=%d\r\n", data, data, len);
+	return comHandler( UART2, data, len );
 }
