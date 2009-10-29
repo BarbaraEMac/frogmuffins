@@ -39,12 +39,14 @@ int timer2Driver (char *retBuf, int buflen) {
 inline int comHandler ( UART *uart, char *data, int len ) {
 	// TODO: Return overrun errors - we already lost the data!
 	
+	// A change in the CTS triggers an Modem status interrupt
 
 	if ( uart->intr & MIS_MASK ) {
 
 		if ( uart->flag & CTS_MASK ) {
-
-
+			//TODO: Reset this interrupt
+			*data = 0;
+			return NO_ERROR;
 		} 
 		//else if ( uart->flag & ) {
 
@@ -52,17 +54,19 @@ inline int comHandler ( UART *uart, char *data, int len ) {
 //		}
 	
 	} else if ( uart->intr & RIS_MASK ){
+		// reading should reset the interrupt
 		// return character if you were told one came in
-		return uart->data;
+		//return uart->data;
+		//
+		data[0] = uart->data;
+		return NO_ERROR;
 	
 	} else if ( uart->intr & TIS_MASK ){
-	
-		int i;
-		for ( i = 0; i < len; i ++ ) {
-			// TODO: Wait 52 instructions
-			
-			uart->data = data[i];
-		}
+		// Implies FIFO is empty
+		
+		// Turn off this interrupt
+		uart->ctlr &= ~(TIEN_MASK);
+
 		return NO_ERROR;
 	}
 	// Never gets here ...

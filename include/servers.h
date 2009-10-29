@@ -27,7 +27,9 @@ enum SvrRequest {
 	GETC,
 	PUTC,
 	GETSTR,
-	PUTSTR
+	PUTSTR,
+	NOTIFY_CH,
+	NOTIFY_CTS
 };
 
 // Any request made to the NameServer needs to be of this form.
