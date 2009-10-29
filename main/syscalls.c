@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 #include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
@@ -241,7 +241,8 @@ void handleInterrupt( TDM *mgr, int intStatus ) {
 	// Get an index of the actual interrupt
 	int eventId = ctz( intStatus );
 	debug( "handleInterrupt: #%d status=%x\r\n", eventId, intStatus );
-	assert( eventId < 32 );
+	assert( eventId >= 0 );
+	assert( eventId < NUM_INTERRUPTS );
 
 	// Get the driver for the interrupt that happened
 	Driver driver = mgr->intDriver[eventId];
