@@ -167,6 +167,11 @@ int main( int argc, char* argv[] ) {
 	intr_allOff();
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
+	// Turn on the cache
+	cache_on();
+	bwprintf( COM2, "Initialized instruction cache.\r\n");
+
+
 	// Initialize the priority queues
 	mgr_init ( &mgr );
 
@@ -194,6 +199,10 @@ int main( int argc, char* argv[] ) {
 	// Turn off interrupts 
 	bwputstr( COM2, "Turning off interrupts.\r\n");
 	intr_allOff();
+	
+	// Turn on the cache
+	bwprintf( COM2, "Disabling instruction cache.\r\n");
+	cache_off();
 	
 	bwputstr( COM2, "Exiting normally.\r\n" );
 	

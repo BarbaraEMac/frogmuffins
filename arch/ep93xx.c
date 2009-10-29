@@ -72,27 +72,37 @@ int uart_setspeed( UART *uart, int speed ) {
 }
 
 void cache_on() {
-	// TODO
-	// MRC p15, 0, Rd, c0, c0, 1 ; returns Cache Type register
-	asm("mrc	p15, 0, r0, c0, c0, 1");
+	// Read the current state of the cache
+	asm("mrc p15, 0, r0, c1, c0, 0");
 	// Enable instruction cache
+	asm("orr r0, r0, #(0x1 <<12)");
 	// Enable data cache
+	//asm("orr r0, r0, #(0x1 <<2)");
+	// Save the changes back to the cache control register
+	asm("mcr p15, 0, r0, c1, c0, 0");
 }
 
 
 void cache_off() {
-	// TODO
+	// Read the current state of the cache
+	asm("mrc p15, 0, r0, c1, c0, 0");
+	// Disable instruction cache
+	asm("bic r0, r0, #(0x1 <<12)");
+	// Disable data cache
+	//asm("bic r0, r0, #(0x1 <<2)");
+	// Save the changes back to the cache control register
+	asm("mcr p15, 0, r0, c1, c0, 0");
 }
 
 
 int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) {
-    // set the loader value, first disabling the timer
+    // Set the loader value, first disabling the timer
     clock->ctl = 0;
     clock->ldr = val;
-    // set the enable bit
+    // Set the enable bit and interrupt
     if( enable ) { clock->ctl = ENABLE_MASK; }
 	if( interrupt ) { clock->ctl |= MODE_MASK; }
-    // return a pointer to the clock
+    // Return a pointer to the time
     return &(clock->val);
 }
 
@@ -101,7 +111,10 @@ void clock_stop( Clock *clock ) {
 }
 
 void clock_bwwait( int ms ) {
-    int volatile* time = clock_init( TIMER1, 1, 0, ms*2 );// turn on the clock
-    while( *time > 0 ) {}				// wait for the clock to finish 
-    clock_stop( TIMER1 );				// turn off the clock
+	// Start the timer
+    int volatile* time = clock_init( TIMER1, 1, 0, ms*2 );
+	// Wait the required time
+    while( *time > 0 ) {}
+	// Stop the timer
+    clock_stop( TIMER1 );
 }
