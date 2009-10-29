@@ -6,7 +6,7 @@
  */
 
 #include <bwio.h>
-#include <clock.h>
+//#include <clock.h>
 #include <ts7200.h>
 
 #include "string.h"
