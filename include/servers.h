@@ -29,7 +29,7 @@ enum SvrRequest {
 	GETSTR,
 	PUTSTR,
 	NOTIFY_CH,
-	NOTIFY_CTS
+	NOTIFY_CTS //12
 };
 
 // Any request made to the NameServer needs to be of this form.
