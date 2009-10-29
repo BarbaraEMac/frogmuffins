@@ -48,5 +48,5 @@ upload:
 	cp main/main.elf /u/cs452/tftpboot/ARM/dgoc/main.elf
 	chmod a+rx -R /u/cs452/tftpboot/ARM/dgoc
 
-copy2:
-	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_a2.elf
+copy:
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo.elf
