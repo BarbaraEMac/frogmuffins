@@ -236,11 +236,11 @@ int awaitEvent (TD *td, TDM *mgr, int eventId ) {
 	return NO_ERROR;
 }
 
-void handleInterrupt( TDM *mgr, int intStatus ) {
+void handleInterrupt( TDM *mgr ) {
 	
 	// Get an index of the actual interrupt
-	int eventId = ctz( intStatus );
-	debug( "handleInterrupt: #%d status=%x\r\n", eventId, intStatus );
+	int eventId = intr_get(); 
+	debug( "handleInterrupt: #%d status=%x\r\n", eventId );
 	assert( eventId >= 0 );
 	assert( eventId < NUM_INTERRUPTS );
 

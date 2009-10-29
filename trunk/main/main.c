@@ -109,7 +109,7 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 
 		case HARDWAREINT:
 			debug("HANDLING INTERRUPT type=%d\r\n", req->type);
-			handleInterrupt( mgr, readMemory( VIC1_BASE ) );
+			handleInterrupt( mgr );
 			// fall through
 		case PASS:
 			// fall through

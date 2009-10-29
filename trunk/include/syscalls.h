@@ -26,7 +26,7 @@ int passMessage (TD *sender, TD *receiver, MsgType reply);
 
 int awaitEvent (TD *td, TDM *mgr, int eventId);
 
-void handleInterrupt( TDM *mgr, int intStatus );
+void handleInterrupt( TDM *mgr );
 
 int destroy( TDM *mgr, TID tid );
 

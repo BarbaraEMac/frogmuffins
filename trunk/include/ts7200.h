@@ -228,6 +228,7 @@ inline int readMemory( int addr ) ;
 inline void writeMemory( int addr, int value ) ;
 
 void intr_set( Interrupt eventId, int state ) ;
+Interrupt intr_get() ;
 void intr_allOff() ;
 
 
