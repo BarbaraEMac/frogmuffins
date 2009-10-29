@@ -17,27 +17,29 @@ inline void writeMemory(int addr, int value) {
 	*mem = value;
 }
 
-void intr_on( Interrupt eventId ) {
-	// Turn off interrupt in the proper VIC
+void intr_set( Interrupt eventId, int state) {
+	VIC * vic;
+	int mask;
+	// Figure out which VIC we're using and set the mask appropriately
 	if( eventId < 32 ) {
-		writeMemory( VIC1_BASE + VIC_INT_ENABLE, (1 << eventId ) );
+		vic = VIC1;
+		mask = 1 << eventId;
 	} else {
-		writeMemory( VIC2_BASE + VIC_INT_ENABLE, (1 << (eventId - 32)) );
+		vic = VIC2;
+		mask = 1 << (eventId - 32);
 	}
-}
-
-void intr_off( Interrupt eventId ) {
-	// Turn off interrupt in the proper VIC
-	if( eventId < 32 ) {
-		writeMemory( VIC1_BASE + VIC_INT_EN_CLR, (1 << eventId ) );
+	// turn the interrupt on or off depending on the case
+	if( state ) {
+		vic->intEnable |= mask;
 	} else {
-		writeMemory( VIC2_BASE + VIC_INT_EN_CLR, (1 << (eventId - 32)) );
+		vic->intEnClear |= mask;
 	}
 }
 
 void intr_allOff() {
-	writeMemory( VIC1_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
-	writeMemory( VIC2_BASE + VIC_INT_EN_CLR, 0xFFFFFFFF );
+	VIC *vic1 = VIC1, *vic2 = VIC2;
+	vic1->intEnClear = 0xFFFFFFFF;
+	vic2->intEnClear = 0xFFFFFFFF;
 }
 
 /*
