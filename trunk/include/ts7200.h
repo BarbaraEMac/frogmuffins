@@ -98,6 +98,12 @@
 #define VIC_SOFT_INT		0x18
 #define VIC_SOFT_INT_CLR 	0x1C
 
+
+/*********************
+ * PUBLIC INTERFACES *
+ *********************/
+
+// UART INTERFACE
 typedef volatile struct _uart {
 	int data;
 	int rsr;
@@ -111,6 +117,8 @@ typedef volatile struct _uart {
 #define UART1			(UART *) UART1_BASE
 #define UART2			(UART *) UART2_BASE
 
+
+// TIMER INTERFACE
 typedef volatile struct _clock {
 	int ldr;
 	int val;
@@ -120,6 +128,31 @@ typedef volatile struct _clock {
 #define TIMER1			(Clock *) TIMER1_BASE
 #define TIMER2			(Clock *) TIMER2_BASE
 #define TIMER3			(Clock *) TIMER3_BASE
+
+// VIC INTERFACE
+typedef volatile struct _vic {
+	const int IRQStatus;
+	const int FIQStatus;
+	const int rawIntr;
+	int intSelect;
+	int intEnable;
+	int intEnClear;
+	int softInt;
+	int softIntClear;
+/*	int protection;
+	int vectAddr;
+	int defVectAddr;
+	int vectAddr[16];
+	int vectCntl[16];
+	const int periphID0;
+	const int periphID1;
+	const int periphID2;
+	const int periphID3;*/
+
+} VIC;
+#define VIC1			(VIC *) VIC1_BASE
+#define VIC2			(VIC *) VIC2_BASE
+
 
 typedef enum _interrupt {
 	// -		 =  0,	// Unused
