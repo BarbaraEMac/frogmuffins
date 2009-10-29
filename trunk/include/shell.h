@@ -20,6 +20,6 @@ void shell_run ();
 /**
  * Given an input command, error check it and execute it.
  */
-void shell_exec ( char *command, TID tcTid );
+void shell_exec ( char *command, TID tcTid, TID ios1, TID ios2 );
 
 #endif
