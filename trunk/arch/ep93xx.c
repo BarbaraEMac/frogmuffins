@@ -83,6 +83,9 @@ int uart_setspeed( UART *uart, int speed ) {
 }
 
 void cache_on() {
+	asm("mov r0, #0");
+	// Invalidate the cache before using it
+	asm("mcr p15, 0, r0, c7, c5, 0");
 	// Read the current state of the cache
 	asm("mrc p15, 0, r0, c1, c0, 0");
 	// Enable instruction cache
