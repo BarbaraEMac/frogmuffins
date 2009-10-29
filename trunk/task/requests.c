@@ -126,6 +126,7 @@ int Getc (int channel,  TID iosTid) {
 	req.type    = GETC;
 	req.channel = channel;
 	req.data[0] = 0;
+	req.len     = 0;
 
 	Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&ret, 
 		 sizeof(char));
@@ -141,26 +142,12 @@ int Putc (int channel, char ch, TID iosTid) {
 	req.type    = PUTC;
 	req.channel = channel;
 	req.data[0] = ch;
+	req.len     = 1;
 
 	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
 			   sizeof(char));
 	
 	return err;
-}
-
-int GetStr (int channel, char *retBuf, int retBufLen, TID iosTid) {
-	int err;
-	IORequest req;
-	
-	req.type    = GETSTR;
-	req.channel = channel;
-	req.data[0] = 0;
-
-	err = Send (iosTid, (char*)&req, sizeof(IORequest), (char*)&retBuf, 
-		        sizeof(char)*retBufLen);
-	
-	return err;
-
 }
 
 int PutStr (int channel, const char *str, int strLen, TID iosTid) {
@@ -173,6 +160,7 @@ int PutStr (int channel, const char *str, int strLen, TID iosTid) {
 	req.type    = PUTSTR;
 	req.channel = channel;
 	strncpy ( req.data, str, strLen );
+	req.len     = strLen;
 
 	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
 		       sizeof(char));
