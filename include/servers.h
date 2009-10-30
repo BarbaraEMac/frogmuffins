@@ -8,7 +8,7 @@
 #define __SERVERS_H__
 
 #define CLOCK_NAME 		"ClockServer"
-#define SERIAL_IO_NAME  "IOServer"
+#define SERIALIO_NAME  "IOServer"
 
 #define NUM_ENTRIES		256
 #define ENTRY_LEN		80
