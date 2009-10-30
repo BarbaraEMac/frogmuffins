@@ -66,8 +66,16 @@ inline int comHandler ( UART *uart, char *data, int len ) {
 		data[0] = uart->data;
 		return NO_ERROR;
 	
-	} else if ( uart->intr & TIS_MASK ){
+	} else if ( uart->intr & RTIS_MASK ){
 		debug("5\r\n");
+
+		// TODO: We might want to do something else in this case
+
+		data[0] = uart->data;
+		return NO_ERROR;
+	
+	} else if ( uart->intr & TIS_MASK ){
+		debug("6\r\n");
 		// Implies FIFO is empty
 		
 		// Turn off this interrupt
