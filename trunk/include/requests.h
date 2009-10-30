@@ -183,7 +183,7 @@ int DelayUntil (int ticks, TID csTid);
  * channel - COM1 for train controller; COM2 for keyboard/monitor
  * iosTid - The task id of the serial io server
  */
-int Getc (int channel, TID iosTid);
+int Getc (TID iosTid);
 
 /**
  * Send the given character over the specified UART.
@@ -191,7 +191,7 @@ int Getc (int channel, TID iosTid);
  * ch - The character to send
  * iosTid - The task id of the serial io server
  */
-int Putc (int channel, char ch, TID iosTid);
+int Putc (char ch, TID iosTid);
 
 /**
  * Sends a string of bytes to a given channel.
@@ -200,6 +200,6 @@ int Putc (int channel, char ch, TID iosTid);
  * strLen - The number of bytes to send.
  * iosTid - The task id of the serial io server
  */
-int PutStr (int channel, const char *str, int strLen, TID iosTid);
+int PutStr (const char *str, int strLen, TID iosTid);
 
 #endif

@@ -47,7 +47,6 @@ typedef struct {
 // Any request made to the SerialIO Server has this form.
 typedef struct {
 	enum SvrRequest type;
-	int				channel;
 	char 		    data[ENTRY_LEN];
 	int				len;
 } IORequest;

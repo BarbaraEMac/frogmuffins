@@ -67,8 +67,8 @@ void shell_run ( ) {
 	Create (9, &k4_idleTask);
 
 	FOREVER {
-		debug ("GETTING A CHARACTER\r\n");
-		char ch = Getc( COM1, ios1Tid );
+		debug ("SHELL IS GETTING A CHARACTER\r\n");
+		char ch = Getc( ios1Tid );
 		bwputc (COM2, ch);
 	}
 
@@ -83,7 +83,7 @@ void shell_run ( ) {
 		mins = time / 600;
 
 		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
-			Putc( COM1, input[i], ios1Tid );
+			Putc( input[i], ios1Tid );
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");
                 input[i+1] = 0;

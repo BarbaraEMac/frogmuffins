@@ -119,12 +119,11 @@ int DelayUntil (int ticks, TID csTid) {
 	return err;
 }
 
-int Getc (int channel,  TID iosTid) {
+int Getc (TID iosTid) {
 	char      ret;
 	IORequest req;
 	
 	req.type    = GETC;
-	req.channel = channel;
 	req.data[0] = 0;
 	req.len     = 0;
 
@@ -134,13 +133,12 @@ int Getc (int channel,  TID iosTid) {
 	return ret;
 }
 
-int Putc (int channel, char ch, TID iosTid) {
+int Putc (char ch, TID iosTid) {
 	int       err;
 	char 	  reply;
 	IORequest req;
 	
 	req.type    = PUTC;
-	req.channel = channel;
 	req.data[0] = ch;
 	req.len     = 1;
 
@@ -150,7 +148,7 @@ int Putc (int channel, char ch, TID iosTid) {
 	return err;
 }
 
-int PutStr (int channel, const char *str, int strLen, TID iosTid) {
+int PutStr (const char *str, int strLen, TID iosTid) {
 	assert ( strLen <= 80 );
 	
 	int		  err;
@@ -158,8 +156,7 @@ int PutStr (int channel, const char *str, int strLen, TID iosTid) {
 	IORequest req;
 	
 	req.type    = PUTSTR;
-	req.channel = channel;
-	strncpy ( req.data, str, strLen );
+	strncpy (req.data, str, strLen);
 	req.len     = strLen;
 
 	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
