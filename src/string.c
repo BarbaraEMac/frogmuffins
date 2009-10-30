@@ -4,59 +4,57 @@
  * dgoc
  */
 
-#include "bwio.h"
 #include "string.h"
 
-char * strncpy ( char *destination, const char * source, size_t num ) {
-	int i;
-	for ( i=0; (i < num) && source[i]; i++ ) {
-		destination[i] = source[i];
-	}
-	for ( ; i < num; i++ ) {
-		destination[i] = '\0';
-	}
-	return destination;
+// strncpy
+char * strncpy ( char *dest, const char * src, size_t num ) {
+	// Copy the source into destination
+	for ( ; (num > 0) && *src; num-- ) 
+		*dest++ = *src++;
+	// Padd the rest with zeroes if needed
+	for ( ; (num > 0); num-- ) 
+		*dest++ = '\0';
+	return dest;
 }
 
-
+// memcpy
 char * memcpy ( char * destination, const char * source, size_t num ) {
 	while( (--num) >= 0 ) destination[num] = source[num];
 	return destination;
 }
 
-int strcmp (const char *str1, const char *str2) {
-	while ( *str1 == *str2 ) {
-		str1 ++;
-		str2 ++;
-
-		if ( (*str1 == 0) && (*str2 == 0) ) {
+// strcmp -- implementation from wikipedia.org
+int strcmp (const char *s1, const char *s2) {
+	for(; *s1 == *s2; ++s1, ++s2)
+		if(*s1 == 0)
 			return 0;
-		}
-		if ( (*str1 == 0) || (*str2 == 0) ) {
-			break;
-		}
-	}
-	
-	return (*str1 < *str2) ? -1 : 1;
+	return *(const unsigned char *)s1 - *(const unsigned char *)s2;
 }
 
-int scan ( char *src, char *fmt, va_list va ) {
+// strlen -- implementation from wikipedia.org
+inline size_t strlen ( const char * str ) {
+	const char * s = str;
+	for (; *s; ++s);
+	return(s - str);
+}
+
+// scan -- sscanf helper
+int scan ( const char *src, const char *fmt, va_list va ) {
 	char ch, ig, rd, *dest;
 	int w, *val;
-    unsigned int *uval;
+	unsigned int *uval;
 
-    rd = *(src++);	
+	rd = *(src++);	
 	while ( ( ch = *(fmt++) ) && rd ) {
-//        bwprintf( COM2, "\n\rch=%c, rd=%c", ch, rd);
 		if ( ch != '%' ) {
-            if( ch != rd )	return -1;
-            rd = *(src++);
-        } else {
+			if( ch != rd )	return -1;
+			rd = *(src++);
+		} else {
 			ig =0; w = 0;
 			ch = *(fmt++);
 			if ( ch == '*' ) {
 				ig = 1; ch = *(fmt++);
-            }
+			}
 			switch ( ch ) {
 			case '1':
 			case '2':
@@ -70,56 +68,137 @@ int scan ( char *src, char *fmt, va_list va ) {
 				ch = atoi( ch, &fmt, 10, &w );
 				break;
 			}
-            //bwprintf( COM2, "\n\r2:ch=%c, rd=%c", ch, rd);
 			switch( ch ) {
 			case 'c':
 				*(va_arg( va, char* ) ) = rd;
-                rd = *(src++);
+				rd = *(src++);
 				break;
 			case 's':
-                dest = va_arg( va, char* );
-                if( rd <= 32 || rd >= 127 ) return -5;
-                while( rd > 32 && rd < 127 ) { // stop at whitespace
-                    *dest++ = rd;
-                    rd = *src++;
-                }
+				dest = va_arg( va, char* );
+				if( ws(rd) ) return -5;
+				while( !ws(rd) ) { // stop at whitespace
+					*dest++ = rd;
+					rd = *src++;
+				}
 				break;
 			case 'u':
-                uval =	va_arg( va, unsigned int *);
-                rd = atoi(rd, &src, 10, uval );
+				uval =	va_arg( va, unsigned int *);
+				rd = atoi(rd, &src, 10, uval );
 				break;
 			case 'd':
 				val= va_arg( va, int *);
-                rd = atoi(rd, &src, 10, val );
+				rd = atoi(rd, &src, 10, val );
 				break;
-			case 'x':
+				case 'x':
 				val= va_arg( va, int *);
-                rd = atoi(rd, &src, 16, val );
+				rd = atoi(rd, &src, 16, val );
 				break;
 			case '%':
 				if( rd != ch ) return -3;
-                rd = *(src++);
+				rd = *(src++);
 				break;
 			}
-
-            //bwprintf( COM2, "\n\r3:ch=%c, rd=%c, val=%d, uval=%u", ch, rd, *val, uval);
 		}
 	}
-    if( !rd && ch ) return -2; // we ran out of input
-    return 0;
+	if( !rd && ch ) return -2; // we ran out of input
+	return 0;
 }
 
-int sscanf( char *src, char *fmt, ... ) {
+//sscanf
+int sscanf( const char *src, const char *fmt, ... ) {
 	int res;
 	va_list va;
 	
 	va_start(va,fmt);
 	res = scan( src, fmt, va );
-	if( res != 0 ) return res;
 	va_end(va);
 
-	return 0;
+	return res;
 }
+
+// strcpyw -- strncpy with padding
+char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
+	size_t len = strlen( src ); 
+	size_t pad = w - len;
+	// Pad the string beginning
+	if( pad > 0 ) 
+		src = memoryset( dest, fc, pad );
+	// Copy the source into the destination
+	return strncpy( dest, src, len );
+}
+
+// format -- printf's helper
+size_t format ( char *str, const char *fmt, va_list va ) {
+	char bf[12];
+	char ch, lz, *s= str;
+	size_t w, len=0; // len holds the length of the sting generated so far
+	
+	while ( ( ch = *(fmt++) ) ) {
+		if ( ch != '%' ) {
+			str[len++] = ch;
+		} else {
+			lz = ' '; w = 0;
+			ch = *(fmt++);
+			if ( ch == '0' ) {
+				lz = '0'; ch = *(fmt++);
+			}
+			switch ( ch ) {
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+			case '5':
+			case '6':
+			case '7':
+			case '8':
+			case '9':
+				ch = atoi( ch, &fmt, 10, &w );
+				break;
+			}
+			switch( ch ) {
+			case 0: return len;
+			case 'c':
+				*s++ = va_arg( va, char );
+				break;
+			case 's':
+				s = strcpyw( s, va_arg( va, char* ), ' ', w );
+				break;
+			case 'u':
+				uitoa( va_arg( va, unsigned int ), 10, bf );
+				s = strcpyw( s, bf, lz, w );
+				break;
+			case 'd':
+				itoa( va_arg( va, int ), bf );
+				s = strcpyw( s, bf, lz, w );
+				break;
+			case 'x':
+				uitoa( va_arg( va, unsigned int ), 16, bf );
+				s = strcpyw( s, bf, lz, w );
+				break;
+			case '%':
+				*s++ = ch;
+				break;
+			}
+		}
+	}
+	return s-str;
+}
+
+// sprintf
+size_t sprintf ( char * str, const char * fmt, ... ) {
+	int len;
+	va_list va;
+	
+	va_start(va,fmt);
+	len = format( str, fmt, va );
+	va_end(va);
+
+	return len;
+}
+
+/********************************************
+ *				HELPER FUNCTIONS 			*
+ ********************************************/
 
 /** 
  * The following functions have been borrowed from bwio and 
@@ -132,15 +211,15 @@ int atod( char ch ) {
 	return -1;
 }
 
-char atoi( char ch, char **src, int base, int *nump ) {
+char atoi( char ch, const char **src, int base, int *nump ) {
 	int num, digit, sign;
-	char *p;
+	const char *p;
 
 	p = *src; num = 0; sign = 1;
-    if( ch == '-' ) {
-        sign = -1;
-        ch = *p++;
-    }
+	if( ch == '-' ) {
+		sign = -1;
+		ch = *p++;
+	}
 	while( ( digit = atod( ch ) ) >= 0 ) {
 		if ( digit > base ) break;
 		num = num*base + digit;
@@ -150,8 +229,8 @@ char atoi( char ch, char **src, int base, int *nump ) {
 	return ch;
 }
 
-void uitoa( unsigned int num, unsigned int base, char *bf ) {
-	int n = 0;
+size_t uitoa( unsigned int num, unsigned int base, char *bf ) {
+	size_t n = 0;
 	int dgt;
 	unsigned int d = 1;
 	
@@ -166,14 +245,17 @@ void uitoa( unsigned int num, unsigned int base, char *bf ) {
 		}
 	}
 	*bf = 0;
+	return n;
 }
 
-void itoa( int num, char *bf ) {
+size_t itoa( int num, char *bf ) {
+	size_t len = 0;
 	if( num < 0 ) {
 		num = -num;
 		*bf++ = '-';
+		len=1;
 	}
-	uitoa( num, 10, bf );
+	return len + uitoa( num, 10, bf );
 }
 
 char ctox( char ch ) {
@@ -181,7 +263,13 @@ char ctox( char ch ) {
 	return 'a' + ch - 10;
 }
 
-// zero-fill a char array
-void memoryset( char *str, int value, size_t len ) {
-    while( (--len) >= 0 ) str[len] = value;
+// value-fill a char array
+char *memoryset( char *str, char value, size_t num ) {
+	while( num-- > 0 ) *str++ = value;
+	return str;
+}
+
+// check for whitespace
+inline int ws( const char ch ) {
+	return (ch <= 32 || ch >= 127);
 }

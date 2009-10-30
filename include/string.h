@@ -7,6 +7,20 @@
 #ifndef __STRING_H__
 #define __STRING_H__
 
+typedef char *va_list;
+
+#define __va_argsiz(t)	\
+		(((sizeof(t) + sizeof(int) - 1) / sizeof(int)) * sizeof(int))
+
+#define va_start(ap, pN) ((ap) = ((va_list) __builtin_next_arg(pN)))
+
+#define va_end(ap)	((void)0)
+
+#define va_arg(ap, t)	\
+		 (((ap) = (ap) + __va_argsiz(t)), *((t*) (void*) ((ap) - __va_argsiz(t))))
+
+
+
 // ****************************************************************
 // * NOTE: Most descriptions copied from the standard c libraries *
 // ****************************************************************
@@ -50,14 +64,39 @@ char * memcpy ( char * destination, const char * source, size_t num ) ;
  * Compares the C string str1 to the C string str2.
  * This function starts comparing the first character of each string.
  * If they are equal to each other, it continues with the following pairs 
- * until the characters differ or until a terminanting null-character is reached.
+ * until the characters differ or until a terminanting null-character is 
+ * reached.
  */
 int strcmp (const char *str1, const char *str2);
 
+
 /**
- * Parse a string given the format.
+ * Get string length
+ * 
+ * Returns the length of str.
  */
-int sscanf( char *src, char *fmt, ... );
+size_t strlen ( const char * str );
+
+/**
+ * Read formatted data from string
+ * 
+ * Reads data from str and stores them according to the parameter format 
+ * into the locations given by the additional arguments. 
+ * Locations pointed by each additional argument are filled with 
+ * their corresponding type of value specified in the format string.
+ */
+int sscanf( const char *src, const char *format, ... );
+
+
+/**
+ * Write formatted data to string
+ *
+ * Writes into the array pointed by str a C string consisting on a sequence of 
+ * data formatted as the format argument specifies. After the format parameter, 
+ * the function expects at least as many additional arguments as specified 
+ * in format.
+ */
+size_t sprintf ( char * str, const char * format, ... );
 
 /**
  * The following functions were borrowed and renamed from bwio.
@@ -72,20 +111,22 @@ int atod( char ch );
 /**
  * Convert the given string to into an integer.
  */
-char atoi( char ch, char **src, int base, int *nump );
+char atoi( char ch, const char **src, int base, int *nump );
 
 /**
  * Converts a given unsigned integer into a string.
  * The base can be specified.
+ * Returns: the nuber of characters written
  */
-void uitoa( unsigned int num, unsigned int base, char *bf );
+size_t uitoa( unsigned int num, unsigned int base, char *bf );
 
 /**
  * Converts a given integer into a string.
  * num - The integer to convert
  * bf  - A buffer that we copy the returned string into.
+ * Returns: the nuber of characters written
  */
-void itoa( int num, char *bf );
+size_t itoa( int num, char *bf );
 
 /**
  * Converts a character into its hexidecimal value.
@@ -94,7 +135,22 @@ void itoa( int num, char *bf );
  */
 char ctox( char ch );
 
+/*
+ * Fill block of memory
+ * 
+ * Sets the first num bytes of the block of memory pointed by
+ * ptr to the specified value (interpreted as an unsigned char).
+ *
+ * Returns: place in memory after last set
+ */
+char *memoryset ( char *ptr, char value, size_t num );
 
-void memoryset (char *source, int value, int length);
+
+/*
+ * Checks for whitespace
+ *
+ * Returns true if the character passed in is whitespace
+ */
+inline int ws( const char ch );
 
 #endif
