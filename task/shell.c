@@ -37,7 +37,7 @@ void shell_run ( ) {
 	csReq.ticks = 0;
 
 	// Create the name server
-	debug ("Creating the name server. \r\n");
+//	debug ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
 	
 	// Create the clock server
@@ -48,13 +48,13 @@ void shell_run ( ) {
 	debug ("Creating the serial io server. \r\n");
 	ios1Tid = Create (2, &ios1_run);
 //	ios2Tid = Create (2, &ios2_run);
-
+/*
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
 	tcTid = Create (2, &tc_run);
 	
 	output ("Type 'h' for a list of commands.\r\n");
-
+*/
     input = history[h++];
 	int	time, tens, secs, mins;
  
@@ -63,6 +63,14 @@ void shell_run ( ) {
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+
+	Create (9, &k4_idleTask);
+
+	FOREVER {
+		debug ("GETTING A CHARACTER\r\n");
+		char ch = Getc( COM1, ios1Tid );
+		bwputc (COM2, ch);
+	}
 
 	// Main loop
     FOREVER {
@@ -75,6 +83,7 @@ void shell_run ( ) {
 		mins = time / 600;
 
 		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
+			Putc( COM1, input[i], ios1Tid );
             if( input[i] == '\r' ) {        // Enter was pressed
 				bwputstr ( COM2, "\n\r");
                 input[i+1] = 0;
