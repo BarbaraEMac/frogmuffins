@@ -30,33 +30,38 @@ Question 1
 Question 2 
 ==========
 	
-	PREAMBLE
+	Preamble? Abstract?
 	========
+	We have worked hard over the past two months to create the most efficient
+	kernel possible. Since we are implementing a Real-Time Operating System,
+	all operations within the kernel should take O(1) time. 
 
 	Main Kernel Loop
 	================
 	 FOREVER {
 		  activeTask = schedule (activeTask, &priorityQueues);
-		  getNextRequest    	  (activeTask, &nextRequest);
-		  service 			  (activeTask, &nextRequest, &priorityQueues);
+		  getNextRequest    	(activeTask, &nextRequest);
+		  service 			    (activeTask, &nextRequest, &priorityQueues);
 	 }
 
-	 schedule() puts the active task on the ready queue for its priority. If the active task
-	 is blocked or called Exit(), then it is added to the blocked queue or not added to
-	 any queue, respectively. Then we grab the highest priority task from a ready queue and 
-	 set it as the active task. If there are no remaining tasks on any ready queue, a null
-	 active task is returned. We check this null task to determine when to stop running.
+	 schedule() puts the active task on the ready queue for its priority. If the
+	 active task is blocked or called Exit(), then it is added to the blocked 
+	 queue or not added to any queue, respectively. Then we grab the highest
+	 priority task from a ready queue and set it as the active task. If there are
+	 no remaining tasks on any ready queue, a null active task is returned. We 
+	 check this null task to determine when to stop running.
 
-	 The only issue with this scheduling algorithm is that there is possibility of starvation
-	 for the lower priority tasks. If a high priority task always has work to do and never calls
-	 Exit(), this task will always be scheduled and any lower priority tasks will never run. This
-	 is obviously unfair to low priority tasks, but this is the algorithm Professor Cowan gave 
-	 in class.
+	 The only issue with this scheduling algorithm is that there is possibility 
+	 of starvation for the lower priority tasks. If a high priority task always 
+	 has work to do and never calls Exit(), this task will always be scheduled 
+	 and any lower priority tasks will never run. This is obviously unfair to low
+	 priority tasks, but this is the algorithm Professor Cowan gave in class.
 
-	 getNextRequest() is a wrapper for the assembly function kernelExit() and they both take in 2
-	 parameters: the active task and a structure holding the request.
-	 The reason we have this wrapper is for debug statements. If this were production code,
-	 all debug statements would be optimized away using precompiler directives.
+	 getNextRequest() is a wrapper for the assembly function kernelExit() and they
+	 both take in 2 parameters: the active task and a structure holding the 
+	 request. The reason we have this wrapper is for debug statements. If this 
+	 were production code, all debug statements would be optimized away using 
+	 precompiler directives.
 
 
 	Hardware Dependent Code
@@ -64,16 +69,25 @@ Question 2
 		
 		Hardware Interface
 		==================
-		Talking directly to harware is limited to trusted tasks - mostly the servers and drivers. 
-		Other tasks use the servers and do not access the harware directly. 
-		Thus within the servers we pass around structs that map directly to the memory-mapped
-		hardware. Pointers to these structs are defined as macro constans in <ts7200.h>
-		Thus not only we improve the readability of the code, we also improve the effecienty 
-		two different ways:
-		1) no unnecesary checks of what channel is which harware - the code is trusted and this
-		value is allways precomputed
-		2) as there is only one struct pointer to the hardware (instead of multiple int pointers)
-		the compiler (w/o optimization) produces shorter & faster code.
+		Talking directly to harware is limited to trusted tasks - mostly the 
+		servers and drivers. Other tasks use the servers and do not access the
+		hardware directly. Thus within the servers, we pass around structs that
+		map directly to the memory-mapped hardware. Pointers to these structs
+		are defined as macro constants in <ts7200.h>. This improves the 
+		readability of the code and the effeciency in two different ways:
+		1)No unnecesary checks of what channel is which hardware
+			- the code is trusted and this value is allways precomputed
+		2)Since there is only one struct pointer to the hardware
+			(instead of multiple int pointers), the compiler (w/o optimization)
+			produces shorter & faster code.
+
+
+		Cache
+		=====
+
+
+		GCC Optimization
+		================
 
 
 
@@ -185,6 +199,12 @@ Question 2
 		directly using the vectored fast interrupts available in the ARM architecture
 		if we wish to do so in the future.
 
+		Timer Drivers
+		=============
+
+		Serial IO Drivers
+		=================
+
 
 
 	Structures & Objects
@@ -238,7 +258,7 @@ Question 2
 	============
 		Types
 		=====
-			The system call types are all stored in an enum so that we can use a 
+		The system call types are all stored in an enum so that we can use a 
 		switch statement to easily determine how to handle the call. 
 		At this point of our kernel, this is the enum: 
 			enum RequestCode {
@@ -369,9 +389,22 @@ Question 2
 	
 		RegisterAs
 		==========
+		RegisterAs() can be called by a user task to register a name with the 
+		Name Server. The desired name is passed as a parameter. 
+
+		Note that there are 2 special cases:
+		1. If Task1 registers with name "A" and then Task2 registers with name "A",
+		Task1's entry is overwritten. Calling WhoIs("A") will return Task2.
+		2. If Task1 registers with "A" and then Task1 registers with "B", WhoIs("A")
+		will return NOT_FOUND. WhoIs("B") will return Task2.
 
 		WhoIs
 		=====
+		After a task has registered with the Name Server, user tasks can query it
+		by calling WhoIs() with a name as a parameter. This call is non-blocking.
+		If a task has not registered with a particular name, NOT_FOUND is returned.
+		Otherwise, the id of the registered task with the corresponding name is
+		returned.
 
 		Await Event
 		===========
@@ -443,10 +476,9 @@ Question 2
 
 		Putc
 		====
-
-		GetStr
-		======
-
+		The code for Putc() is identical to PutStr(). The length of the string is set
+		to 1.
+		
 		PutStr
 		======
 
@@ -561,6 +593,10 @@ Question 2
 		Serial IO
 		=========
 
+
+
+		Serial IO Notifier
+		==================
 
 
 
