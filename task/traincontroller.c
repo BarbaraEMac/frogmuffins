@@ -23,7 +23,8 @@ void tc_run () {
 	int 	   senderTid;
 	TCRequest  req;
 	int 	   ret, len;
-	TID		   iosTid = WhoIs("IOServer");
+	TID		   ios1Tid = WhoIs("IOServer1");
+	TID		   ios2Tid = WhoIs("IOServer2");
 	TID		   csTid  = WhoIs("ClockServer");
 	int 	   speed;
 
@@ -52,9 +53,9 @@ void tc_run () {
 				if ( (ret = checkTrain ( req.arg1 )) >= NO_ERROR ) {
 					speed = tc.speeds[req.arg1];
 					
-					ret =  trainSend (0,            (char) req.arg1, iosTid, csTid);
-					ret |= trainSend (15, 			(char) req.arg1, iosTid, csTid);
-					ret |= trainSend ((char) speed, (char) req.arg1, iosTid, csTid);
+					ret =  trainSend (0,            (char) req.arg1, ios1Tid, csTid);
+					ret |= trainSend (15, 			(char) req.arg1, ios1Tid, csTid);
+					ret |= trainSend ((char) speed, (char) req.arg1, ios1Tid, csTid);
 				}
 				
 				break;
@@ -67,7 +68,7 @@ void tc_run () {
 				debug ("tc: Setting switch %d to dir %c.\r\n", req.arg1, (char)req.arg2);
   
 				if ( (ret = checkDir ( &req.arg2 )) >= NO_ERROR ) {
-					ret = switchSend( (char) req.arg1, (char) req.arg2, tc.switches, iosTid );
+					ret = switchSend( (char) req.arg1, (char) req.arg2, tc.switches, ios1Tid );
 				}
 				break;
 			
@@ -75,7 +76,7 @@ void tc_run () {
 				debug("tc: Setting train #%d to speed %d.\r\n", req.arg1, req.arg2 );
 	
 				if( (ret = checkTrain ( req.arg1 )) >= NO_ERROR ) {
-					ret = trainSend( (char) req.arg2, (char) req.arg1, iosTid, csTid);
+					ret = trainSend( (char) req.arg2, (char) req.arg1, ios1Tid, csTid);
 					
 					// Store the new train speed
 					tc.speeds[req.arg1] = (char) req.arg2;
@@ -139,14 +140,14 @@ int checkDir( int *dir ) {
 }
 
 // send commands to the train, try a few times
-int trainSend( char byte1, char byte2, TID iosTid, TID csTid ) {
+int trainSend( char byte1, char byte2, TID ios1Tid, TID csTid ) {
     char bytes[2];
 	bytes[0] = byte1;
 	bytes[1] = byte2;
 
 	int i;
     for( i = 0; i < TRAIN_TRIES; i ++ ) {
-        if( PutStr(COM1, bytes, 2, iosTid ) >= NO_ERROR ) {
+        if( PutStr( bytes, 2, ios1Tid ) >= NO_ERROR ) {
         	break;
 		}
     }
@@ -160,16 +161,16 @@ int trainSend( char byte1, char byte2, TID iosTid, TID csTid ) {
 }
 
 // set a switch to a desired position checking for bad input
-int switchSend( char sw, char dir, char* switches, TID iosTid ) {
+int switchSend( char sw, char dir, char* switches, TID ios1Tid ) {
 	int err;
 	char bytes[2];
 	bytes[0] = sw;
 	bytes[1] = 32; 	// TURN OFF THE SOLENOID
     
-	err = Putc ( COM1, dir, iosTid );
+	err = Putc( dir, ios1Tid );
 
 	if ( err >= NO_ERROR ) {
-		err = PutStr( COM1, bytes, 2, iosTid );
+		err = PutStr( bytes, 2, ios1Tid );
 		
 		// Store the new direction
 		switches[(int) sw] = dir;    
@@ -179,32 +180,32 @@ int switchSend( char sw, char dir, char* switches, TID iosTid ) {
 }
 
 // set all the switches to given direction
-int switches_init( char dir, char* switches, TID iosTid ) {
+int switches_init( char dir, char* switches, TID ios1Tid ) {
     int err = 0;
 
 	int i;
     for( i = 1; i <= 18; i ++ ) {
-		err |= switchSend( i, dir, switches, iosTid );
+		err |= switchSend( i, dir, switches, ios1Tid );
 	}
     for( i = 153; i <= 156; i ++ ) {
-		err |= switchSend( i, dir, switches, iosTid );
+		err |= switchSend( i, dir, switches, ios1Tid );
 	}
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
 }
 
-void pollSensors( TrainController *tc, TID iosTid ) {
+void pollSensors( TrainController *tc, TID ios1Tid ) {
     int err;
     char ch=0; int i=-1, res;//, old_time=*(tc.clock);
 
 	// TODO:Remove this!
 	bwclear( COM1 );                // clear the io before reading
     
-	err = Putc( COM1, 133, iosTid );
-    err = Putc( COM1, 192, iosTid );   // ask for sensor dump
+	err = Putc( 133, ios1Tid );
+    err = Putc( 192, ios1Tid );   // ask for sensor dump
     
 	// look for the first non-empty char
-    while( (++ i < 10) && (err = Getc( COM1, iosTid) < NO_ERROR) && !ch ) {
+    while( (++ i < 10) && (err = Getc(ios1Tid) < NO_ERROR) && !ch ) {
 		ch = err;
 	}
 
