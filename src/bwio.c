@@ -12,31 +12,29 @@
 
 
 int bwsendc( int channel, char c, int timeout ) {
-	int *flags, *data, *clock;
+	volatile int *time;
+	UART *uart;
 	switch( channel ) {
 	case COM1:
-		flags = (int *)( UART1_BASE + UART_FLAG_OFFSET );
-		data = (int *)( UART1_BASE + UART_DATA_OFFSET );
+		uart = UART1;
 		break;
 	case COM2:
-		flags = (int *)( UART2_BASE + UART_FLAG_OFFSET );
-		data = (int *)( UART2_BASE + UART_DATA_OFFSET );
+		uart = UART2;
 		break;
 	default:
 		return -1;
 		break;
 	}
 
-    clock = clock_init( TIMER2, 1, 0, timeout );
+    time = clock_init( TIMER2, 1, 0, timeout );
     // wait for the input to be ready
-    while( (( *flags & TXFF_MASK ) || !( *flags & CTS_MASK ))
-            && ( *clock > 0 ) ) {}
-    clock_stop( TIMER2_BASE ); 
-    if( ( *flags & TXFF_MASK ) || !( *flags & CTS_MASK ) ) {
-//        bwputstr( COM2, "Sending: Connection timeout.\n\r" );
+    while( (( uart->flag & TXFF_MASK ) || !( uart->flag & CTS_MASK ))
+            && ( *time > 0 ) ) {}
+    clock_stop( TIMER2 ); 
+    if( ( uart->flag & TXFF_MASK ) || !( uart->flag & CTS_MASK ) ) {
         return -1;
     }
-	*data = c;
+	uart->data = c;
     return 0;
 }
 
@@ -140,34 +138,33 @@ int bwgetc( int channel ) {
 // read a character from the COM if one is present and return true
 // return false otherwise
 int bwreadc( int channel, char *c, int timeout) {
-    int *flags, *data, *clock;
+    volatile int *time;
+	UART *uart;
 
     switch( channel ) {
     case COM1:
-        flags = (int *)( UART1_BASE + UART_FLAG_OFFSET );
-        data = (int *)( UART1_BASE + UART_DATA_OFFSET );
+		uart = UART1;
         break;
     case COM2:
-        flags = (int *)( UART2_BASE + UART_FLAG_OFFSET );
-        data = (int *)( UART2_BASE + UART_DATA_OFFSET );
+		uart = UART2;
         break;
     default:
         return 0;
         break;
     }
     if( timeout ) {
-        clock = clock_init( TIMER2, 1, 0, timeout );
-        while( !( *flags & RXFF_MASK ) && (*clock > 0) ) {}          //busy-wait
-        clock_stop( TIMER2_BASE );
+        time = clock_init( TIMER2, 1, 0, timeout );
+        while( !( uart->flag & RXFF_MASK ) && (*time > 0) ) {}  //busy-wait
+        clock_stop( TIMER2 );
     }
-    if( (*flags & RXFF_MASK) ) {
-        *c = *data;
+    if( (uart->flag & RXFF_MASK) ) {
+        *c = uart->data;
         return 1;
     }
     return 0;
 }
 
-void bwformat ( int channel, char *fmt, va_list va ) {
+void bwformat ( int channel, const char *fmt, va_list va ) {
 	char bf[12];
 	char ch, lz;
 	int w;
@@ -203,7 +200,7 @@ void bwformat ( int channel, char *fmt, va_list va ) {
 				bwputc( channel, va_arg( va, char ) );
 				break;
 			case 's':
-				bwputw( channel, w, 0, va_arg( va, char* ) );
+				bwputw( channel, w, ' ', va_arg( va, char* ) );
 				break;
 			case 'u':
 				uitoa( va_arg( va, unsigned int ), 10, bf );
@@ -225,7 +222,7 @@ void bwformat ( int channel, char *fmt, va_list va ) {
 	}
 }
 
-void bwprintf( int channel, char *fmt, ... ) {
+void bwprintf( int channel, const char *fmt, ... ) {
         va_list va;
 
         va_start(va,fmt);
