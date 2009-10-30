@@ -244,11 +244,13 @@ void ios_run (UART *uart) {
 void ios_init (SerialIOServer *s, UART *uart) {
 	int i, err;
 	char c;
-	
+
 	// Create the notifier
 	if ( (err = Create (1, &ionotifier_run)) < NO_ERROR) {
 		error (err, "Cannot make IO notifier.\r\n");
 	}
+	
+	// TODO: Send/Receive to synchronize with the notifier
 
 	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
@@ -272,11 +274,13 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	// Enable the UART
 	uart->ctlr |= UARTEN_MASK;
 	
-	// TODO: Turn the interrupt ON
+	// Turn the interrupt ON
 	uart->ctlr |= RIEN_MASK;
+	// TODO: Getting a C might work without this on .. I didn't try
 	uart->ctlr |= RTIEN_MASK;
 
 	// Register with the name server
+	// TODO: FIX THIS NAME TO REFLECT COM1 & COM2
 	RegisterAs (SERIALIO_NAME);
 }
 
