@@ -14,7 +14,8 @@
 #include "requests.h"
 #include "servers.h"
 
-#define DUMMY_TID		0xFF
+#define DUMMY_TID		-1
+#define DUMMY_CH		0xFF
 #define AWAITBUF_LEN	1
 
 
@@ -24,7 +25,7 @@
 typedef struct {
 	char sendBuffer[NUM_ENTRIES];
 	char recvBuffer[NUM_ENTRIES];
-	char waiting   [NUM_ENTRIES];	// Array of waiting tids (for a char)
+	int waiting    [NUM_ENTRIES];	// Array of waiting tids (for a char)
 
 	int sEmpPtr;
 	int sFulPtr;
@@ -52,6 +53,9 @@ void ionotifier_init();
 
 inline void uart_write( UART *uart, char ch ) {
 	uart->data = ch;
+
+	// TODO: we might not want to turn the interrupt on here
+	// we ONLY want it on iff there is another character to write
 	// Turn on the interrupt so that when the FIFO is empty, we will know
 	uart->ctlr |= TIEN_MASK;	
 }
@@ -90,10 +94,18 @@ void advance (int *ptr) {
 }
 
 // Store the given value in the buffer and increment the pointer
-void storeAndAdvancePtr (char *buf, int *ptr, char ch) {
+void storeCh (char *buf, int *ptr, char ch) {
 	buf[*ptr] = ch;
-	*ptr += 1;
-	*ptr %= NUM_ENTRIES;
+
+	debug ("STORE ch=%c (%d)\r\n", ch, ch);
+	advance(ptr);
+}
+
+void storeInt (int *buf, int *ptr, int item) {
+	buf[*ptr] = item;
+
+	debug ("STORE int=%d\r\n", item);
+	advance (ptr);
 }
 
 void ios_run (UART *uart) {
@@ -129,19 +141,23 @@ void ios_run (UART *uart) {
 				// If we have a character and someone is blocked, wake them up
 				if ( ios.wEmpPtr != ios.wFulPtr ) {
 					assert (ios.waiting[ios.wFulPtr] != DUMMY_TID);
-
+					
+					debug ("ios: waking up %d to give ch=%c\r\n",
+							ios.waiting[ios.wFulPtr], req.data[0]);
 					Reply ((int)ios.waiting[ios.wFulPtr], (char *)&req.data, 
 							sizeof(char));
 					
-					storeAndAdvancePtr(ios.waiting, &ios.wFulPtr, DUMMY_TID);
+					storeInt(ios.waiting, &ios.wFulPtr, DUMMY_TID);
 					assert (ios.wFulPtr <= ios.wEmpPtr);
 				}
 				
 				// If we have a character and no one is waiting, store ch
 				else {
-					assert (ios.recvBuffer[ios.rEmpPtr] == 0);
+					debug("ios: notified is storing ch=%c\r\n", req.data[0]);
+					assert (ios.recvBuffer[ios.rEmpPtr] == DUMMY_CH);
+					assert (ios.waiting[ios.wFulPtr] == DUMMY_TID);
 					
-					storeAndAdvancePtr(ios.recvBuffer, &ios.rEmpPtr, req.data[0]);
+					storeCh(ios.recvBuffer, &ios.rEmpPtr, req.data[0]);
 					assert (ios.rFulPtr <= ios.rEmpPtr);
 				}
 			
@@ -161,22 +177,30 @@ void ios_run (UART *uart) {
 			
 			case GETC:
 				// If we have a character, send it back!
-				if (ios.recvBuffer[ios.rFulPtr] != 0) {
-					assert (ios.wFulPtr == ios.wEmpPtr);	// Make sure no one else was waiting first ...
-					assert (ios.wFulPtr == DUMMY_TID);
+				//if (ios.recvBuffer[ios.rFulPtr] != DUMMY_CH) {
+				if (ios.rFulPtr != ios.rEmpPtr ) {
+					debug ("ios: getc has a char=%c ful=%d emp=%d wait:ful=%d emp=%d\r\n",
+							ios.recvBuffer[ios.rFulPtr], ios.rFulPtr, ios.rEmpPtr,
+							ios.wFulPtr, ios.wEmpPtr);
+					assert (ios.recvBuffer[ios.rFulPtr] != DUMMY_CH);
+					// Make sure no one else was waiting first ...
+					assert (ios.wFulPtr == ios.wEmpPtr);	
+					assert (ios.waiting[ios.wFulPtr] == DUMMY_TID);
 
 					Reply (senderTid, (char *)&ios.recvBuffer[ios.rFulPtr], 
 						   sizeof(char));
 					
 					// Empty the slot and advance the pointer
-					storeAndAdvancePtr(ios.recvBuffer, &ios.rFulPtr, 0);
+					storeCh(ios.recvBuffer, &ios.rFulPtr, DUMMY_CH);
 					assert (ios.rFulPtr <= ios.rEmpPtr);
 				}
 				// Otherwise, store the tid until we get a character
 				else {
+					debug ("ios: getc NO char ful=%d emp=%d wait:ful=%d emp=%d\r\n",
+							ios.rFulPtr, ios.rEmpPtr, ios.wFulPtr, ios.wEmpPtr);
 					assert (ios.waiting[ios.wEmpPtr] == DUMMY_TID);
 
-					storeAndAdvancePtr(ios.waiting, &ios.wEmpPtr, (char)senderTid);
+					storeInt(ios.waiting, &ios.wEmpPtr, (char)senderTid);
 					assert (ios.wFulPtr <= ios.wEmpPtr); 
 				}
 
@@ -191,13 +215,16 @@ void ios_run (UART *uart) {
 
 				// Copy the data to our send buffer
 				for ( i = 0; i < req.len; i ++ ) {
-					assert (ios.sendBuffer[ios.sEmpPtr] == 0);
+					assert (ios.sendBuffer[ios.sEmpPtr] == DUMMY_CH);
 					
-					storeAndAdvancePtr (ios.sendBuffer, &ios.sEmpPtr,
+					bwputc(COM2, req.data[i]);
+					storeCh (ios.sendBuffer, &ios.sEmpPtr,
 										req.data[i]);
 					
 					assert (ios.sFulPtr <= ios.sEmpPtr);
 				}
+
+				bwputstr(COM2, "\r\n");
 
 				// Try to send some data across the UART
 				ios_attemptTransmit (&ios, uart);
@@ -225,8 +252,8 @@ void ios_init (SerialIOServer *s, UART *uart) {
 
 	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
-		s->sendBuffer[i] = 0;
-		s->recvBuffer[i] = 0;
+		s->sendBuffer[i] = DUMMY_CH;
+		s->recvBuffer[i] = DUMMY_CH;
 		s->waiting[i]    = DUMMY_TID;
 	}
 	// Init array pointers
@@ -241,8 +268,16 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	while ( uart->flag & RXFF_MASK ) {
 		c = (uart->data);
 	}
+	
+	// Enable the UART
+	uart->ctlr |= UARTEN_MASK;
+	
+	// TODO: Turn the interrupt ON
+	uart->ctlr |= RIEN_MASK;
+	uart->ctlr |= RTIEN_MASK;
 
-	// TODO: Register with the Name Server
+	// Register with the name server
+	RegisterAs (SERIALIO_NAME);
 }
 
 void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
@@ -261,7 +296,7 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 		uart_write ( uart, ios->sendBuffer[ios->sFulPtr] );
 	
 		// Clear buf & advance pointer
-		storeAndAdvancePtr (ios->sendBuffer, &ios->sFulPtr, 0);
+		storeCh (ios->sendBuffer, &ios->sFulPtr, 0);
 		assert (ios->sFulPtr <= ios->sEmpPtr);
 
 		// If we want to send more, enable the interrupt
@@ -289,7 +324,7 @@ void ionotifier_run() {
 
 			}
 		}
-
+		debug ("NOTIFIER WOKE UP\r\n");
 		// If we do not have a character, we must be clear to send
 		if ( awaitBuffer == 0 ) {
 			req.type    = NOTIFY_CTS;
@@ -298,6 +333,7 @@ void ionotifier_run() {
 		}
 		// Otherwise, give the server the character
 		else {
+			debug ("HAS A CHARACTER\r\n");
 			req.type    = NOTIFY_CH;
 			req.data[0] = awaitBuffer;
 			req.len     = 1;
@@ -323,6 +359,4 @@ void ionotifier_run() {
 
 void ionotifier_init () {
 	debug ("ionotifier_init\r\n");
-	
-	// TODO: Register
 }	
