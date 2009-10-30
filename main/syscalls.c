@@ -32,22 +32,24 @@ int send (TD *sender, TDM *mgr, TID tid) {
 	assert ( sender != 0 );
 	assert ( sender->state == ACTIVE );
 	assert ( mgr != 0 );
-	assert ( sender->id != tid ); // Do not send a message to yourself.
 	int ret = NO_ERROR;
 
+  	// Do not send a message to yourself.
+	if ( sender->id == tid )
+		return INVALID_TID;
+
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = isValidMem(sender->a->send.msg, sender)) != NO_ERROR ) {
+	if ( (ret = isValidMem(sender->a->send.msg, sender)) != NO_ERROR ) 
 		return ret;
-	}
-	if ( (ret = isValidMem(sender->a->send.reply, sender)) != NO_ERROR ) {
+
+	if ( (ret = isValidMem(sender->a->send.reply, sender)) != NO_ERROR ) 
 		return ret; // TODO Add a mask here so that we can tell is apart
-	}
+
 	
 	TD *receiver = mgr_fetchById (mgr, tid);
 	// mgr_fetchById error checks the tid
-	if ( (int) receiver < NO_ERROR ) {
+	if ( (int) receiver < NO_ERROR ) 
 		return (int) receiver;
-	}
 	
 	// Set state to receive blocked
 	sender->state = RCV_BLKD;
