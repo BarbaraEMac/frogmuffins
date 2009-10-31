@@ -6,6 +6,7 @@
 
 #include <ts7200.h>
 #include <math.h>
+#include "error.h"
 
 inline int readMemory(int addr) {
 	int volatile *mem = (int *) (addr);
@@ -78,7 +79,7 @@ int uart_setspeed( UART *uart, int speed ) {
 		uart->lcrl = 0xbf;
 		return 0;
 	default:
-		return -1;
+		return INVALID_UART_SPEED;
 	}
 }
 
