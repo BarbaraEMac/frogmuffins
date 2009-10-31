@@ -7,7 +7,7 @@
 #ifndef __TRAIN_CONTROLLER_H__
 #define __TRAIN_CONTROLLER_H__
 
-#define TRAIN_CONTROLLER_NAME "TrainController"
+#define TRAIN_CONTROLLER_NAME "TrainCtrl"
 #define NUM_TRNS    81
 #define NUM_SWTS    256
 #define SW_CNT      22
