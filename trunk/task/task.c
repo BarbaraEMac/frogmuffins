@@ -21,18 +21,7 @@
 //-------------------------------------------------------------------------
 
 // NOTE: Kernel 4 is mostly located with in shell.c
-// A fun idle task that counts to high numbers
-void k4_idleTask () {
-	debug ("K4_idleTask running\r\n");
-	int i = 0;
 
-	while ( 1 ) {
-		//if ( (i % 20) == 0 ) {
-		//	bwprintf(COM2, "IDLE=%d\r\n", i);
-		//}
-		i = i + 1;
-	}
-}
 
 //-------------------------------------------------------------------------
 //---------------------------Kernel 3--------------------------------------

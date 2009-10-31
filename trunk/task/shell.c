@@ -20,9 +20,23 @@
 
 #define output(args...) bwputstr(COM2, "\033[36m"); bwprintf(COM2, args); bwputstr(COM2,"\033[37m")
 
+// A fun idle task that counts to high numbers
+void idleTask () {
+	debug ("idleTask running\r\n");
+	int i = 0;
+	RegisterAs("Idle");
+
+	while ( 1 ) {
+		//if ( (i % 20) == 0 ) {
+		//	bwprintf(COM2, "IDLE=%d\r\n", i);
+		//}
+		i = i + 1;
+	}
+}
+
+
 void shell_run ( ) {
     debug ("shell_run\r\n");
-	char ch;
 
 	// Initialize variables
     char *input, history[INPUT_HIST][INPUT_LEN];
@@ -31,6 +45,7 @@ void shell_run ( ) {
 	TID csTid;
 	TID ios1Tid, ios2Tid;
 	TID tcTid;
+	TID idle;
 	CSRequest csReq;
 
 	csReq.type  = TIME;
@@ -55,6 +70,10 @@ void shell_run ( ) {
 	
 	output ("Type 'h' for a list of commands.\r\n");
 */
+	
+	// Create the idle task
+	idle = Create (9, &idleTask);
+
     input = history[h++];
 	int	time, tens, secs, mins;
  
@@ -63,14 +82,6 @@ void shell_run ( ) {
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
-
-	Create (9, &k4_idleTask);
-
-	FOREVER {
-		debug ("SHELL IS GETTING A CHARACTER\r\n");
-		char ch = Getc( ios1Tid );
-		bwputc (COM2, ch);
-	}
 
 	// Main loop
     FOREVER {
@@ -81,35 +92,37 @@ void shell_run ( ) {
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
-
-		if( bwreadc( COM2, &(input[i]), 0 ) == 1 ) {
-			Putc( input[i], ios1Tid );
-            if( input[i] == '\r' ) {        // Enter was pressed
-				bwputstr ( COM2, "\n\r");
-                input[i+1] = 0;
-                
-				shell_exec( input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
-                
-				// Clear the input for next line
-                //input = history[h++];
-                //h++; h &= INPUT_HIST;
-                i = 0;
-				output ("\r%02d:%02d:%02d> ", mins, secs, tens);
-            } else if( input[i] == '\b' || input[i] == 127) {	// Backspace was pressed
-				if( i > 0 ) {
-					bwputstr ( COM2, "\b \b");
-    	            
-					input[i] = 0;
-            	    i --;
-				}
-            } else {                        // Update the position in the command string
-				output ("%c", input[i]);
-				if( input[i] < 32 || input[i] > 126 ) {
-					output("%d", input[i]);
-				}
-				i ++;
-            }
-        }
+	
+		input[i] = bwgetc(COM2 ); //Getc( ios1Tid );
+		Putc( input[i], ios1Tid );
+		// Enter was pressed
+		if( input[i] == '\r' ) {        
+			bwputstr ( COM2, "\n\r");
+			input[i+1] = 0;
+			
+			shell_exec( input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
+			
+			// Clear the input for next line
+			//input = history[h++];
+			//h++; h &= INPUT_HIST;
+			i = 0;
+			output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+		// Backspace was pressed
+		} else if( input[i] == '\b' || input[i] == 127) {
+			if( i > 0 ) {
+				bwputstr ( COM2, "\b \b");
+				
+				input[i] = 0;
+				i --;
+			}
+		// Update the position in the command string
+		} else {
+			output ("%c", input[i]);
+			if( input[i] < 32 || input[i] > 126 ) {
+				output("%d", input[i]);
+			}
+			i++;
+		}
         if( i == INPUT_LEN - 1 ) {	i-- ; }
     }
 }
@@ -141,6 +154,8 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 
 	// Quit
     if ( sscanf(command, "q\r") >= 0 ) {
+		output( "Shell exiting.\r\n" );
+		Destroy( WhoIs("Idle") );
         Exit();
 	// k1
     } else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
@@ -149,7 +164,7 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
     // k2
 	} else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
 		Create (0, &k2_firstUserTask);
-		Destroy (WhoIs("GameServer"));
+		Destroy ( WhoIs("GameServer") );
 		output( "K2 is done executing.\r\n" );
     // k3
 	} else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
