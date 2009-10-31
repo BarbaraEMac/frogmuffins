@@ -59,15 +59,15 @@
 	#define BRDL_MASK	0xff	// LSB of baud rate divisor
 #define UART_CTLR_OFFSET	0x14	// low 8 bits
 	#define UARTEN_MASK	0x1
-	#define MSIEN_MASK	0x8	// modem status int
+	#define MSIEN_MASK	0x8		// modem status int
 	#define RIEN_MASK	0x10	// receive int
 	#define TIEN_MASK	0x20	// transmit int
 	#define RTIEN_MASK	0x40	// receive timeout intSK
 	#define LBEN_MASK	0x80	// loopback 
 #define UART_FLAG_OFFSET	0x18	// low 8 bits
 	#define CTS_MASK	0x1
-	#define DCD_MASK	0x2
-	#define DSR_MASK	0x4
+	#define DSR_MASK	0x2
+	#define DCD_MASK	0x4
 	#define TXBUSY_MASK	0x8
 	#define RXFE_MASK	0x10	// Receive buffer empty
 	#define TXFF_MASK	0x20	// Transmit buffer full
@@ -78,7 +78,11 @@
 	#define RIS_MASK	0x2		// Receive interrupt status
 	#define TIS_MASK	0x4		// Transmit interrupt status
 	#define RTIS_MASK	0x8		// Receive Timeout Intertupt Status
-#define UART_DMAR_OFFSET	0x28
+#define UART_DMAR_OFFSET	0x28	// DMA
+#define UART_MCTL_OFFSET	0x100	// Modem control 
+	#define DTR_MASK	0x1
+	#define RTS_MASK	0x2
+
 
 // Specific to UART1
 
@@ -115,6 +119,10 @@ typedef volatile struct _uart {
 	int ctlr;
 	int flag;
 	int intr;
+	int _dummy1[2];
+	int dmar;
+	int _dummy2[53];
+	int mctl;
 } UART;
 #define UART1			(UART *) UART1_BASE
 #define UART2			(UART *) UART2_BASE

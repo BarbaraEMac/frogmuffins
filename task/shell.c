@@ -62,7 +62,7 @@ void shell_run ( ) {
 	// Create the Serial I/O server
 	debug ("Creating the serial io server. \r\n");
 	ios1Tid = Create (2, &ios1_run);
-//	ios2Tid = Create (2, &ios2_run);
+	ios2Tid = Create (2, &ios2_run);
 	
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
@@ -92,7 +92,7 @@ void shell_run ( ) {
 		secs = (time / 10) % 60;
 		mins = time / 600;
 	
-		input[i] = bwgetc(COM2 ); //Getc( ios1Tid );
+		input[i] = Getc( ios1Tid );
 		// Enter was pressed
 		if( input[i] == '\r' ) {        
 			bwputstr ( COM2, "\n\r");
