@@ -59,20 +59,11 @@ inline void uart_write( UART *uart, char ch ) {
 void ios1_run () {
 	debug ("ios1: Running 1\r\n");
 	
-	int err = InstallDriver( INT_UART1, &uart1Driver );
-	if_error(err, "UART1 driver not installed.");
+	int err = uart_install( UART1, 2400, OFF );
+	if_error(err, "UART1 not installed.");
 	
 	debug ("ios1: installed the first driver.\r\n");
 
-	err = uart_setSpeed( UART1, 2400 );
-	if_error(err, "UART1 speed not set.");
-	
-	// Always set the HIGH bits after the Mid / Low
-	uart_setFifo( UART1, OFF );
-
-	// Set the Request to Send bit
-	(UART1)->mctl |= RTS_MASK;
-	
 	// Start the server
 	ios_run( UART1 );
 }
@@ -81,17 +72,11 @@ void ios1_run () {
 void ios2_run () {
 	debug ("ios2: Running 2\r\n");
 	
-	int err = InstallDriver( INT_UART2, &uart2Driver );
-	if_error(err, "UART2 driver not installed.");
+	int err = uart_install( UART2, 115200, OFF );
+	if_error(err, "UART2 not installed.");
 	
 	debug ("ios2: installed the second driver.\r\n");
 	
-	err = uart_setSpeed( UART2, 115200 );
-	if_error(err, "UART2 speed not set.");
-	
-	// Always set the HIGH bits after the Mid / Low
-	uart_setFifo( UART2, OFF );
-
 	ios_run( UART2 );
 }
 

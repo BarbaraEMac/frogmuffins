@@ -56,7 +56,7 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 			*data = 0;
 			return NO_ERROR;
 		} 
-	
+	// Receive FIFO is empty
 	} else if ( uart->intr & RIS_MASK ){
 		debug("4\r\n");
 		// reading should reset the interrupt
@@ -68,15 +68,7 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 		uart->mctl |= RTS_MASK;
 
 		return NO_ERROR;
-	
-	} else if ( uart->intr & RTIS_MASK ){
-		debug("5\r\n");
-
-		// TODO: We might want to do something else in this case
-
-		data[0] = uart->data;
-		return NO_ERROR;
-	
+	// Transmit FIFO is not full
 	} else if ( uart->intr & TIS_MASK ){
 		debug("6\r\n");
 		// Implies FIFO is empty
@@ -87,8 +79,8 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 		*data = 0;
 		return NO_ERROR;
 	}
-	debug("THIS IS BAD. THIS SHOULD NEVER PRINT\r\n");
-	// Never gets here ...
+	error( UNHANDLED_UART_INTR, "UART driver intercepted an unknown uart interrupt!");
+	return UNHANDLED_UART_INTR;
 }
 
 int uart1Driver (char *data, int len) {
@@ -99,4 +91,29 @@ int uart1Driver (char *data, int len) {
 int uart2Driver (char *data, int len) {
 	debug ("com2driver: data=%s @(%x) len=%d\r\n", data, data, len);
 	return uartHandler( UART2, data, len );
+}
+
+int uart_install ( UART *uart, int speed, int fifo ) {
+
+	// Set the speed
+	int err = uart_setSpeed( uart, speed );
+	
+	// Set up the Request to Send bit
+	uart->mctl |= RTS_MASK;
+
+	// Always set the HIGH bits after the Mid / Low
+	uart_setFifo( uart, fifo );
+
+	switch( (int) uart ) {
+		case UART1_BASE:
+			err = InstallDriver( INT_UART1, &uart1Driver );
+			break;
+		case UART2_BASE:
+			err = InstallDriver( INT_UART2, &uart2Driver );
+			break;
+		default:
+			return INVALID_UART_ADDR;
+	}
+
+	return err;
 }
