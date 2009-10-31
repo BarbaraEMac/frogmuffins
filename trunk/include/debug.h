@@ -7,7 +7,7 @@
  * If DEBUG is not defined in any file, then all assert and
  * debug statements are stripped.
  */
-
+#include <bwio.h>
 #include "error.h"
 
 #ifndef __DEBUG_H__
