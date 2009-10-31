@@ -5,8 +5,6 @@
  */
 #define DEBUG 1
 
-#include <bwio.h>
-
 #include "debug.h"
 #include "error.h"
 #include "servers.h"

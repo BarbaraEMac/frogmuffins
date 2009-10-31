@@ -4,7 +4,6 @@
  * dgoc
  */
 //#define DEBUG
-#include <bwio.h>
 #include <debug.h>
 #include <ts7200.h>
 #include <math.h>
