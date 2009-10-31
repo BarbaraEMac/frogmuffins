@@ -39,7 +39,11 @@ enum ERROR {
 	CONNECTION_TIMEOUT,		// Connection to the train controller failed
 	CANNOT_INIT_SWITCHES,	// Switch initialization failed
 	SERIAL_OVERRUN,			// Serial IO data was overrun
-	INVALID_UART_SPEED		// The uart speed specified is not valid
+	INVALID_UART_SPEED,		// The uart speed specified is not valid
+	// --9975
+	UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
+	INVALID_UART_ADDR		// The addres passed in is not a UART
+		
 } error;
 
 #endif

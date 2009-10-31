@@ -28,17 +28,9 @@ int timer1Driver (char *retBuf, int bufLen);
 int timer2Driver (char *retBuf, int bufLen);
 
 /*
- * The driver for the UART
- * retBuf - The buffer to return data to.
- * bufLen - The length of the return buffer.
+ * Set up the UART
+ * This should be called to install the driver and set up the UART
  */
-int uart1Driver (char *retBuf, int bufLen);
-
-/*
- * The driver for the UART
- * retBuf - The buffer to return data to.
- * bufLen - The length of the return buffer.
- */
-int uart2Driver (char *retBuf, int bufLen);
+int uart_install ( UART *uart, int speed, int fifo );
 
 #endif
