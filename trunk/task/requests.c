@@ -127,8 +127,7 @@ int Getc (TID iosTid) {
 	req.data[0] = 0;
 	req.len     = 0;
 
-	Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&ret, 
-		 sizeof(char));
+	Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&ret, sizeof(char));
 	
 	return ret;
 }

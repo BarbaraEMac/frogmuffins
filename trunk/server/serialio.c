@@ -64,26 +64,35 @@ inline void uart_write( UART *uart, char ch ) {
 void ios1_run () {
 	debug ("ios1: Running 1\r\n");
 	
-	int err;
-	if ( (err = InstallDriver( INT_UART1, &comOneDriver )) < NO_ERROR ) {
-		error(err, "UART1 not installed.");
-	}
-	debug ("ios1: installed the first driver.\r\n");
+	int err = InstallDriver( INT_UART1, &comOneDriver );
+	if_error(err, "UART1 driver not installed.");
 	
-	ios_run(UART1);
+	debug ("ios1: installed the first driver.\r\n");
+
+	err = uart_setspeed( UART1, 2400 );
+	if_error(err, "UART1 speed not set.");
+
+	// TODO remove the next 3 lines
+	UART *uart = UART1;
+	assert( uart->lcrm == 0 );
+	assert( uart->lcrl == 0xbf );
+
+	ios_run( UART1 );
 }
 
 // Warpper for UART2 / COM2 / Monitor & Keyboard
 void ios2_run () {
 	debug ("ios2: Running 2\r\n");
 	
-	int err;
-	if ( InstallDriver( INT_UART2, &comTwoDriver ) < NO_ERROR ) {
-		error(err, "UART2 not installed.");
-	}
+	int err = InstallDriver( INT_UART2, &comTwoDriver );
+	if_error(err, "UART2 driver not installed.");
+	
 	debug ("ios2: installed the second driver.\r\n");
 	
-	ios_run(UART2);
+	err = uart_setspeed( UART2, 115200 );
+	if_error(err, "UART2 speed not set.");
+
+	ios_run( UART2 );
 }
 
 //TODO: Delete Me if this code works without me!
@@ -267,9 +276,7 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	s->wFulPtr = 0;				
 	
 	// Clear out the uart buffer
-	while ( uart->flag & RXFF_MASK ) {
-		c = (uart->data);
-	}
+	while ( uart->flag & RXFF_MASK ) { c = (uart->data); }
 	
 	// Enable the UART
 	uart->ctlr |= UARTEN_MASK;
