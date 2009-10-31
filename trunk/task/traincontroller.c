@@ -23,9 +23,9 @@ void tc_run () {
 	int 	   senderTid;
 	TCRequest  req;
 	int 	   ret, len;
-	TID		   ios1Tid = WhoIs("IOServer1");
-	TID		   ios2Tid = WhoIs("IOServer2");
-	TID		   csTid  = WhoIs("ClockServer");
+	TID		   ios1Tid = WhoIs(SERIALIO1_NAME);
+	TID		   ios2Tid = WhoIs(SERIALIO2_NAME);
+	TID		   csTid  = WhoIs(CLOCK_NAME);
 	int 	   speed;
 
 	// Initialize the Train Controller
@@ -53,8 +53,8 @@ void tc_run () {
 				if ( (ret = checkTrain ( req.arg1 )) >= NO_ERROR ) {
 					speed = tc.speeds[req.arg1];
 					
-					ret =  trainSend (0,            (char) req.arg1, ios1Tid, csTid);
-					ret |= trainSend (15, 			(char) req.arg1, ios1Tid, csTid);
+					ret =  trainSend ((char) 0,     (char) req.arg1, ios1Tid, csTid);
+					ret |= trainSend ((char) 15,    (char) req.arg1, ios1Tid, csTid);
 					ret |= trainSend ((char) speed, (char) req.arg1, ios1Tid, csTid);
 				}
 				
@@ -141,15 +141,19 @@ int checkDir( int *dir ) {
 
 // send commands to the train, try a few times
 int trainSend( char byte1, char byte2, TID ios1Tid, TID csTid ) {
-    char bytes[2];
+    debug ("tc: trainSend: b1=%d b2=%d\r\n", byte1, byte2);
+	char bytes[2];
 	bytes[0] = byte1;
 	bytes[1] = byte2;
+	int err;
 
 	int i;
     for( i = 0; i < TRAIN_TRIES; i ++ ) {
-        if( PutStr( bytes, 2, ios1Tid ) >= NO_ERROR ) {
+        if((err=PutStr( bytes, 2, ios1Tid)) >= NO_ERROR ) {
+			debug ("tc: trainSend was successful on try %d\r\n", i);
         	break;
 		}
+		error(err, "Sending to train cnotroller failed.\r\n");
     }
 
     if( i == TRAIN_TRIES ) {
