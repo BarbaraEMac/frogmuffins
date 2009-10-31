@@ -47,7 +47,7 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart);
 
 void ionotifier_run();
 
-void ionotifier_init();
+int ionotifier_init();
 
 //-----------------------------------------------------------------------------
 
@@ -78,11 +78,7 @@ void ios1_run () {
 	// Set the Request to Send bit
 	(UART1)->mctl |= RTS_MASK;
 	
-	// TODO remove the next 3 lines
-	UART *uart = UART1;
-	assert( uart->lcrm == 0 );
-	assert( uart->lcrl == 0xbf );
-
+	// Start the server
 	ios_run( UART1 );
 }
 
@@ -104,7 +100,6 @@ void ios2_run () {
 	ios_run( UART2 );
 }
 
-//TODO: Delete Me if this code works without me!
 // Advance the buffer pointer
 void advance (int *ptr) {
 	*ptr += 1;
@@ -259,15 +254,17 @@ void ios_run (UART *uart) {
 }
 
 void ios_init (SerialIOServer *s, UART *uart) {
-	int i, err;
+	int i, tid;
 	char c;
 
 	// Create the notifier
-	if ( (err = Create (1, &ionotifier_run)) < NO_ERROR) {
-		error (err, "Cannot make IO notifier.\r\n");
+	if ( (tid = Create (1, &ionotifier_run)) < NO_ERROR) {
+		error (tid, "Cannot make IO notifier.\r\n");
 	}
 	
-	// TODO: Send/Receive to synchronize with the notifier
+	// Send/Receive to synchronize with the notifier
+	// This tells the notifier the server's tid
+	Send ( tid, &c, sizeof(char), &c, sizeof(char) );
 
 	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
@@ -291,12 +288,13 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	
 	// Turn the interrupt ON
 	uart->ctlr |= RIEN_MASK;
-	// TODO: Getting a C might work without this on .. I didn't try
-	uart->ctlr |= RTIEN_MASK;
 
 	// Register with the name server
-	// TODO: FIX THIS NAME TO REFLECT COM1 & COM2
-	RegisterAs (SERIALIO_NAME);
+	if ( uart == UART1 ) {
+		RegisterAs (SERIALIO1_NAME);
+	} else {
+		RegisterAs (SERIALIO2_NAME);
+	}
 }
 
 void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
@@ -305,14 +303,13 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 	
 	// If the transmitter is busy, wait for interrupt
 	if ( uart->flag & TXBUSY_MASK ) {
-		debug ("transmit line is busy\r\n");
+		debug ("ios: transmit line is busy. Turning on transmit interrupt.\r\n");
 		uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
 	
 	// Otherwise, write a single byte
 	} else {	
 		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulPtr]);
 
-		debug ("UART: h=%x m=%x l=%x\r\n", uart->lcrh, uart->lcrm, uart->lcrl);
 		uart_write ( uart, ios->sendBuffer[ios->sFulPtr] );
 	
 		// Clear buf & advance pointer
@@ -328,15 +325,15 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 
 void ionotifier_run() {
 	int 	  err;
-	int 	  serverId = MyParentTid();
 	int 	  reply;
 	char 	  awaitBuffer;
 	IORequest req;
 
 	// Initialize this notifier
-	// TODO: get the server id by snychronizing with the parent in inits
-	ionotifier_init ();
+	int serverTid = ionotifier_init ();
 	
+	debug ("SERVER's TID = %d\r\n",serverTid);
+
 	FOREVER {
 		if((err = AwaitEvent(INT_UART1, &awaitBuffer, sizeof(char))) < NO_ERROR){
 			// TODO: Handle overrun error
@@ -359,24 +356,25 @@ void ionotifier_run() {
 			req.len     = 1;
 		}
 
-		if ( (err = Send( serverId, (char*) &req, sizeof(IORequest),
+		if ( (err = Send( serverTid, (char*) &req, sizeof(IORequest),
 					     (char *) &reply, sizeof(int) )) < NO_ERROR ) {
 			// Handle errors
 			
 		}
-
-
-/*
-		assert dtr to say you want to send. wait for cts
-
-		// The device driver will clear the interrupt
-		//
-*/
+		// TODO: assert dtr to say you want to send. wait for cts
 	}
 
 	Exit(); // This will never be called.
 }
 
-void ionotifier_init () {
+int ionotifier_init () {
 	debug ("ionotifier_init\r\n");
+	int  serverTid;
+	char msg;
+
+	// Synchronize with the server
+	Receive ( &serverTid, &msg, sizeof(char) );
+	Reply   ( serverTid,  &msg, sizeof(char) );
+
+	return serverTid;
 }	
