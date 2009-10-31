@@ -60,7 +60,7 @@ void intr_allOff() {
  * 	fifos enabled
  */
 
-int uart_setfifo( UART *uart, int state ) {
+int uart_setFifo( UART *uart, int state ) {
 	int buf;
 	buf = uart->lcrh;
 	buf = state ? buf | FEN_MASK : buf & ~FEN_MASK;
@@ -68,7 +68,7 @@ int uart_setfifo( UART *uart, int state ) {
 	return 0;
 }
 
-int uart_setspeed( UART *uart, int speed ) {
+int uart_setSpeed( UART *uart, int speed ) {
 	switch( speed ) {
 	case 115200:
 		uart->lcrm = 0x0;

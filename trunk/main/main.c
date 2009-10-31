@@ -156,7 +156,7 @@ int main( int argc, char* argv[] ) {
 	Request  nextRequest;	// The next request to service
 
 	// Initialize the printing connection
-	uart_setfifo( UART2, OFF );
+	uart_setFifo( UART2, OFF );
 	bwputstr( COM2, "Initialized serial port connection.\r\n" );
 	
 	// Set up the Software interrupt for context switches
