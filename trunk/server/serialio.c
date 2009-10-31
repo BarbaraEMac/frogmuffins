@@ -253,6 +253,7 @@ void ios_run (UART *uart) {
 void ios_init (SerialIOServer *s, UART *uart) {
 	int i, tid;
 	char c;
+	int notifierEvt = (uart == UART1) ? INT_UART1 : INT_UART2;
 
 	// Create the notifier
 	if ( (tid = Create (1, &ionotifier_run)) < NO_ERROR) {
@@ -261,7 +262,7 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	
 	// Send/Receive to synchronize with the notifier
 	// This tells the notifier the server's tid
-	Send ( tid, &c, sizeof(char), &c, sizeof(char) );
+	Send ( tid, (char*)&notifierEvt, sizeof(int), &notifierEvt, sizeof(int) );
 
 	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
@@ -323,14 +324,15 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 void ionotifier_run() {
 	int 	  err;
 	int 	  reply;
+	int		  serverTid;
 	char 	  awaitBuffer;
 	IORequest req;
 
 	// Initialize this notifier
-	int serverTid = ionotifier_init ();
+	int event = ionotifier_init (&serverTid);
 	
 	FOREVER {
-		if((err = AwaitEvent(INT_UART1, &awaitBuffer, sizeof(char))) 
+		if((err = AwaitEvent(event, &awaitBuffer, sizeof(char))) 
 				< NO_ERROR){
 			// Handle overrun error
 			if ( err == SERIAL_OVERRUN ) {
@@ -363,14 +365,13 @@ void ionotifier_run() {
 	Exit(); // This will never be called.
 }
 
-int ionotifier_init () {
+int ionotifier_init (int *serverTid) {
 	debug ("ionotifier_init\r\n");
-	int  serverTid;
-	char msg;
+	int event;
 
 	// Synchronize with the server
-	Receive ( &serverTid, &msg, sizeof(char) );
-	Reply   ( serverTid,  &msg, sizeof(char) );
+	Receive ( serverTid,  (char*) &event, sizeof(int) );
+	Reply   ( *serverTid, (char*) &event, sizeof(int) );
 
-	return serverTid;
+	return event;
 }	
