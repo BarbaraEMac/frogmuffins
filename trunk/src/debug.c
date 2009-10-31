@@ -14,4 +14,5 @@ void __assert ( int test, char *exp, int line, char *file ) {
 	if ( !test ) {
 		bwprintf (COM2, "\033[31mAssert Failure: %s at line #%d in file %s.\033[37m\n\r", exp, line, file );
 	}
+	int i = 1 /0;
 }
