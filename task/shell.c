@@ -93,7 +93,6 @@ void shell_run ( ) {
 		mins = time / 600;
 	
 		input[i] = bwgetc(COM2 ); //Getc( ios1Tid );
-		Putc( input[i], ios1Tid );
 		// Enter was pressed
 		if( input[i] == '\r' ) {        
 			bwputstr ( COM2, "\n\r");
@@ -130,7 +129,8 @@ void shell_run ( ) {
 // Execute a train command
 int trainCmd ( TCRequest *tcReq, int tcTid ) {
 	int	  rpl;
-	Send(tcTid, (char*) &tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int)); 
+	
+	Send(tcTid, (char*) tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int)); 
 	return rpl;
 }
 
@@ -184,7 +184,7 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		trainCmd( &tcReq, tcTid );
 	// tr
 	} else if( sscanf(command, "tr %d %d\r", &tcReq.arg1, &tcReq.arg2) >= 0 ) {
-    	tcReq.type = TR;
+		tcReq.type = TR;
 		trainCmd( &tcReq, tcTid );
 	// wh
     } else if( sscanf(command, "wh\r") >=0 ) {
