@@ -63,13 +63,12 @@ void shell_run ( ) {
 	debug ("Creating the serial io server. \r\n");
 	ios1Tid = Create (2, &ios1_run);
 //	ios2Tid = Create (2, &ios2_run);
-/*
+	
 	// Create the train controller
 	debug ("Creating the train controller. \r\n");
 	tcTid = Create (2, &tc_run);
 	
 	output ("Type 'h' for a list of commands.\r\n");
-*/
 	
 	// Create the idle task
 	idle = Create (9, &idleTask);

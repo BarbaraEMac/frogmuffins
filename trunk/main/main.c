@@ -4,7 +4,7 @@
  * dgoc
  */
 
-#define DEBUG 1
+#define DEBUG 1 
 #include <bwio.h>
 #include <ts7200.h>
 #include <math.h>
@@ -155,10 +155,6 @@ int main( int argc, char* argv[] ) {
 	TD		*active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
 
-	// Initialize the printing connection
-	uart_setFifo( UART2, OFF );
-	bwputstr( COM2, "Initialized serial port connection.\r\n" );
-	
 	// Set up the Software interrupt for context switches
 	writeMemory(0x28, (int) &kernelEnter );
 	writeMemory(0x38, (int) &interruptHandler );
@@ -169,8 +165,8 @@ int main( int argc, char* argv[] ) {
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Turn on the cache
-	cache_on();
-	bwprintf( COM2, "Initialized instruction cache.\r\n");
+//	cache_on();
+//	bwprintf( COM2, "Initialized instruction cache.\r\n");
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
