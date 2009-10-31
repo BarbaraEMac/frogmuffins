@@ -71,7 +71,10 @@ void ios1_run () {
 
 	err = uart_setSpeed( UART1, 2400 );
 	if_error(err, "UART1 speed not set.");
-
+	
+	// Always set the HIGH bits after the Mid / Low
+	uart_setFifo( UART1, OFF );
+	
 	// TODO remove the next 3 lines
 	UART *uart = UART1;
 	assert( uart->lcrm == 0 );
@@ -91,6 +94,9 @@ void ios2_run () {
 	
 	err = uart_setSpeed( UART2, 115200 );
 	if_error(err, "UART2 speed not set.");
+	
+	// Always set the HIGH bits after the Mid / Low
+	uart_setFifo( UART2, OFF );
 
 	ios_run( UART2 );
 }
@@ -227,8 +233,7 @@ void ios_run (UART *uart) {
 					assert (ios.sendBuffer[ios.sEmpPtr] == DUMMY_CH);
 					
 					bwputc(COM2, req.data[i]);
-					storeCh (ios.sendBuffer, &ios.sEmpPtr,
-										req.data[i]);
+					storeCh (ios.sendBuffer, &ios.sEmpPtr, req.data[i]); 
 					
 					assert (ios.sFulPtr <= ios.sEmpPtr);
 				}
@@ -304,6 +309,7 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 	} else {	
 		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulPtr]);
 
+		debug ("UART: h=%x m=%x l=%x\r\n", uart->lcrh, uart->lcrm, uart->lcrl);
 		uart_write ( uart, ios->sendBuffer[ios->sFulPtr] );
 	
 		// Clear buf & advance pointer
