@@ -4,7 +4,7 @@
  * dgoc
  */
 
-#define DEBUG 2
+#define DEBUG 1
 #include <bwio.h>
 #include <ts7200.h>
 
