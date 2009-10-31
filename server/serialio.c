@@ -74,6 +74,9 @@ void ios1_run () {
 	
 	// Always set the HIGH bits after the Mid / Low
 	uart_setFifo( UART1, OFF );
+
+	// Set the Request to Send bit
+	(UART1)->mctl |= RTS_MASK;
 	
 	// TODO remove the next 3 lines
 	UART *uart = UART1;

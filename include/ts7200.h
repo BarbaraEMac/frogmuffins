@@ -124,8 +124,8 @@ typedef volatile struct _uart {
 	int _dummy2[53];
 	int mctl;
 } UART;
-#define UART1			(UART *) UART1_BASE
-#define UART2			(UART *) UART2_BASE
+#define UART1			((UART *) UART1_BASE)
+#define UART2			((UART *) UART2_BASE)
 
 
 // TIMER INTERFACE
@@ -135,9 +135,9 @@ typedef volatile struct _clock {
 	int ctl;
 	int clr;
 } Clock;
-#define TIMER1			(Clock *) TIMER1_BASE
-#define TIMER2			(Clock *) TIMER2_BASE
-#define TIMER3			(Clock *) TIMER3_BASE
+#define TIMER1			((Clock *) TIMER1_BASE)
+#define TIMER2			((Clock *) TIMER2_BASE)
+#define TIMER3			((Clock *) TIMER3_BASE)
 
 // VIC INTERFACE
 typedef volatile struct _vic {
