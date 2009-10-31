@@ -53,11 +53,6 @@ int ionotifier_init();
 
 inline void uart_write( UART *uart, char ch ) {
 	uart->data = ch;
-
-	// TODO: we might not want to turn the interrupt on here
-	// we ONLY want it on iff there is another character to write
-	// Turn on the interrupt so that when the FIFO is empty, we will know
-	uart->ctlr |= TIEN_MASK;	
 }
 
 // Wrapper for UART1 / COM1 / Train Controller!
@@ -145,8 +140,9 @@ void ios_run (UART *uart) {
 		
 		// Handle the request
 		switch (req.type) {
-			case NOTIFY_CH:
-				debug ("ios: notified CH emp=%d ful=%d\r\n", ios.sEmpPtr, ios.sFulPtr);
+			case NOTIFY_GET:
+				debug ("ios: notified GET emp=%d ful=%d\r\n",
+						ios.sEmpPtr, ios.sFulPtr);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
@@ -176,8 +172,9 @@ void ios_run (UART *uart) {
 			
 				break;
 
-			case NOTIFY_CTS:
-				debug ("ios: notified cts emp=%d ful=%d\r\n", ios.sEmpPtr, ios.sFulPtr);
+			case NOTIFY_PUT:
+				debug ("ios: notified PUT emp=%d ful=%d\r\n", 
+						ios.sEmpPtr, ios.sFulPtr);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
@@ -332,26 +329,25 @@ void ionotifier_run() {
 	// Initialize this notifier
 	int serverTid = ionotifier_init ();
 	
-	debug ("SERVER's TID = %d\r\n",serverTid);
-
 	FOREVER {
-		if((err = AwaitEvent(INT_UART1, &awaitBuffer, sizeof(char))) < NO_ERROR){
-			// TODO: Handle overrun error
+		if((err = AwaitEvent(INT_UART1, &awaitBuffer, sizeof(char))) 
+				< NO_ERROR){
+			// Handle overrun error
 			if ( err == SERIAL_OVERRUN ) {
-
+				error(err, "Serial IO data has been overrun.\r\n");
 			}
 		}
 		debug ("NOTIFIER WOKE UP\r\n");
 		// If we do not have a character, we must be clear to send
 		if ( awaitBuffer == 0 ) {
-			req.type    = NOTIFY_CTS;
+			req.type    = NOTIFY_PUT;
 			req.data[0] = 0;
 			req.len     = 0;
 		}
 		// Otherwise, give the server the character
 		else {
 			debug ("HAS A CHARACTER\r\n");
-			req.type    = NOTIFY_CH;
+			req.type    = NOTIFY_GET;
 			req.data[0] = awaitBuffer;
 			req.len     = 1;
 		}
