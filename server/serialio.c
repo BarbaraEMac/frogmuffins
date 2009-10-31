@@ -69,7 +69,7 @@ void ios1_run () {
 	
 	debug ("ios1: installed the first driver.\r\n");
 
-	err = uart_setspeed( UART1, 2400 );
+	err = uart_setSpeed( UART1, 2400 );
 	if_error(err, "UART1 speed not set.");
 
 	// TODO remove the next 3 lines
@@ -89,7 +89,7 @@ void ios2_run () {
 	
 	debug ("ios2: installed the second driver.\r\n");
 	
-	err = uart_setspeed( UART2, 115200 );
+	err = uart_setSpeed( UART2, 115200 );
 	if_error(err, "UART2 speed not set.");
 
 	ios_run( UART2 );

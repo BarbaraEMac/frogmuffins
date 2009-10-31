@@ -232,8 +232,8 @@ Interrupt intr_get() ;
 void intr_allOff() ;
 
 
-int uart_setfifo( UART *uart, int state ) ;
-int uart_setspeed( UART *uart, int speed ) ;
+int uart_setFifo( UART *uart, int state ) ;
+int uart_setSpeed( UART *uart, int speed ) ;
 inline void uart_write( UART *uart, char ch ) ;
 
 void cache_on() ;
