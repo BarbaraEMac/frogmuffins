@@ -184,8 +184,7 @@ void td_destroy (TD *td, TDM *mgr) {
 	// Mark the td as unused
 	mgr_setUsed( mgr, idx, 0 );
 
-
-	int p = td->priority, eventId, *handler;
+	int p = td->priority, eventId;
 	TD *waitOn;
 	switch ( td->state ) {
 
@@ -207,11 +206,9 @@ void td_destroy (TD *td, TDM *mgr) {
 			eventId = td->a->awaitEvent.eventId;
 			// Remove the TD from the interrupt queue
 			queue_remove ( &mgr->intBlocked[eventId], td );
-			// TODO clean this up!
 			if( mgr->intBlocked[eventId] == 0 ) {
 				// Turn off interrupts as there is no-one to handle them
-				handler = (int *) (VIC1_BASE + VIC_INT_EN_CLR);
-				*handler |= (1 << eventId);	
+				intr_set ( eventId, OFF );
 			}
 			break;
 
