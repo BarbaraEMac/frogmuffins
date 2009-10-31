@@ -125,6 +125,8 @@ void ns_insert (NameServer *ns, const char *name, int tid) {
 		e = &ns->entries[ns->nextEmpty++]; 
 		// Deep copy the name
 		strncpy (e->name, name, NAME_LEN);
+		// Make sure the name is null terminated
+		e->name[NAME_LEN-1] = '\0';
 	} else {						// A match was found
 		debug ("\tns_insert: Overwriting tid of %s to %d \r\n", name, tid);
 	}
