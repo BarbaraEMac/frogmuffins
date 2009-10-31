@@ -127,7 +127,7 @@ void ios_run (UART *uart) {
 		switch (req.type) {
 			case NOTIFY_GET:
 				debug ("ios: notified GET emp=%d ful=%d\r\n",
-						ios.sEmpPtr, ios.sFulPtr);
+						ios.rEmpPtr, ios.rFulPtr);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
@@ -136,7 +136,7 @@ void ios_run (UART *uart) {
 				if ( ios.wEmpPtr != ios.wFulPtr ) {
 					assert (ios.waiting[ios.wFulPtr] != DUMMY_TID);
 					
-					debug ("ios: waking up %d to give ch=%c\r\n",
+					debug ("ios: waking up task %d to give ch=%c\r\n",
 							ios.waiting[ios.wFulPtr], req.data[0]);
 					Reply ((int)ios.waiting[ios.wFulPtr], (char *)&req.data, 
 							sizeof(char));
@@ -324,7 +324,7 @@ void ionotifier_run() {
 				error(err, "Serial IO data has been overrun.\r\n");
 			}
 		}
-		debug ("NOTIFIER WOKE UP\r\n");
+		debug ("NOTIFIER %d WOKE UP\r\n", (event ==INT_UART1)? 1:2);
 		// If we do not have a character, we must be clear to send
 		if ( awaitBuffer == 0 ) {
 			req.type    = NOTIFY_PUT;
@@ -333,7 +333,6 @@ void ionotifier_run() {
 		}
 		// Otherwise, give the server the character
 		else {
-			debug ("HAS A CHARACTER\r\n");
 			req.type    = NOTIFY_GET;
 			req.data[0] = awaitBuffer;
 			req.len     = 1;
