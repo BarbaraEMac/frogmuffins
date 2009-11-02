@@ -155,7 +155,7 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 	IORequest req;
 	
 	req.type    = PUTSTR;
-	strncpy (req.data, str, strLen);
+	memcpy (req.data, str, strLen);
 	req.len     = strLen;
 
 	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
