@@ -107,17 +107,13 @@ void tc_run () {
 int tc_init (TrainController *tc) {
 	debug ("tc_init: train controller=%x \r\n", tc);
 
-	int err = RegisterAs(TRAIN_CONTROLLER_NAME);
+	tc->lstSensorCh  = 0;
+	tc->lstSensorNum = 0;
 
-	if ( err >= NO_ERROR ) {
-		tc->lstSensorCh  = 0;
-		tc->lstSensorNum = 0;
-
-		memoryset ( tc->speeds, 0, NUM_TRNS );
-		memoryset ( tc->switches, 0, NUM_SWTS );
-	} 
-
-	return err;
+	memoryset ( tc->speeds, 0, NUM_TRNS );
+	switches_init ( 'S', tc->switches, ios1Tid );
+	
+	return RegisterAs(TRAIN_CONTROLLER_NAME);
 }
 
 // check if the train index is within range
@@ -167,18 +163,14 @@ int trainSend( char byte1, char byte2, TID ios1Tid, TID csTid ) {
 // set a switch to a desired position checking for bad input
 int switchSend( char sw, char dir, char* switches, TID ios1Tid ) {
 	int err;
-	char bytes[2];
-	bytes[0] = sw;
-	bytes[1] = 32; 	// TURN OFF THE SOLENOID
-    
-	err = Putc( dir, ios1Tid );
+	char bytes[3] = { dir, sw, 32 };	// 32 = TURN OFF THE SOLENOID
+	
+	// TODO: wait?
 
-	if ( err >= NO_ERROR ) {
-		err = PutStr( bytes, 2, ios1Tid );
+	err = PutStr( bytes, 3, ios1Tid );
 		
-		// Store the new direction
-		switches[(int) sw] = dir;    
-	}
+	// Store the new direction
+	switches[(int) sw] = dir;    
 	
 	return err;
 }
