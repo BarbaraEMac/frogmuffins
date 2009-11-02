@@ -28,40 +28,23 @@ enum TCRequestCode {
 
 typedef struct {
 	enum TCRequestCode type;
-	int arg1;
-	int arg2;
+	union {
+		int train;
+		int sw;
+		int arg1;
+	};
+	union {
+		int speed;
+		char dir;
+		int arg2;
+	};
 } TCRequest;
 
 
-/**
- * A Train Controller
- */
-typedef struct {
-    char lstSensorCh;
-    int  lstSensorNum;
-    char speeds   [NUM_TRNS];
-    char switches [NUM_SWTS];
-} TrainController;
-
-/**
- * Initialize the traincontroller
- */
-int tc_init (TrainController *tc);
 
 /**
  * The main function for the Train Controller task.
  */
 void tc_run ();
 
-int checkTrain( int train );
-
-int checkDir( int *dir );
-
-int trainSend( char byte1, char byte2, TID iosTid, TID csTid );
-
-int switchSend( char sw, char dir, char* switches, TID iosTid );
-
-int switches_init( char dir, char* switches, TID iosTid );
-
-void pollSensors( TrainController *tc, TID iosTid );
 #endif
