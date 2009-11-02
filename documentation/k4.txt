@@ -675,5 +675,34 @@ Question 4
 ==========
 	Here are all of the files we are submitting:
 
+	.:
+	arch  documentation  include  lib  main  Makefile  out  server  src  task
+
+	./arch:
+	drivers.c  ep93xx.c  switch.c  switch.S
+
+	./documentation:
+	k1.txt  k2.out  k2.txt  k3.txt  k4.txt  syscall.txt
+
+	./include:
+	bwio.h     error.h       globals.h   servers.h  switch.h    td.h
+	debug.h    gameplayer.h  math.h      shell.h    syscalls.h  traincontroller.h
+	drivers.h  gameserver.h  requests.h  string.h   task.h      ts7200.h
+
+	./lib:
+	libbwio.a  libdebug.a  libmath.a  libstring.a
+
+	./main:
+	main.c  orex.ld  syscalls.c  td.c
+
+	./server:
+	clockserver.c  nameserver.c  serialio.c
+
+	./src:
+	bwio.c  debug.c  Makefile  math.c  string.c
+
+	./task:
+	gameplayer.c  gameserver.c  requests.c  shell.c  task.c  traincontroller.c
+
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
 	
