@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "drivers.h"
 #include "error.h"
+#include "requests.h"
 
 int timer1Driver (char *retBuf, int buflen) {
 	// Get clear location
