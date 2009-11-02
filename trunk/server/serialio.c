@@ -238,7 +238,8 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	
 	// Send/Receive to synchronize with the notifier
 	// This tells the notifier the server's tid & event to await
-	Send ( tid, (char*)&notifierEvt, sizeof(int), &notifierEvt, sizeof(int) );
+	Send ( tid, (char*) &notifierEvt, sizeof(int), 
+			(char*) &notifierEvt, sizeof(int) );
 
 	// Empty out the character buffers
 	for (i = 0; i < NUM_ENTRIES; i++) {
