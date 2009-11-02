@@ -1,7 +1,9 @@
  /*
- * dgoc_a1.c
+ * Shell for Kernel 
+ * becmacdo
+ * dgoc
  */
-#define DEBUG 2
+#define DEBUG 2 
 
 #include <bwio.h>
 #include <string.h>
@@ -81,7 +83,7 @@ void shell_run ( ) {
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
-
+	
 	// Main loop
     FOREVER {
 
@@ -92,13 +94,16 @@ void shell_run ( ) {
 		secs = (time / 10) % 60;
 		mins = time / 600;
 	
-		input[i] = Getc( ios1Tid );
+		input[i] = Getc( ios2Tid );
+		//Putc(input[i], ios1Tid);
+		//Putc(input[i], ios2Tid);
+
 		// Enter was pressed
 		if( input[i] == '\r' ) {        
 			bwputstr ( COM2, "\n\r");
 			input[i+1] = 0;
 			
-			shell_exec( input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
+			shell_exec(input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
 			
 			// Clear the input for next line
 			//input = history[h++];
@@ -128,7 +133,7 @@ void shell_run ( ) {
 
 // Execute a train command
 int trainCmd ( TCRequest *tcReq, int tcTid ) {
-	int	  rpl;
+	int	rpl;
 	
 	Send(tcTid, (char*) tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int)); 
 	return rpl;
