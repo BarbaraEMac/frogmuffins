@@ -128,7 +128,7 @@ char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
 }
 
 // format -- printf's helper
-size_t format ( char *str, const char *fmt, va_list va ) {
+size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 	char bf[12];
 	char ch, lz, *s= str;
 	size_t w, len=0; // len holds the length of the sting generated so far
@@ -190,7 +190,7 @@ size_t sprintf ( char * str, const char * fmt, ... ) {
 	va_list va;
 	
 	va_start(va,fmt);
-	len = format( str, fmt, va );
+	len = _sprintf( str, fmt, va );
 	va_end(va);
 
 	return len;
