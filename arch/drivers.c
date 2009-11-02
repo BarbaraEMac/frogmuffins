@@ -37,53 +37,40 @@ int timer2Driver (char *retBuf, int buflen) {
 }
 
 inline int uartHandler ( UART *uart, char *data, int len ) {
+	int intr = uart->intr;
+
 	// Return overrun error if we have already lost data!
 	if ( uart->rsr & OE_MASK ) {
-		//debug("1\r\n");
 		uart->rsr = 0;			// write to clear memory?
 		return SERIAL_OVERRUN;
 	}
 
 	// A change in the CTS triggers a Modem status interrupt
-	if ( uart->intr & MIS_MASK ) {
-		//debug("2\r\n");
+	if ( intr & MIS_MASK ) {
 		// Reset this interrupt
 		uart->intr = 0;
 
 		if ( uart->flag & CTS_MASK ) {
-			//debug("3\r\n");
 			*data = 0;
 			return NO_ERROR;
 		} 
-		if ( uart->flag & RTS_MASK ) {
-			//debug ("RTSSSSS\r\n");
-			*data = 0;
-			return NO_ERROR;
-		}
 	// Receive FIFO is empty
-	} else if ( uart->intr & RIS_MASK ){
-		//debug("4\r\n");
-		// reading should reset the interrupt
-		// return character if you were told one came in
-		//return uart->data;
-
+	} else if ( intr & RIS_MASK ){
+		// Return character read that came in (reading resets the interrupt)
 		data[0] = uart->data;
+		
 		// Set the RTS bit
 		uart->mctl |= RTS_MASK;
-
 		return NO_ERROR;
 	// Transmit FIFO is not full
-	} else if ( uart->intr & TIS_MASK ){
-		//debug("6\r\n");
-		// Implies FIFO is empty
-		
-		// Turn off this interrupt
+	} else if ( intr & TIS_MASK ){
+		// Turn off this interrupt (user code turns it back on when ready)
 		uart->ctlr &= ~(TIEN_MASK);
 
 		*data = 0;
 		return NO_ERROR;
 	} else {
-		debug ("This is the interrupt: %x\r\n", uart->intr);
+		debug ("This is the interrupt: %x\r\n", intr);
 		error (UNHANDLED_UART_INTR,
 			   "UART driver intercepted an unknown uart interrupt!");
 	}
@@ -91,12 +78,10 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 }
 
 int uart1Driver (char *data, int len) {
-//	debug ("com1driver: data=%s @(%x) len=%d\r\n", data, data, len);
 	return uartHandler( UART1, data, len );
 }
 
 int uart2Driver (char *data, int len) {
-//debug ("com2driver: data=%s @(%x) len=%d\r\n", data, data, len);
 	return uartHandler( UART2, data, len );
 }
 
@@ -106,7 +91,7 @@ int uart_install ( UART *uart, int speed, int fifo ) {
 	int err = uart_setSpeed( uart, speed );
 	
 	// Set up the Request to Send bit
-	uart->mctl |= RTS_MASK;
+	uart->mctl = RTS_MASK;
 
 	// Always set the HIGH bits after the Mid / Low
 	uart_setFifo( uart, fifo );
