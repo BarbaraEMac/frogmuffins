@@ -57,7 +57,7 @@ void cs_run () {
 	CSRequest	 req;						// A clock server request message
 	int			 len;
 	
-	int			*time = clock_init ( TIMER3_BASE, 1, 0, 0 );
+	volatile int *time = clock_init ( TIMER3, 1, 0, 0 );
 	int			 ticks;
 	Sleeper		*sleepersQ;					// A queue of all sleeping user tasks
 	Sleeper		 memSleepers[NUM_SLEEPERS]; // For allocating memory
@@ -312,5 +312,5 @@ void notifier_init () {
 	}
 
 	// Init clock stuff
-	clock_init ( TIMER1_BASE, 1, 1, 100 );
+	clock_init ( TIMER1, 1, 1, 100 );
 }	
