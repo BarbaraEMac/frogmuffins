@@ -3,9 +3,8 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
-#include <bwio.h>
 #include <ts7200.h>
 
 #include "debug.h"
@@ -17,7 +16,6 @@
 #define DUMMY_TID		-1
 #define DUMMY_CH		0xFF
 #define AWAITBUF_LEN	1
-
 
 //-----------------------------------------------------------------------------
 // Private members & Forward Declarations
@@ -68,7 +66,7 @@ void ios1_run () {
 	ios_run( UART1 );
 }
 
-// Warpper for UART2 / COM2 / Monitor & Keyboard
+// Wrapper for UART2 / COM2 / Monitor & Keyboard
 void ios2_run () {
 	debug ("ios2: Running 2\r\n");
 	
@@ -89,15 +87,11 @@ void advance (int *ptr) {
 // Store the given value in the buffer and increment the pointer
 void storeCh (char *buf, int *ptr, char ch) {
 	buf[*ptr] = ch;
-
-	debug ("STORE ch=%c (%d)\r\n", ch, ch);
 	advance(ptr);
 }
 
 void storeInt (int *buf, int *ptr, int item) {
 	buf[*ptr] = item;
-
-	debug ("STORE int=%d\r\n", item);
 	advance (ptr);
 }
 
@@ -117,17 +111,18 @@ void ios_run (UART *uart) {
 		// Receive a server request
 		debug ("ios: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(IORequest) );
+		
 		debug ("ios: Received: Tid=%d  type=%d len=%d\r\n", 
 				senderTid, req.type, len);
-	
+		
 		assert( len == sizeof(IORequest) );
 		assert( senderTid >= 0 );
 		
 		// Handle the request
 		switch (req.type) {
 			case NOTIFY_GET:
-				debug ("ios: notified GET emp=%d ful=%d\r\n",
-						ios.rEmpPtr, ios.rFulPtr);
+				debug ("ios: notified GET data=%c emp=%d ful=%d\r\n",
+						req.data[0], ios.rEmpPtr, ios.rFulPtr);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
@@ -191,7 +186,7 @@ void ios_run (UART *uart) {
 				}
 				// Otherwise, store the tid until we get a character
 				else {
-					debug ("ios: getc NO char ful=%d emp=%d wait:ful=%d emp=%d\r\n",
+					debug ("ios: getc, but NO char ful=%d emp=%d wait:ful=%d emp=%d\r\n",
 							ios.rFulPtr, ios.rEmpPtr, ios.wFulPtr, ios.wEmpPtr);
 					assert (ios.waiting[ios.wEmpPtr] == DUMMY_TID);
 
@@ -202,7 +197,6 @@ void ios_run (UART *uart) {
 				break;
 			
 			case PUTC:
-				debug ("ios: putc ch=%c len=%d\r\n", req.data[0], req.len);
 			case PUTSTR:
 				debug ("ios: putstr str=%s len=%d\r\n", req.data, req.len);
 				// Do not let the sender stay blocked for long.
@@ -212,13 +206,10 @@ void ios_run (UART *uart) {
 				for ( i = 0; i < req.len; i ++ ) {
 					assert (ios.sendBuffer[ios.sEmpPtr] == DUMMY_CH);
 					
-					bwputc(COM2, req.data[i]);
 					storeCh (ios.sendBuffer, &ios.sEmpPtr, req.data[i]); 
 					
 					assert (ios.sFulPtr <= ios.sEmpPtr);
 				}
-
-				bwputstr(COM2, "\r\n");
 
 				// Try to send some data across the UART
 				ios_attemptTransmit (&ios, uart);
@@ -246,7 +237,7 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	}
 	
 	// Send/Receive to synchronize with the notifier
-	// This tells the notifier the server's tid
+	// This tells the notifier the server's tid & event to await
 	Send ( tid, (char*)&notifierEvt, sizeof(int), &notifierEvt, sizeof(int) );
 
 	// Empty out the character buffers
@@ -324,7 +315,7 @@ void ionotifier_run() {
 				error(err, "Serial IO data has been overrun.\r\n");
 			}
 		}
-		debug ("NOTIFIER %d WOKE UP\r\n", (event ==INT_UART1)? 1:2);
+		
 		// If we do not have a character, we must be clear to send
 		if ( awaitBuffer == 0 ) {
 			req.type    = NOTIFY_PUT;
@@ -343,7 +334,6 @@ void ionotifier_run() {
 			// Handle errors
 			
 		}
-		// TODO: assert dtr to say you want to send. wait for cts
 	}
 
 	Exit(); // This will never be called.
