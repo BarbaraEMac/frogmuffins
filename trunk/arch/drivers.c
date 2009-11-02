@@ -54,14 +54,20 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 			*data = 0;
 			return NO_ERROR;
 		} 
+
 	// Receive FIFO is empty
 	} else if ( intr & RIS_MASK ){
 		// Return character read that came in (reading resets the interrupt)
 		data[0] = uart->data;
 		
-		// Set the RTS bit
-		uart->mctl |= RTS_MASK;
+		// UART2 doesn't have the physical lines for RTS/CTS
+		if ( uart == UART1 ) { 
+			// Set the RTS bit
+			uart->mctl |= RTS_MASK;
+		}
+		
 		return NO_ERROR;
+	
 	// Transmit FIFO is not full
 	} else if ( intr & TIS_MASK ){
 		// Turn off this interrupt (user code turns it back on when ready)
