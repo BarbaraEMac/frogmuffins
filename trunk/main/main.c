@@ -165,8 +165,8 @@ int main( int argc, char* argv[] ) {
 	bwprintf( COM2, "Initialized interrupt control unit.\r\n");
 
 	// Turn on the cache
-//	cache_on();
-//	bwprintf( COM2, "Initialized instruction cache.\r\n");
+	cache_on();
+	bwprintf( COM2, "Initialized instruction cache.\r\n");
 
 	// Initialize the priority queues
 	mgr_init ( &mgr );
