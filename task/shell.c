@@ -54,7 +54,7 @@ void shell_run ( ) {
 	csReq.ticks = 0;
 
 	// Create the name server
-//	debug ("Creating the name server. \r\n");
+	debug ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
 	
 	// Create the clock server

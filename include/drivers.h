@@ -27,6 +27,13 @@ int timer1Driver (char *retBuf, int bufLen);
  */
 int timer2Driver (char *retBuf, int bufLen);
 
+
+enum UARTIntr {
+	MODEM_BIT_CHANGE = 1,
+	TRANSMIT_NOT_FULL,
+	RECEIVE_NOT_EMPTY
+};
+
 /*
  * Set up the UART
  * This should be called to install the driver and set up the UART

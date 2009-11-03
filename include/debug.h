@@ -19,7 +19,7 @@
 #define debug(args...)
 #define error(code, msg) bwprintf (COM2, "\033[35mERROR: %d %s on line %d in file %s.\r\n\033[37m", code, msg, __LINE__, __FILE__)
 
-#define if_error(code, msg) if( code > NO_ERROR ) error(code, msg)
+#define if_error(code, msg) if( code < NO_ERROR ) error(code, msg)
 
 #ifdef DEBUG 
 

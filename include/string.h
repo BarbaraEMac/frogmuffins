@@ -85,7 +85,7 @@ size_t strlen ( const char * str );
  * Locations pointed by each additional argument are filled with 
  * their corresponding type of value specified in the format string.
  */
-int sscanf( const char *src, const char *format, ... );
+int sscanf( const char * src, const char * format, ... );
 
 
 /**
@@ -96,6 +96,7 @@ int sscanf( const char *src, const char *format, ... );
  * the function expects at least as many additional arguments as specified 
  * in format.
  */
+size_t _sprintf ( char * str, const char * fmt, va_list va );
 size_t sprintf ( char * str, const char * format, ... );
 
 /**

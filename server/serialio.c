@@ -25,13 +25,13 @@ typedef struct {
 	char recvBuffer[NUM_ENTRIES];
 	int waiting    [NUM_ENTRIES];	// Array of waiting tids (for a char)
 
-	int sEmpPtr;
-	int sFulPtr;
-	int rEmpPtr;
-	int rFulPtr;
+	int sEmpIdx;
+	int sFulIdx;
+	int rEmpIdx;
+	int rFulIdx;
 	
-	int wEmpPtr;					// Points to next EMPTY slot
-	int wFulPtr;					// Points to the first FULL slot
+	int wEmpIdx;					// Points to next EMPTY slot
+	int wFulIdx;					// Points to the first FULL slot
 } SerialIOServer;
 
 /**
@@ -88,6 +88,7 @@ void advance (int *ptr) {
 void storeCh (char *buf, int *ptr, char ch) {
 	buf[*ptr] = ch;
 	advance(ptr);
+	assert (*ptr <= NUM_ENTRIES);
 }
 
 void storeInt (int *buf, int *ptr, int item) {
@@ -122,76 +123,72 @@ void ios_run (UART *uart) {
 		switch (req.type) {
 			case NOTIFY_GET:
 				debug ("ios: notified GET data=%c emp=%d ful=%d\r\n",
-						req.data[0], ios.rEmpPtr, ios.rFulPtr);
+						req.data[0], ios.rEmpIdx, ios.rFulIdx);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
 				// If we have a character and someone is blocked, wake them up
-				if ( ios.wEmpPtr != ios.wFulPtr ) {
-					assert (ios.waiting[ios.wFulPtr] != DUMMY_TID);
+				if ( ios.wEmpIdx != ios.wFulIdx ) {
+					assert (ios.waiting[ios.wFulIdx] != DUMMY_TID);
 					
 					debug ("ios: waking up task %d to give ch=%c\r\n",
-							ios.waiting[ios.wFulPtr], req.data[0]);
-					Reply ((int)ios.waiting[ios.wFulPtr], (char *)&req.data, 
+							ios.waiting[ios.wFulIdx], req.data[0]);
+					Reply ((int)ios.waiting[ios.wFulIdx], (char *)&req.data, 
 							sizeof(char));
 					
-					storeInt(ios.waiting, &ios.wFulPtr, DUMMY_TID);
-					assert (ios.wFulPtr <= ios.wEmpPtr);
+					storeInt(ios.waiting, &ios.wFulIdx, DUMMY_TID);
 				}
 				
 				// If we have a character and no one is waiting, store ch
 				else {
 					debug("ios: notified is storing ch=%c\r\n", req.data[0]);
-					assert (ios.recvBuffer[ios.rEmpPtr] == DUMMY_CH);
-					assert (ios.waiting[ios.wFulPtr] == DUMMY_TID);
+					assert (ios.recvBuffer[ios.rEmpIdx] == DUMMY_CH);
+					assert (ios.waiting[ios.wFulIdx] == DUMMY_TID);
 					
-					storeCh(ios.recvBuffer, &ios.rEmpPtr, req.data[0]);
-					assert (ios.rFulPtr <= ios.rEmpPtr);
+					storeCh(ios.recvBuffer, &ios.rEmpIdx, req.data[0]);
 				}
 			
 				break;
 
 			case NOTIFY_PUT:
 				debug ("ios: notified PUT emp=%d ful=%d\r\n", 
-						ios.sEmpPtr, ios.sFulPtr);
+						ios.sEmpIdx, ios.sFulIdx);
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
 				// Try to send the data across the UART!
-				if ( ios.sFulPtr != ios.sEmpPtr ) {
+				if ( ios.sFulIdx != ios.sEmpIdx ) {
 					ios_attemptTransmit(&ios, uart);
 				}
 				break;
 			
 			case GETC:
 				// If we have a character, send it back!
-				//if (ios.recvBuffer[ios.rFulPtr] != DUMMY_CH) {
-				if (ios.rFulPtr != ios.rEmpPtr ) {
+				//if (ios.recvBuffer[ios.rFulIdx] != DUMMY_CH) {
+				if (ios.rFulIdx != ios.rEmpIdx ) {
 					debug ("ios: getc has a char=%c ful=%d emp=%d wait:ful=%d emp=%d\r\n",
-							ios.recvBuffer[ios.rFulPtr], ios.rFulPtr, ios.rEmpPtr,
-							ios.wFulPtr, ios.wEmpPtr);
-					assert (ios.recvBuffer[ios.rFulPtr] != DUMMY_CH);
+							ios.recvBuffer[ios.rFulIdx], ios.rFulIdx, ios.rEmpIdx,
+							ios.wFulIdx, ios.wEmpIdx);
+					assert (ios.recvBuffer[ios.rFulIdx] != DUMMY_CH);
 					// Make sure no one else was waiting first ...
-					assert (ios.wFulPtr == ios.wEmpPtr);	
-					assert (ios.waiting[ios.wFulPtr] == DUMMY_TID);
+					assert (ios.wFulIdx == ios.wEmpIdx);	
+					assert (ios.waiting[ios.wFulIdx] == DUMMY_TID);
 
-					Reply (senderTid, (char *)&ios.recvBuffer[ios.rFulPtr], 
+					Reply (senderTid, (char *)&ios.recvBuffer[ios.rFulIdx], 
 						   sizeof(char));
 					
 					// Empty the slot and advance the pointer
-					storeCh(ios.recvBuffer, &ios.rFulPtr, DUMMY_CH);
-					assert (ios.rFulPtr <= ios.rEmpPtr);
+					storeCh(ios.recvBuffer, &ios.rFulIdx, DUMMY_CH);
 				}
 				// Otherwise, store the tid until we get a character
 				else {
 					debug ("ios: getc, but NO char ful=%d emp=%d wait:ful=%d emp=%d\r\n",
-							ios.rFulPtr, ios.rEmpPtr, ios.wFulPtr, ios.wEmpPtr);
-					assert (ios.waiting[ios.wEmpPtr] == DUMMY_TID);
+							ios.rFulIdx, ios.rEmpIdx, ios.wFulIdx, ios.wEmpIdx);
+					assert (ios.waiting[ios.wEmpIdx] == DUMMY_TID);
 
-					storeInt(ios.waiting, &ios.wEmpPtr, (char)senderTid);
-					assert (ios.wFulPtr <= ios.wEmpPtr); 
+					storeInt(ios.waiting, &ios.wEmpIdx, (char)senderTid);
 				}
 
 				break;
@@ -204,11 +201,13 @@ void ios_run (UART *uart) {
 
 				// Copy the data to our send buffer
 				for ( i = 0; i < req.len; i ++ ) {
-					assert (ios.sendBuffer[ios.sEmpPtr] == DUMMY_CH);
-					
-					storeCh (ios.sendBuffer, &ios.sEmpPtr, req.data[i]); 
-					
-					assert (ios.sFulPtr <= ios.sEmpPtr);
+					if( ios.sendBuffer[ios.sEmpIdx] != DUMMY_CH ) {
+						int k;
+						for( k = 0; k < NUM_ENTRIES; k++ ) 
+							bwprintf( COM2, "%d=[%d]\r\n", k, ios.sendBuffer[k]);
+					}
+					assert (ios.sendBuffer[ios.sEmpIdx] == DUMMY_CH);
+					storeCh (ios.sendBuffer, &ios.sEmpIdx, req.data[i]); 
 				}
 
 				// Try to send some data across the UART
@@ -248,12 +247,12 @@ void ios_init (SerialIOServer *s, UART *uart) {
 		s->waiting[i]    = DUMMY_TID;
 	}
 	// Init array pointers
-	s->sEmpPtr = 0;
-	s->sFulPtr = 0;
-	s->rEmpPtr = 0;
-	s->rFulPtr = 0;
-	s->wEmpPtr = 0;					
-	s->wFulPtr = 0;				
+	s->sEmpIdx = 0;
+	s->sFulIdx = 0;
+	s->rEmpIdx = 0;
+	s->rFulIdx = 0;
+	s->wEmpIdx = 0;					
+	s->wFulIdx = 0;				
 	
 	// Clear out the uart buffer
 	while ( uart->flag & RXFF_MASK ) { c = (uart->data); }
@@ -261,8 +260,9 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	// Enable the UART
 	uart->ctlr |= UARTEN_MASK;
 	
-	// Turn the interrupt ON
+	// Turn the interrupts ON
 	uart->ctlr |= RIEN_MASK;
+	uart->ctlr |= MSIEN_MASK;
 
 	// Register with the name server
 	if ( uart == UART1 ) {
@@ -274,7 +274,7 @@ void ios_init (SerialIOServer *s, UART *uart) {
 
 void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 	debug("ios: attempting to transmit ful=%d emp=%d ch=%c\r\n", 
-		   ios->sFulPtr, ios->sEmpPtr, ios->sendBuffer[ios->sFulPtr]);
+		   ios->sFulIdx, ios->sEmpIdx, ios->sendBuffer[ios->sFulIdx]);
 	
 	// If the transmitter is busy, wait for interrupt
 	if ( uart->flag & TXBUSY_MASK ) {
@@ -282,58 +282,57 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 		uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
 	
 	// Otherwise, write a single byte
-	} else {	
-		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulPtr]);
+	} else if( uart->flag & CTS_MASK ) {	
+		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulIdx]);
 
-		uart_write ( uart, ios->sendBuffer[ios->sFulPtr] );
+		uart_write ( uart, ios->sendBuffer[ios->sFulIdx] );
 	
 		// Clear buf & advance pointer
-		storeCh (ios->sendBuffer, &ios->sFulPtr, 0);
-		assert (ios->sFulPtr <= ios->sEmpPtr);
+		storeCh (ios->sendBuffer, &ios->sFulIdx, DUMMY_CH);
 
 		// If we want to send more, enable the interrupt
-		if ( ios->sFulPtr != ios->sEmpPtr ) {
+		if ( ios->sFulIdx != ios->sEmpIdx ) {
 			uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
 		}
 	}
 }
 
 void ionotifier_run() {
-	int 	  err;
+	int 	  ret;
 	int 	  reply;
 	int		  serverTid;
-	char 	  awaitBuffer;
+	char	  ch;
 	IORequest req;
 
 	// Initialize this notifier
 	int event = ionotifier_init (&serverTid);
 	
 	FOREVER {
-		if((err = AwaitEvent(event, &awaitBuffer, sizeof(char))) 
-				< NO_ERROR){
-			// Handle overrun error
-			if ( err == SERIAL_OVERRUN ) {
-				error(err, "Serial IO data has been overrun.\r\n");
-			}
-		}
-		
-		// If we do not have a character, we must be clear to send
-		if ( awaitBuffer == 0 ) {
-			req.type    = NOTIFY_PUT;
-			req.data[0] = 0;
-			req.len     = 0;
-		}
-		// Otherwise, give the server the character
-		else {
-			req.type    = NOTIFY_GET;
-			req.data[0] = awaitBuffer;
-			req.len     = 1;
+		ret = AwaitEvent(event, (char*) &ch, sizeof(ch)); 
+		switch( ret ) {
+			case SERIAL_OVERRUN: // Handle overrun error
+				error( ret, "Serial IO data has been overrun." );
+				break;
+			case RECEIVE_NOT_EMPTY: // We just read a character
+				req.type    = NOTIFY_GET;
+				req.data[0] = ch;
+				req.len     = 1;
+				break;
+			case MODEM_BIT_CHANGE:
+			case TRANSMIT_NOT_FULL: // We could be clear to send
+				req.type    = NOTIFY_PUT;
+				req.data[0] = 0;
+				req.len     = 0;
+				break;
+			default: // Handle all the other errors
+				error( ret, "ionotifier: AwaitEvent failed" );
 		}
 
-		if ( (err = Send( serverTid, (char*) &req, sizeof(IORequest),
-					     (char *) &reply, sizeof(int) )) < NO_ERROR ) {
+		if ( ret >= NO_ERROR ) {
+			ret = Send( serverTid, (char*) &req, sizeof(IORequest),
+					     (char *) &reply, sizeof(reply) );
 			// Handle errors
-			
+			if_error( ret, "ionotifier: Send failed" );
 		}
 	}
 

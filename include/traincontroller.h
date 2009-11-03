@@ -23,7 +23,8 @@ enum TCRequestCode {
 	ST,
 	SW,
 	TR,
-	WH
+	WH,
+	POLL
 };
 
 typedef struct {
@@ -31,15 +32,16 @@ typedef struct {
 	union {
 		int train;
 		int sw;
+		char channel;
 		int arg1;
 	};
 	union {
 		int speed;
 		char dir;
+		int sensor;
 		int arg2;
 	};
 } TCRequest;
-
 
 
 /**

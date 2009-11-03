@@ -51,14 +51,12 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 		// Reset this interrupt
 		uart->intr = 0;
 
-		if ( uart->flag & CTS_MASK ) {
-			*data = 0;
-			return NO_ERROR;
-		} 
+		return MODEM_BIT_CHANGE;
 
-	// Receive FIFO is empty
+	// Receive FIFO is not empty
 	} else if ( intr & RIS_MASK ){
 		// Return character read that came in (reading resets the interrupt)
+		assert( len > 0 );
 		data[0] = uart->data;
 		
 		// UART2 doesn't have the physical lines for RTS/CTS
@@ -67,15 +65,14 @@ inline int uartHandler ( UART *uart, char *data, int len ) {
 			uart->mctl |= RTS_MASK;
 		}
 		
-		return NO_ERROR;
+		return RECEIVE_NOT_EMPTY;
 	
 	// Transmit FIFO is not full
 	} else if ( intr & TIS_MASK ){
 		// Turn off this interrupt (user code turns it back on when ready)
 		uart->ctlr &= ~(TIEN_MASK);
 
-		*data = 0;
-		return NO_ERROR;
+		return TRANSMIT_NOT_FULL;
 	} else {
 		debug ("This is the interrupt: %x\r\n", intr);
 		error (UNHANDLED_UART_INTR,
