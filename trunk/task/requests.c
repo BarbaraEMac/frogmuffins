@@ -163,3 +163,9 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 	
 	return err;
 }
+
+int cprintf ( TID iosTid, const char * format, ... ) {
+
+
+
+}

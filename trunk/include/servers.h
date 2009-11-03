@@ -48,8 +48,8 @@ typedef struct {
 // Any request made to the SerialIO Server has this form.
 typedef struct {
 	enum SvrRequest type;
-	char 		    data[ENTRY_LEN];
 	int				len;
+	char 		    data[ENTRY_LEN];
 } IORequest;
 
 //-----------------------------------------------------------------------------
