@@ -54,20 +54,20 @@ void shell_run ( ) {
 	csReq.ticks = 0;
 
 	// Create the name server
-	debug ("Creating the name server. \r\n");
+	output ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
 	
 	// Create the clock server
-	debug ("Creating the clock server. \r\n");
+	output ("Creating the clock server. \r\n");
 	csTid = Create (2, &cs_run);
 
 	// Create the Serial I/O server
-	debug ("Creating the serial io server. \r\n");
+	output ("Creating the serial io server. \r\n");
 	ios1Tid = Create (2, &ios1_run);
 	ios2Tid = Create (2, &ios2_run);
 	
 	// Create the train controller
-	debug ("Creating the train controller. \r\n");
+	output ("Creating the train controller. \r\n");
 	tcTid = Create (2, &tc_run);
 	
 	output ("Type 'h' for a list of commands.\r\n");
@@ -132,22 +132,23 @@ void shell_run ( ) {
 
 
 // Execute a train command
-int trainCmd ( TCRequest *tcReq, int tcTid ) {
-	int	rpl;
+TCReply trainCmd ( TCRequest *req, int tcTid ) {
+	TCReply	rpl;
 	
-	Send(tcTid, (char*) tcReq, sizeof(TCRequest), (char*)&rpl, sizeof(int)); 
+	Send( tcTid, (char*) req, sizeof(TCRequest), (char*) &rpl, sizeof(rpl) ); 
 	return rpl;
 }
 
 // Execute the command passed in
 void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
-	TCRequest tcReq;
+	TCRequest	tcReq;
+	TCReply		tcRpl;
 	char *commands[] = {
 		"h = Help!", 
 		"k1 = Execute kernel 1 user tasks.", 
 		"k2 = Execute kernel 2 user tasks.", 
 		"k3 = Execute kernel 3 user tasks.", 
-		"cache ON/OFF = turn the instruction cache on/off respectively",
+	//	"cache ON/OFF = turn the instruction cache on/off respectively",
 		"++ Train Controller Commands ++",
 		"\t rv train_num  = Reverse specified train.",
 		"\t st switch_num = Display status of switch.",
@@ -176,24 +177,39 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		// K3 is asynchronous so we don't know when it will end
 		//output( "K3 is done executing.\r\n" );
 	// rv
-	} else if( sscanf(command, "rv %d\r", &tcReq.arg1) >=0 ) {
+	} else if( sscanf(command, "rv %d\r", &tcReq.train) >=0 ) {
     	tcReq.type = RV;
 		trainCmd( &tcReq, tcTid );
 	// st
-    } else if( sscanf(command, "st %d\r", &tcReq.arg1) >=0 ) {
+    } else if( sscanf(command, "st %d\r", &tcReq.sw) >=0 ) {
 		tcReq.type = ST;
-		trainCmd( &tcReq, tcTid );
+		tcRpl = trainCmd( &tcReq, tcTid );
+		output( "Switch %d is set to %c. \r\n", tcReq.sw, tcRpl.dir );
 	// sw
-    } else if( sscanf(command, "sw %d %c\r", &tcReq.arg1, (char*)&tcReq.arg2) >=0 ) {
+    } else if( sscanf(command, "sw %d %c\r", &tcReq.sw, &tcReq.dir) >=0 ) {
 		tcReq.type = SW;
 		trainCmd( &tcReq, tcTid );
 	// tr
-	} else if( sscanf(command, "tr %d %d\r", &tcReq.arg1, &tcReq.arg2) >= 0 ) {
+	} else if( sscanf(command, "tr %d %d\r", &tcReq.train, &tcReq.speed) >= 0 ) {
 		tcReq.type = TR;
 		trainCmd( &tcReq, tcTid );
 	// wh
     } else if( sscanf(command, "wh\r") >=0 ) {
 		tcReq.type = WH;
+		tcRpl = trainCmd( &tcReq, tcTid );
+		if( tcRpl.sensor == 0 ) {
+			output( "No sensor triggered yet.\r\n" );
+		} else {
+			output( "Last sensor triggered was %c%d (updated %d ms ago).\r\n", 
+					tcRpl.channel, tcRpl.sensor, tcRpl.ticks * 50 );
+		}
+	// start
+    } else if( sscanf(command, "start\r") >=0 ) {
+		tcReq.type = START;
+		trainCmd( &tcReq, tcTid );
+	// stop
+    } else if( sscanf(command, "stop\r") >=0 ) {
+		tcReq.type = STOP;
 		trainCmd( &tcReq, tcTid );
 	// cache ON
 	} else if( sscanf(command, "cache ON\r") >= 0 ) {
