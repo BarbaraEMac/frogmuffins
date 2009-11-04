@@ -34,7 +34,7 @@ Question 2
 	========
 	We have worked hard over the past two months to create the most efficient
 	kernel possible. Since we are implementing a Real-Time Operating System,
-	all operations within the kernel should take O(1) time. 
+	all operations within the kernel take O(1) time. 
 
 	Main Kernel Loop
 	================
@@ -88,8 +88,9 @@ Question 2
 
 		GCC Optimization
 		================
-
-
+		Unfortunately, we could not get our code to run properly with gcc optimization
+		turned on. Hopefully, we will be able to get this working in time for the
+		demo in December.
 
 		Context Switch
 		==============
@@ -180,68 +181,93 @@ Question 2
 		application it would have to be certified before we would allow it to do so.
 		Also, the MMU would be set up to limit the driver's 'reach'.
 		
-		One driver should be written per interrupt type. For this assignment, we are 
-		only using the timers, so only a timer1Driver and timer2Driver were implemented.
-		In future assignments, it will be very easy to implement other drivers. 
-		Here is the pseudo code for the timer 1 and 2 drivers:
-			Clear the timer interrupt.
-			Return an empty buffer and NO_ERROR.
-		
 		A user task that will eventually call AwaitEvent() must first call 
 		InstallDriver(). (Unless another tasks has already done so.)
 		This is another system call that we have implemented. The
 		function takes an interrupt type and a pointer to the corresponding driver
 		function. This function is stored in the TD mananger in an array indexed by 
 		the interrupt type it handles. The TD manager has 1 entry for every interrupt
-		type (0->31).
+		type (0->64).
 
-		Another approach of the driver approach is being able to run the driver 
+		Another advantage of the driver approach is being able to run the driver 
 		directly using the vectored fast interrupts available in the ARM architecture
 		if we wish to do so in the future.
 
+		One driver should be written per interrupt type. 		
+		
 		Timer Drivers
 		=============
+		Here is the pseudo code for the timer 1 and 2 drivers:
+			Clear the timer interrupt.
+			Return an empty buffer and NO_ERROR.
 
 		Serial IO Drivers
 		=================
+		The drivers for both UART1 and UART2 are almost identical. The only 
+		difference is that we only assert RTS for UART1 since UART2 doesn't have
+		the physical line for it.
+
+		Here is the pseudo code for the UART drivers:
+		Check for the interrupt type.
+
+		If we had an overrun error, 
+			Tell the calling code by returning an error.
+		If the Modem Status Bit changed,
+			Clear the interrupt. 
+			Return the CTS.
+		If it was a Receive Interrupt,
+			Grab the character we've received to return.
+			// The read clears the interrupt.
+			If this was a UART1 interrupt,
+				Assert RTS.
+			Return that we've received a character.
+		If it was a Transmit Interrupt,
+			Turn the interrupt off.
+			Let the notifier handle the rest.
+		Else,
+			Signal an error since we couldn't handle ther interrupt type.
+			
+	We assume that a notifier is awaiting on a UART interrupt and will either
+	grab the returned character OR send the data OR handle the overrun
+	error
 
 
-
-	Structures & Objects
-	====================
+	Task Structures & Objects
+	=========================
+	We abstract a task and a task manager using the following objects:
 
 		TD 
 		==
-		volatile int spsr;						// Saved Processor State Register
+		volatile int spsr;				// Saved Processor State Register
 		union {
 			int volatile * volatile sp;	// Stack Pointer
-			ReqArgs * volatile a;			// request arguments in a neatly avaiable union
+			ReqArgs * volatile a;		// request arguments in a neatly avaiable union
 		};
-		int returnValue;						// the value to return after syscall
-		int *sb;									// Stack base
-		TID id;			 						// A unique identifying id
-		TID parentId;							// The unique id of the parent
+		int returnValue;				// the value to return after syscall
+		int *sb;						// Stack base
+		TID id;			 				// A unique identifying id
+		TID parentId;					// The unique id of the parent
 
-		int priority;							// A priority value (ranges from 0->10)
-							
-		enum TASK_STATE state;				// State of the task - see enum above
+		int priority;					// A priority value (ranges from 0->10)
+					
+		enum TASK_STATE state;			// State of the task - see enum above
 
-		TD *nextTD; 								// Link to the next TD in the TDM
-		TD *prevTD; 								// Link to the prev TD in the TDM
+		TD *nextTD; 					// Link to the next TD in the TDM
+		TD *prevTD; 					// Link to the prev TD in the TDM
 
-		Queue sendQ;								// A circularly linked list of TDs that 
-													// have called send() this TD a message
+		Queue sendQ;					// A circularly linked list of TDs that 
+										// have called send() this TD a message
 
 		TD Manager
 		==========
-		TD tdArray[NUM_TDS]; 					// Stores all the TDs
+		TD tdArray[NUM_TDS]; 			// Stores all the TDs
 
-		TID lastId;								// Last id to used
+		TID lastId;						// Last id to used
 
-		BitField empty[NUM_BITFIELD];		// Bitfield mask signifying which td's are used
+		BitField empty[NUM_BITFIELD];	// Bitfield mask signifying which td's are used
 
-		Queue ready[NUM_PRIORITY]; 			// The ready queue
-		int highestPriority;					// The highest non-empty bucket in readyQ
+		Queue ready[NUM_PRIORITY]; 		// The ready queue
+		int highestPriority;			// The highest non-empty bucket in readyQ
 
 		Queue intBlocked[NUM_INTERRUPTS];	// A queue of blkd tasks awaiting interrupts
 		Driver intDriver[NUM_INTERRUPTS];	// An array of drivers to handler each interrupt
@@ -270,9 +296,11 @@ Question 2
 				SEND = 6,
 				RECEIVE = 7,
 				REPLY = 8,
-				AWAITEVENT = 9
+				AWAITEVENT = 9,
+				INSTALLDRIVER = 10,
+				DESTROY = 11,
+				HARDWAREINT = 99
 			};
-		As we implement more system calls, they will be added to this enum. 
 		Note: We specify the integer value of the enum here to remind ourselves to
 		match up the code for the SWI instruction (in the following paragraph).
 
@@ -315,7 +343,7 @@ Question 2
 		If Pass() was called, the kernel does nothing to handle and system call and
 		allows the scheduler to run.
 
-**		Exit 
+TODO**		Exit 
 		====
 		If Exit() was called, the kernel sets the active task's state to DEFUNCT and
 		calls the scheduler. The scheduler will not place this task on a ready queue, so
@@ -476,8 +504,8 @@ Question 2
 
 		Putc
 		====
-		The code for Putc() is identical to PutStr(). The length of the string is set
-		to 1.
+		The code for Putc() is identical to PutStr(). The length of the string is 
+		set to 1.
 		
 		PutStr
 		======
@@ -685,10 +713,62 @@ Question 2
 
 Question 3
 ==========
-	The	All source code is located in: /u8/becmacdonald/cs452/a4/handin.
+	The	source code is located in: /u8/becmacdonald/cs452/a4/handin.
 
 	Here are the md5 hashes for each file:
  
+	f9fefde96e0792be2e104decd0251115  ./frogmuffins/task/gameserver.c
+	859afe92549f15d283f5ab9095ef904b  ./frogmuffins/task/traincontroller.c
+	7fecead3c803ba05718cb88a4d42175a  ./frogmuffins/task/task.c
+	67176ab15a6023cb97879874dcb0c3b3  ./frogmuffins/task/gameplayer.c
+	fc23e9f77dfbf70c8544e4f47755fde0  ./frogmuffins/task/shell.c
+	50bd40ccb148c658b6d784d8bfe121a4  ./frogmuffins/task/requests.c
+
+	0c9edd4cf80d73163476c60a024a8c93  ./frogmuffins/include/servers.h
+	01d55af92db6df35ca61a6c6a0e0ef6f  ./frogmuffins/include/error.h
+	b61f00bc1ea8c5e399999e987c8dd469  ./frogmuffins/include/math.h
+	5efc2b57900cdd08ee04372ad606edde  ./frogmuffins/include/syscalls.h
+	5db889628ce8fcec3ee42134d32affd5  ./frogmuffins/include/ts7200.h
+	8146ed251b92ea06a95351da69340699  ./frogmuffins/include/gameserver.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./frogmuffins/include/bwio.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./frogmuffins/include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./frogmuffins/include/task.h
+	365dd33b5f269aa9259a21d33bd6286b  ./frogmuffins/include/string.h
+	9a9b2e58b88b5412afefe439cac97326  ./frogmuffins/include/td.h
+	f71703fd98030236f1f8bb301d3bba9c  ./frogmuffins/include/shell.h
+	85100ff8be5f33fd462703a058f1c1bb  ./frogmuffins/include/requests.h
+	67e70e8647557c6d928f15eab1381a49  ./frogmuffins/include/drivers.h
+	b7d9aa12c31f8712c85a85df0a933a69  ./frogmuffins/include/traincontroller.h
+	4cdafbed0b30d282fa12007097533e5a  ./frogmuffins/include/globals.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./frogmuffins/include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./frogmuffins/include/debug.h
+
+	4cbee1cc2c46d74ec7eac74d6caf7129  ./frogmuffins/main/main.c
+	624ad2e3c1a84422c3f72063731698af  ./frogmuffins/main/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./frogmuffins/main/orex.ld
+	6b8891ddf952a840c67a4d2abeffef90  ./frogmuffins/main/syscalls.c
+
+	0825df0333306c2b8e57bfbe5a7fcf9c  ./frogmuffins/server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./frogmuffins/server/nameserver.c
+	2bf46a556805de9ead44cb60bd9b06a8  ./frogmuffins/server/serialio.c
+
+	344dc6c5099b4d8e8ed6efe1bc7cc9bb  ./frogmuffins/src/bwio.c
+	9b9adf635a7d7d6661e76d005c6e1078  ./frogmuffins/src/debug.c
+	0113279b4bd6074f45b64cf754c18bb8  ./frogmuffins/src/string.c
+	0ab089e844e4e5a44a4c1376055e8504  ./frogmuffins/src/math.c
+	258148c6d8c137d46f6b80cecfd3e18a  ./frogmuffins/src/Makefile
+
+	52964ac97d4144df7768e6d5f4dba159  ./frogmuffins/documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./frogmuffins/documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./frogmuffins/documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentation/k3.txt
+	6e3422ce06447f1140804df1fb3115a0  ./frogmuffins/documentation/k4.txt
+
+	2420fc161c0fc03e7c4fdbe0215485b0  ./frogmuffins/arch/drivers.c
+	a1b51c4b4da6e3096415d22c50a03450  ./frogmuffins/arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./frogmuffins/arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./frogmuffins/arch/switch.c
+	5d24ba7361d220c5f7d987f978f1211f  ./frogmuffins/Makefile
 
 Question 4 
 ==========
