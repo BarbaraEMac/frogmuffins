@@ -32,7 +32,10 @@ all: main/main.elf
 %.o: %.s
 	$(AS) $(ASFLAGS) -o $@ $<
 
-main/main.elf: $(OBJECTS)
+libraries: 
+	cd src && make && cd ..
+
+main/main.elf: $(OBJECTS) libraries
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lstring -lmath -lgcc 
 
 arch/switch.o: arch/switch.S
