@@ -116,7 +116,7 @@ void ios_run (UART *uart) {
 		debug ("ios: Received: Tid=%d  type=%d len=%d\r\n", 
 				senderTid, req.type, len);
 		
-		assert( len == sizeof(IORequest) );
+		assert( len >= IO_REQUEST_SIZE + req.len );
 		assert( senderTid >= 0 );
 		
 		// Handle the request
@@ -201,11 +201,11 @@ void ios_run (UART *uart) {
 
 				// Copy the data to our send buffer
 				for ( i = 0; i < req.len; i ++ ) {
-					if( ios.sendBuffer[ios.sEmpIdx] != DUMMY_CH ) {
+				/*	if( ios.sendBuffer[ios.sEmpIdx] != DUMMY_CH ) {
 						int k;
 						for( k = 0; k < NUM_ENTRIES; k++ ) 
 							bwprintf( COM2, "%d=[%d]\r\n", k, ios.sendBuffer[k]);
-					}
+					}*/
 					assert (ios.sendBuffer[ios.sEmpIdx] == DUMMY_CH);
 					storeCh (ios.sendBuffer, &ios.sEmpIdx, req.data[i]); 
 				}
@@ -278,11 +278,11 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 	
 	// If the transmitter is busy, wait for interrupt
 	if ( uart->flag & TXBUSY_MASK ) {
-		debug ("ios: transmit line is busy. Turning on transmit interrupt.\r\n");
+		debug ( "ios: transmit busy. Turning on transmit interrupt.\r\n");
 		uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
 	
 	// Otherwise, write a single byte
-	} else if( uart->flag & CTS_MASK ) {	
+	} else if( (uart->flag & CTS_MASK) || (uart != UART1) ) {	
 		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulIdx]);
 
 		uart_write ( uart, ios->sendBuffer[ios->sFulIdx] );
