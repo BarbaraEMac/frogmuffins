@@ -7,4 +7,5 @@
 	*	spawn a task for reversing a train
 	*	rewrite serialio requests so as not to send 80 chars every time
 	*	create a generic fifo structure
+	*	wake up the tasks waiting on the sendQ of an exited task (with erro code)
 	*	get 100 in course
