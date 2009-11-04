@@ -680,6 +680,34 @@ TODO**		Exit
 		The serial IO server uses the UARTs to receive interrupts to get and send
 		data to either the train controller or the monitor/keyboard.
 		
+		Structure
+		=========
+		The Serial IO server is a struct of the following form:
+
+		typedef struct {
+			char sendBuffer[NUM_ENTRIES];
+			char recvBuffer[NUM_ENTRIES];
+			int  waiting   [NUM_ENTRIES];	// Array of waiting tids (for a char)
+
+			int sEmpIdx;
+			int sFulIdx;
+			int rEmpIdx;
+			int rFulIdx;
+			
+			int wEmpIdx;					// Points to next EMPTY slot
+			int wFulIdx;					// Points to the first FULL slot
+		} SerialIOServer;
+	
+		The send buffer fills with characters to be sent across the UART.
+		The receive buffer fills with characters received from the UART.
+		Both are wraparound buffers of size 256.
+
+		The s*Idx variables are pointers to the next full and empty slots in the 
+		send buffer. The same applies for the r*Idx.
+
+		The waiting buffer is used to hold the task ids for user tasks that want
+		a character. The w*Idx variable are pointers into this array.
+
 		UARTs
 		=====
 		We create 2 separate server and notifier pairs and each set handles events
