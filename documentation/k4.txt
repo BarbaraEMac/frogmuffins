@@ -778,7 +778,26 @@ TODO**		Exit
 
 		Serial IO Notifier
 		==================
+		The notifer awaits interrupts on the given UART and alerts the 
+		server when needed. The notifier passes received characters back to
+		the server.
 
+		Here is the pseudo code for the notifier:
+
+		Initialize:
+			Synchronize with the server to get its tid and the event to await.
+		FOREVER{
+			Await an interrupt on the UART.
+			If the data was overrun, 
+				Display an error.
+			If we 've received a character,
+				Pass it back to the server to store.
+			If a modem status bit changed OR
+			If the transmit buffer is not fully,
+				Let the server know it can attempt to write.
+			Else,
+				Error since we can't handle this request.
+		}
 
 		Shell
 		=====
