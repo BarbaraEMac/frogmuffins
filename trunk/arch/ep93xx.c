@@ -84,15 +84,15 @@ int uart_setSpeed( UART *uart, int speed ) {
 }
 
 void cache_on() {
-	asm("mov r0, #0");
 	// Invalidate the cache before using it
-	asm("mcr p15, 0, r0, c7, c5, 0");
+	asm("mov r0, #0");
+	asm("mcr p15, 0, r0, c7, c7, 0");
 	// Read the current state of the cache
 	asm("mrc p15, 0, r0, c1, c0, 0");
 	// Enable instruction cache
 	asm("orr r0, r0, #(0x1 <<12)");
-	// Enable data cache
-	//asm("orr r0, r0, #(0x1 <<2)");
+	// Enable data cache and write buffer
+	asm("orr r0, r0, #(0xc)");
 	// Save the changes back to the cache control register
 	asm("mcr p15, 0, r0, c1, c0, 0");
 }
@@ -103,10 +103,13 @@ void cache_off() {
 	asm("mrc p15, 0, r0, c1, c0, 0");
 	// Disable instruction cache
 	asm("bic r0, r0, #(0x1 <<12)");
-	// Disable data cache
-	//asm("bic r0, r0, #(0x1 <<2)");
+	// Disable data cache and write buffer
+	//asm("bic r0, r0, #(0xc)");
 	// Save the changes back to the cache control register
 	asm("mcr p15, 0, r0, c1, c0, 0");
+	// Clean and invalidate the data cache after using it
+	asm("mov r0, #0");
+	asm("mcr p15, 0, r0, c7, c15, 0");
 }
 
 
