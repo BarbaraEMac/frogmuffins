@@ -272,8 +272,6 @@ Question 2
 		Queue intBlocked[NUM_INTERRUPTS];	// A queue of blkd tasks awaiting interrupts
 		Driver intDriver[NUM_INTERRUPTS];	// An array of drivers to handler each interrupt
 
-
-
 		The highest priority pointer keeps track of the highest priority of all 
 		tasks in the ready queue. When it is time to schedule a new active task,
 		we simply look at the head of the queue at this highest priority and return
@@ -364,7 +362,8 @@ Question 2
 
 		Syscall Implementation
 		======================
-			
+		Here is more information about how each system call is implemented.
+
 		Create
 		======
 		If Create was called, then the kernel executes td_create() with all of
@@ -548,6 +547,11 @@ TODO**		Exit
 		
 		Getc
 		====
+		Getc() is a blocking call. It will either return a single byte from either UART
+		or cause the calling task to block until a byte is received.
+		Requests are processed in FIFO order.
+
+		Getc() will return an input byte.
 
 		Putc
 		====
@@ -556,9 +560,15 @@ TODO**		Exit
 		
 		PutStr
 		======
+		PutStr() will write the input string of characters to a specified UART.
+		This call is non-blocking. The string of characters is stored in a
+		buffer and written to the UART when possible. If the UART is busy 
+		transmitting, the buffer at the other end is full, or we are not clear 
+		to send, the data will not be sent immediately.
 
 		Destroy
 		=======
+		Can a task destroy another task?
 	
 	User Tasks
 	==========
