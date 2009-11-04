@@ -644,6 +644,20 @@ TODO**		Exit
 		Type 'h' at the command prompt to get a list of valid commands. Nothing happens
 		for invalid commands. 
 
+	
+		Train Controller
+		================
+		We implemented a very basic train controller for this kernel to be able to 
+		run the assignment 0 commands. This server will be heavily modified as we
+		complete rest of the train assignments.
+
+		The controller works like a server and receives messages from the shell. 
+		It converts the messages into commands that the actual train controller
+		understands and forwards them along. This server also spawns a notifier
+		task to poll for the sensor data.
+
+		All in all, the code is similar to Daniel's assignment 0 code, with some 
+		updates to reflect the changes in the kernel.
 
 	Error Codes
 	===========
@@ -804,4 +818,3 @@ Question 4
 	gameplayer.c  gameserver.c  requests.c  shell.c  task.c  traincontroller.c
 
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
-	
