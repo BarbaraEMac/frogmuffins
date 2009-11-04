@@ -466,8 +466,7 @@ Question 2
 		Note that there are 2 special cases:
 		1. If Task1 registers with name "A" and then Task2 registers with name "A",
 		Task1's entry is overwritten. Calling WhoIs("A") will return Task2.
-		2. If Task1 registers with "A" and then Task1 registers with "B", WhoIs("A")
-		will return NOT_FOUND. WhoIs("B") will return Task2.
+		2. A task can register under multiple names.
 
 		WhoIs
 		=====
@@ -509,6 +508,10 @@ Question 2
 		type (0->64). 
 		The driver function must have two input parameters: the event buffer and 
 		the event buffer length - same as the parameters passed into AwaitEvent.
+		When the particular interrupt does occur the driver gets executed in kernel
+		mode, with the appropriate waiting tasks's event buffer data passed in.
+		The driver's return value is passed back to the waiting task which is put back
+		on the ready queue according to its priority.
 
 		Delay
 		=====
@@ -564,11 +567,15 @@ Question 2
 		This call is non-blocking. The string of characters is stored in a
 		buffer and written to the UART when possible. If the UART is busy 
 		transmitting, the buffer at the other end is full, or we are not clear 
-		to send, the data will not be sent immediately.
+		to send, the data will not be sent immediately. 
+		NOTE: PutStr is guaranteed to print atomically.
 
 		Destroy
 		=======
-		Can a task destroy another task?
+		Destroy is similar to exit, except that the tid of the task to be 'exited'
+		is passed in and it is then looked up. If the task does not exist an error
+		code is returned, otherwise the task with the matching tid is exited
+		as though it called Exit() itself.
 	
 	User Tasks
 	==========
@@ -664,10 +671,6 @@ Question 2
 		woken up and sends a message to the ClockServer to wake it up if is blocked 
 		on Receive(). The notifier then awaits the next hardware interrupt.
 
-		Right now, the notifier is specific to helping the ClockServer. It will be
-		made more generic for future kernel assignments so that any task can spawn
-		a notifier task.
-
 		The priority of a notifier task is sufficiently important. It must be able to
 		catch an interrupt as soon as it occurs and handle it appropriately. Hence,
 		the notifier is made at priority 1, making it the second highest priority task
@@ -724,7 +727,16 @@ Question 2
 
 		Flow Control
 		============
-		I think you would better explain the CTS/RTS stuff.
+		After installing the driver, the RTS bit is asserted. Furthermore it is aserted
+		everytime a UART driver handles an interrupt. This is because we use the
+		enable/disable transmit interrupt to handle the slight delay when the serial IO
+		notifier is not awaiting an interrupt and in practice the RTS line is ignored
+		by the train controller anyway. 
+		In our UART drivers we enable the modem interrupt. This means that
+		combined with the transmit_bufffer_not_full interrupt, the notifier will be
+		woken up when the UART is ready for sending. The server simply tries to write
+		every time it's woken up by the notifier ( not after writing ) and checks the
+		CTS is asserted before doing so.
 
 		Pseudo Code
 		===========
@@ -839,6 +851,14 @@ Question 2
 
 		All in all, the code is similar to Daniel's assignment 0 code, with some 
 		updates to reflect the changes in the kernel.
+
+		We also implemented start and stop which respectively starts and stops the
+		train set. Also the delay for reversing depends on the current speed 
+		of the train.
+
+		NOTE: The train controller uses the interrupt IO, in particular PutStr
+		allowing it to send a train command atomically. The polling loop also uses
+		interrupt IO removing busy waits as per a0.
 
 	Error Codes
 	===========
@@ -956,7 +976,8 @@ Question 3
 	52964ac97d4144df7768e6d5f4dba159  ./frogmuffins/documentation/syscall.txt
 	fe969235a8cc5bac3991570200e58ae1  ./frogmuffins/documentation/k1.txt
 	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./frogmuffins/documentation/k2.txt
-	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentation/k3.txt
+	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentatThe cache 
+ion/k3.txt
 	6e3422ce06447f1140804df1fb3115a0  ./frogmuffins/documentation/k4.txt
 
 	2420fc161c0fc03e7c4fdbe0215485b0  ./frogmuffins/arch/drivers.c
@@ -994,6 +1015,7 @@ Question 4
 
 	./src:
 	bwio.c  debug.c  Makefile  math.c  string.c
+The cache 
 
 	./task:
 	gameplayer.c  gameserver.c  requests.c  shell.c  task.c  traincontroller.c
