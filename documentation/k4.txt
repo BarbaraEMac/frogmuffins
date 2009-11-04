@@ -84,7 +84,6 @@ Question 2
 		accessing each register separately. In fact, the provided bwio code will not
 		work if compiler optimized.
 
-
 		Cache
 		=====
 		When the kernel starts, the instruction and data cache (including the
@@ -92,7 +91,6 @@ Question 2
 		cache so as to not run into leftover cache lines from other kernels.
 		Upon exiting, the kernel disables the cache. We clean and invalidate it
 		so that other programs will find the cpu in a consistent state.
-
 
 		GCC Optimization
 		================
@@ -804,7 +802,7 @@ Question 2
 
 		Initialize:
 			Synchronize with the server to get its tid and the event to await.
-		FOREVER{
+		FOREVER {
 			Await an interrupt on the UART.
 			If the data was overrun, 
 				Display an error.
@@ -976,8 +974,7 @@ Question 3
 	52964ac97d4144df7768e6d5f4dba159  ./frogmuffins/documentation/syscall.txt
 	fe969235a8cc5bac3991570200e58ae1  ./frogmuffins/documentation/k1.txt
 	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./frogmuffins/documentation/k2.txt
-	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentatThe cache 
-ion/k3.txt
+	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentation/k3.txt
 	6e3422ce06447f1140804df1fb3115a0  ./frogmuffins/documentation/k4.txt
 
 	2420fc161c0fc03e7c4fdbe0215485b0  ./frogmuffins/arch/drivers.c
@@ -1015,7 +1012,6 @@ Question 4
 
 	./src:
 	bwio.c  debug.c  Makefile  math.c  string.c
-The cache 
 
 	./task:
 	gameplayer.c  gameserver.c  requests.c  shell.c  task.c  traincontroller.c
