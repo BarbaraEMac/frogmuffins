@@ -219,7 +219,7 @@ Question 2
 		Else,
 			Signal an error since we couldn't handle the interrupt type.
 			
-		This way we grab the character almost right away as it comes in. 
+		This way, we grab the character almost right away as it comes in. 
 		We assume that a notifier is awaiting on a UART interrupt and will either
 		grab the returned character OR send the data OR handle the overrun error.
 
@@ -360,7 +360,7 @@ Question 2
 		======
 		If Create was called, then the kernel executes td_create() with all of
 		Create()'s arguments. To get a new td, we pull the next unused one from an
-		array of tds in our TD manager, PQ. We initialize it with the supplied values,
+		array of tds in our TD Manager, PQ. We initialize it with the supplied values,
 		a fresh new stack pointer, a default PSR, and add it to a ready queue.
 		We return the task id of this new task to the parent TD. It stores this value
 		as the returnValue in the TD and the system call is completed.
@@ -503,8 +503,8 @@ Question 2
 		InstallDriver
 		=============
 		InstallDriver() takes an interrupt type and a pointer to the corresponding driver
-		function. This function is stored in the TD manager in an array indexed by 
-		the interrupt type it handles. The TD manager has 1 entry for every interrupt
+		function. This function is stored in the TD Manager in an array indexed by 
+		the interrupt type it handles. The TD Manager has 1 entry for every interrupt
 		type (0->64). 
 		The driver function must have two input parameters: the event buffer and 
 		the event buffer length - same as the parameters passed into AwaitEvent.
@@ -516,7 +516,7 @@ Question 2
 		Delay
 		=====
 		Delay() is a wrapper for send to the ClockServer and can be called by a user 
-		task to cause it to wait for a given amount	of ticks. Here is the pseudocode:
+		task to cause it to wait for a given amount of ticks. Here is the pseudocode:
 
 			Grab an unused sleeper struct.
 			Store the tid in the sleeper struct.
@@ -680,7 +680,7 @@ Question 2
 	
 		Serial IO
 		=========
-		The serial IO server uses the UARTs to receive interrupts to get and send
+		The Serial IO server uses the UARTs to receive interrupts to get and send
 		data to either the train controller or the monitor/keyboard.
 		
 		Structure
@@ -782,14 +782,14 @@ Question 2
 				Error since this server cannot handle the request.
 		}
 
-		The serial io server takes care of handling client requests and also 
+		The Serial IO server takes care of handling client requests and also 
 		writes to the UART when it is available. 
 
 		The pseudo code for writing to the UART is as follows:
 		If the transmit line is busy,
 			Enable the transmit interrupt.
 		Else if we are Clear to Send,
-			Write 1 byte to the uart.
+			Write 1 byte to the UART.
 			Clear the send buffer character.
 			If we have more characters to write,
 				Enable the transmit interrupt.
@@ -900,7 +900,7 @@ Question 2
 			CONNECTION_TIMEOUT,		// Connection to the train controller failed
 			CANNOT_INIT_SWITCHES,	// Switch initialization failed
 			SERIAL_OVERRUN,			// Serial IO data was overrun
-			INVALID_UART_SPEED,		// The uart speed specified is not valid
+			INVALID_UART_SPEED,		// The UART speed specified is not valid
 			// --9975
 			UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
 			INVALID_UART_ADDR		// The address passed in is not a UART
@@ -928,7 +928,7 @@ Question 2
 
 Question 3
 ==========
-	The	source code is located in: /u8/becmacdonald/cs452/a4/handin.
+	The source code is located in: /u8/becmacdonald/cs452/a4/handin.
 
 	Here are the md5 hashes for each file:
  
