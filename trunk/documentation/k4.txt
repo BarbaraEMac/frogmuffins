@@ -75,15 +75,23 @@ Question 2
 		map directly to the memory-mapped hardware. Pointers to these structs
 		are defined as macro constants in <ts7200.h>. This improves the 
 		readability of the code and the effeciency in two different ways:
-		1)No unnecesary checks of what channel is which hardware
+		1) No unnecesary checks of what channel is which hardware
 			- the code is trusted and this value is allways precomputed
-		2)Since there is only one struct pointer to the hardware
+		2) Since there is only one struct pointer to the hardware
 			(instead of multiple int pointers), the compiler (w/o optimization)
 			produces shorter & faster code.
+		3) The struct is declared volatile, something that is easy to forget when
+		accesing each register separately. In fact the provided bwio code will not
+		work if compiler optimized.
 
 
 		Cache
 		=====
+		When the kernel starts, among other things it enables the instruction and data
+		cache (including the writeback buffer) before doing so, we invalidate the
+		cache so as to not run into leftover cache lines from other kernels.
+		Upon exiting, the kernel disables the cache, cleaning and invalidating it
+		so that other programs will find the cpu in a consistent state.
 
 
 		GCC Optimization
@@ -94,26 +102,14 @@ Question 2
 
 		Context Switch
 		==============
-		Inside kernelExit(), the kernel state is saved first. Next, the active task's
-		sp and spsr are copied from its task descriptor. The spsr is then installed. 
-		The return value is put into r0.
-		We switch to system mode and restore the active task, carefully skipping r0.
-		We switch back to supervisor mode so that we can install the pc of the active task, 
-		while switching to the spsr.
-
-		When the task performs a system request, swi with the appropriate immediate value is executed.
-		This effectively calls kernelEntry(). KernelEntry() saves the active task's lr, clobbering the ip
-		register, then switches to system mode, so that we can save active task's state. 
-		We then switch back to supervisor mode and restore the kernel's registers holding 
-		the address of active task's TD and Request. We put the sp, and spsr into the active task.
-		We get the request type using VERY COOL bit masking arithmentic, behold:
-			bic		r6,	r6, #0xFF000000 #; this line is MAGIC (I think the assembler is really smart)
-		Then we fill the request with the arguments, restore the rest of kernel's registers and
-		jump back to the kernel.
-		Note: This returns to where kernelExit would return to if it was a normal function.
-
 		The context switch was slightly changed from the one used in K1 and K2 to
 		make sure we aren't overwriting scratch register. Here is how it works now:
+
+		Before calling kernelExit(), the return value is stored into the task's stored
+		r0 (on the task's stack). 
+
+		When the task performs a system request, swi with the appropriate immediate
+		value is executed. This effectively calls kernelEntry(): 
 		1) switch to system mode
 		2) save active task's state {r0-r12, lr, pc}
 			NOTE: pc is useless and will be overwritten shortly
@@ -181,19 +177,14 @@ Question 2
 		application it would have to be certified before we would allow it to do so.
 		Also, the MMU would be set up to limit the driver's 'reach'.
 		
-		A user task that will eventually call AwaitEvent() must first call 
-		InstallDriver(). (Unless another tasks has already done so.)
-		This is another system call that we have implemented. The
-		function takes an interrupt type and a pointer to the corresponding driver
-		function. This function is stored in the TD mananger in an array indexed by 
-		the interrupt type it handles. The TD manager has 1 entry for every interrupt
-		type (0->64).
+		To install a driver, the InstallDriver systemcall was implemented. It is 
+		documented further down in this document.
 
 		Another advantage of the driver approach is being able to run the driver 
 		directly using the vectored fast interrupts available in the ARM architecture
 		if we wish to do so in the future.
 
-		One driver should be written per interrupt type. 		
+		One driver should be instaled per interrupt type. 		
 		
 		Timer Drivers
 		=============
@@ -227,9 +218,9 @@ Question 2
 		Else,
 			Signal an error since we couldn't handle ther interrupt type.
 			
-	We assume that a notifier is awaiting on a UART interrupt and will either
-	grab the returned character OR send the data OR handle the overrun
-	error
+		We assume that a notifier is awaiting on a UART interrupt and will either
+		grab the returned character OR send the data OR handle the overrun
+		error
 
 
 	Structures & Objects
@@ -496,19 +487,22 @@ TODO**		Exit
 		6)	Push the task on the interrupt blocked queues.
 		7)	Signal no error.
 
-		For this kernel, user tasks can only wait on TIMER1 or TIMER2. This will cause
-		the task to wait until a timer interrupt has occurred. 
-
 		The interrupt blocked queues are stored as a single array of queues within the 
-		TD Manager. The interrupt type (0 -> 31) is used as an index into the array 
+		TD Manager. The interrupt type (0 -> 63) is used as an index into the array 
 		pointing to the head of each FIFO queue. If no task has called AwaitEvent() for
 		an interrupt type, that queue has a null (0) value. We recognize that we will
-		probably not turn on all 32 interrupt types and there may be some wastedspace
+		probably not turn on all 64 interrupt types and there may be some wastedspace
 		here. However, we designed our kernel to be as flexible as possible with as 
 		little rewriting of code in the future.
 		
 		InstallDriver
 		=============
+		InstallDriver() takes an interrupt type and a pointer to the corresponding driver
+		function. This function is stored in the TD mananger in an array indexed by 
+		the interrupt type it handles. The TD manager has 1 entry for every interrupt
+		type (0->64). 
+		The driver function must have two input parameters: the event buffer and 
+		the event buffer length - same as the parameters passed into AwaitEvent.
 
 		Delay
 		=====
