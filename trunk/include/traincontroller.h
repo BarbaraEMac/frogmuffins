@@ -8,13 +8,6 @@
 #define __TRAIN_CONTROLLER_H__
 
 #define TRAIN_CONTROLLER_NAME "TrainCtrl"
-#define NUM_TRNS    81
-#define NUM_SWTS    256
-#define SW_CNT      22
-#define SW_WAIT     100
-#define SNSR_WAIT   100
-#define TRAIN_WAIT  500
-#define TRAIN_TRIES 5
 
 #include "requests.h"
 
@@ -24,7 +17,9 @@ enum TCRequestCode {
 	SW,
 	TR,
 	WH,
-	POLL
+	POLL,
+	START,
+	STOP
 };
 
 typedef struct {
@@ -38,11 +33,21 @@ typedef struct {
 	union {
 		int speed;
 		char dir;
-		int sensor;
+		char sensor;
 		int arg2;
 	};
 } TCRequest;
 
+
+typedef union { 
+	struct {
+		char sensor;
+		char channel;
+		char dir;
+		char ticks;		// hopefully this is never more than 255
+	};
+	int ret;
+} TCReply;
 
 /**
  * The main function for the Train Controller task.
