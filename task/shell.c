@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2 
+#define DEBUG 1 
 
 #include <bwio.h>
 #include <string.h>
@@ -89,14 +89,14 @@ void shell_run ( ) {
 
         input[i] = 0;						// Clear the next character
 
-		time = Time(csTid)/2;
-		tens = time % 10;
-		secs = (time / 10) % 60;
-		mins = time / 600;
 	
 		input[i] = Getc( ios2Tid );
 		//Putc(input[i], ios1Tid);
 		//Putc(input[i], ios2Tid);
+		time = Time(csTid)/2;
+		tens = time % 10;
+		secs = (time / 10) % 60;
+		mins = time / 600;
 
 		// Enter was pressed
 		if( input[i] == '\r' ) {        
@@ -154,7 +154,9 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		"\t st switch_num = Display status of switch.",
 		"\t sw switch_num dir = Switch the switch in the sepcified direction.",
 		"\t tr train_num speed = Set the speed of the specified train.",
-		"\t wh = Display the last modified sensor." };
+		"\t wh = Display the last modified sensor.",
+		"\t start = Starts the train set.",
+		"\t stop = Stops the train set."};
 	int i;
 
 	// Quit
@@ -218,7 +220,7 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 	} else if( sscanf(command, "cache OFF\r") >= 0 ) {
 		cache_off();
     // Help
-	} else if( sscanf(command, "h\r") >=0 ) {	// Get help!
+	} else if( sscanf(command, "h\r") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
 			output( "\t%s\r\n", commands[i] );
 		}
