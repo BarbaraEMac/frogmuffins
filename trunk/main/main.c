@@ -155,6 +155,9 @@ int main( int argc, char* argv[] ) {
 	TD		*active;		// A pointer to the actively running task
 	Request  nextRequest;	// The next request to service
 
+	// turn off FIFO so we can print the following messages:
+	uart_setFifo( UART2, OFF );
+
 	// Set up the Software interrupt for context switches
 	writeMemory(0x28, (int) &kernelEnter );
 	writeMemory(0x38, (int) &interruptHandler );
