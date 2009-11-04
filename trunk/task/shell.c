@@ -150,8 +150,6 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		"k3 = Execute kernel 3 user tasks.", 
 	//	"cache ON/OFF = turn the instruction cache on/off respectively",
 		"++ Train Controller Commands ++",
-		"\t start = Start the trains.",
-		"\t stop = Stop the trains.",
 		"\t rv train_num  = Reverse specified train.",
 		"\t st switch_num = Display status of switch.",
 		"\t sw switch_num dir = Switch the switch in the sepcified direction.",
