@@ -232,8 +232,8 @@ Question 2
 	error
 
 
-	Task Structures & Objects
-	=========================
+	Structures & Objects
+	====================
 	We abstract a task and a task manager using the following objects:
 
 		TD 
@@ -279,6 +279,53 @@ Question 2
 		we simply look at the head of the queue at this highest priority and return
 		it. It means we have to do more management of this pointer, but we can 
 		schedule the highest priority task in O(1) time. 
+
+		Message Passing
+		===============
+		To be able to assert that a server and client are talking to each other properly,
+		we've created a message request / reply struct for each server and client. 
+		Here is the code for the requests:
+		
+		enum SvrRequest {
+			REGISTERAS = 1,
+			WHOIS,
+			DELAY,
+			TIME,
+			DELAYUNTIL,
+			NOTIFY,
+			GETC,
+			PUTC,
+			GETSTR,
+			PUTSTR,
+			NOTIFY_GET,
+			NOTIFY_PUT
+		};
+
+		// Any request made to the NameServer needs to be of this form.
+		typedef struct {
+			enum SvrRequest type;
+			TaskName		name;
+		} NSRequest;
+
+		// Any request made to the ClockServer needs to be of this form.
+		typedef struct {
+			enum SvrRequest type;
+			int  			ticks;
+		} CSRequest;
+
+		// Any request made to the SerialIO Server has this form.
+		typedef struct {
+			enum SvrRequest type;
+			int				len;
+			char 		    data[ENTRY_LEN];
+		} IORequest;
+
+		Each server has its own request struct and associated request types.
+		For example, the Name Server will respond to REGISTERAS and WHOIS and
+		errors for all other request types. Requests to Name Servers always
+		need an input name so this is included in the request. When a client
+		task Sends to the Name Server, the request must be packaged into this 
+		form.
 
 	System Calls
 	============
@@ -640,6 +687,10 @@ TODO**		Exit
 		servers and the state of the kernel. It is created with the lowest priority 
 		possible and will only run when there are no higher priority tasks on the 
 		ready queues.
+
+		The current time in ticks updates every time Enter is pressed. We assume
+		that we will be drastically changing our UI as we advance through the train 
+		projects, so we decided to not invest the time in it now.
 
 		Type 'h' at the command prompt to get a list of valid commands. Nothing happens
 		for invalid commands. 
