@@ -13,27 +13,24 @@
 #include "requests.h"
 
 int timer1Driver (char *retBuf, int buflen) {
-	// Get clear location
-	int *clearLoc = (int *)(TIMER1_BASE + CLR_OFFSET);
+	
+	// Get the clock
+	Clock *clock = TIMER1;
 
 	// Write bit to clear location (handle interrupt)
-	*clearLoc = 0x1;
+	clock->clr = 0x1;
 
-	// Return timer data
-	*retBuf = 0;
 	return NO_ERROR;
 }
 
 int timer2Driver (char *retBuf, int buflen) {
 	
-	// Get clear location
-	int *clearLoc = (int *)(TIMER2_BASE + CLR_OFFSET);
+	// Get the clock
+	Clock *clock = TIMER1;
 
 	// Write bit to clear location (handle interrupt)
-	*clearLoc = 0x1;
+	clock->clr = 0x1;
 
-	// Return timer data
-	*retBuf = 0;
 	return NO_ERROR; 
 }
 
