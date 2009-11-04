@@ -6,7 +6,7 @@
  * User task stuff goes in here.
  */
 
-#define DEBUG 2
+#define DEBUG 1
 #include <bwio.h>
 #include <ts7200.h>
 
@@ -80,7 +80,7 @@ void k3_client () {
 	int i;
 
 	// Register with the name server
-	RegisterAs ("Client" + MyTid());
+//	RegisterAs ("Client" + MyTid()); we don't have string concatenation
 	
 	// Send to your parent
 	Send( MyParentTid(), &blank, 1, (char*) &msg, sizeof(clientMsg) );
