@@ -14,7 +14,7 @@
 
 Question 1
 ==========
-	The executable is located at: /u8/becmacdonald/cs452/a4/handin/main/main.elf.
+	The executable is located at: /u8/becmacdonald/cs452/a4/handin/frogmuffins/main/main.elf.
 
 	To make the kernel, execute the following from the root directory:
 	cd src/
@@ -40,8 +40,8 @@ Question 2
 	================
 	 FOREVER {
 		  activeTask = schedule (activeTask, &priorityQueues);
-		  getNextRequest		(activeTask, &nextRequest);
-		  service 				(activeTask, &nextRequest, &priorityQueues);
+		  getNextRequest        (activeTask, &nextRequest);
+		  service               (activeTask, &nextRequest, &priorityQueues);
 	 }
 
 	 schedule() puts the active task on the ready queue for its priority. If the
@@ -74,23 +74,23 @@ Question 2
 		hardware directly. Thus within the servers, we pass around structs that
 		map directly to the memory-mapped hardware. Pointers to these structs
 		are defined as macro constants in <ts7200.h>. This improves the 
-		readability of the code and the efficiency in two different ways:
-		1) No unnecessary checks of what channel is which hardware
-			- the code is trusted and this value is always precomputed
+		readability of the code and the efficiency in three different ways:
+		1) No unnecessary checks of the UART channel
+			The code is trusted and this value is always precomputed.
 		2) Since there is only one struct pointer to the hardware
 			(instead of multiple int pointers), the compiler (w/o optimization)
 			produces shorter & faster code.
 		3) The struct is declared volatile, something that is easy to forget when
-		accessing each register separately. In fact the provided bwio code will not
+		accessing each register separately. In fact, the provided bwio code will not
 		work if compiler optimized.
 
 
 		Cache
 		=====
-		When the kernel starts, among other things it enables the instruction and data
-		cache (including the writeback buffer) before doing so, we invalidate the
+		When the kernel starts, the instruction and data cache (including the
+		writeback buffer) are enabled. Before doing so, we invalidate the
 		cache so as to not run into leftover cache lines from other kernels.
-		Upon exiting, the kernel disables the cache, cleaning and invalidating it
+		Upon exiting, the kernel disables the cache. We clean and invalidate it
 		so that other programs will find the cpu in a consistent state.
 
 
@@ -109,7 +109,8 @@ Question 2
 		r0 (on the task's stack). 
 
 		When the task performs a system request, swi with the appropriate immediate
-		value is executed. This effectively calls kernelEntry(): 
+		value is executed.
+		This effectively calls kernelEntry(): 
 		1) switch to system mode
 		2) save active task's state {r0-r12, lr, pc}
 			NOTE: pc is useless and will be overwritten shortly
@@ -138,7 +139,7 @@ Question 2
 
 		Interrupt Handling
 		==================
-		Modifying the context switch as described above let us write an interrupt 
+		Modifying the context switch (as described above) lets us write an interrupt 
 		context switch that is very similar to the regular context switch:
 		1) switch to system mode
 		2) save active task's state {r0-r12, lr, pc}
@@ -161,7 +162,7 @@ Question 2
 		2) Get the driver for the interrupt that happened (This is saved in the TDM)
 		3) Pass the event to the task waiting for it (if there is one)
 		4) Turn off interrupts as there is no one to handle them
-		The notifier tasks by convention are some of the highest priority tasks
+		By convention, notifier tasks are some of the highest priority tasks
 		and so get to run within a short amount of time after the interrupt.
 
 		Device Drivers
@@ -173,8 +174,8 @@ Question 2
 
 		The drivers must turn off the interrupt and proceed to read and pass the data 
 		and clearing buffers, etc. Basically, the driver will handle the interrupt
-		once it has been triggered. The driver runs in kernel mode, and in a real world
-		application it would have to be certified before we would allow it to do so.
+		once it has been triggered. The driver runs in kernel mode and, in a real world
+		application, it would have to be certified before we would allow it to do so.
 		Also, the MMU would be set up to limit the driver's 'reach'.
 		
 		To install a driver, the InstallDriver system call was implemented. It is 
