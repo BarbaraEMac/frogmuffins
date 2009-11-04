@@ -91,6 +91,9 @@ int uart_install ( UART *uart, int speed, int fifo ) {
 	// Set the speed
 	int err = uart_setSpeed( uart, speed );
 	
+	// Clear the buffer overrun error
+	uart->rsr = 0;
+
 	// Set up the Request to Send bit
 	uart->mctl = RTS_MASK;
 
