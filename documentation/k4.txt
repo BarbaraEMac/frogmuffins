@@ -40,8 +40,8 @@ Question 2
 	================
 	 FOREVER {
 		  activeTask = schedule (activeTask, &priorityQueues);
-		  getNextRequest    	(activeTask, &nextRequest);
-		  service 			    (activeTask, &nextRequest, &priorityQueues);
+		  getNextRequest		(activeTask, &nextRequest);
+		  service 				(activeTask, &nextRequest, &priorityQueues);
 	 }
 
 	 schedule() puts the active task on the ready queue for its priority. If the
@@ -218,9 +218,9 @@ Question 2
 		Else,
 			Signal an error since we couldn't handle ther interrupt type.
 			
+		This way we grab the character almost right away as it comes in. 
 		We assume that a notifier is awaiting on a UART interrupt and will either
-		grab the returned character OR send the data OR handle the overrun
-		error
+		grab the returned character OR send the data OR handle the overrun error.
 
 
 	Structures & Objects
@@ -306,7 +306,7 @@ Question 2
 		typedef struct {
 			enum SvrRequest type;
 			int				len;
-			char 		    data[ENTRY_LEN];
+			char 			data[ENTRY_LEN];
 		} IORequest;
 
 		Each server has its own request struct and associated request types.
@@ -342,7 +342,7 @@ Question 2
 
 		Syscall Handler
 		===============
-			When a user task makes a system call, all we do is execute the assembly
+		When a user task makes a system call, all we do is execute the assembly
 		instruction 'swi' with a single argument. We do not perform any error checking
 		at this point. We chose to implement system calls this way since it is faster 
 		for calls that do no actual work, ie. Pass(). The argument passed to 'swi' is an 
@@ -380,11 +380,16 @@ Question 2
 		If Pass() was called, the kernel does nothing to handle and system call and
 		allows the scheduler to run.
 
-TODO**		Exit 
+		Exit 
 		====
-		If Exit() was called, the kernel sets the active task's state to DEFUNCT and
-		calls the scheduler. The scheduler will not place this task on a ready queue, so
+		If Exit() was called, the kernel calls td_destroy on the active task.
+		This recycles the task's TD, removes it from any queue it might be on
+		and sets its state to DEFUNCT. (if the task is the only task awaiting an
+		event, that interrupt will be turned off) The kernel then proceeds to call 
+		the scheduler. The scheduler will not place this task on a ready queue, so
 		it will never be scheduled to run again.
+		Note: If there are any tasks on this tasks send queue, they will never 
+		get woken up.
 
 		Send
 		====
