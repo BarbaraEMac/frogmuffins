@@ -677,12 +677,84 @@ TODO**		Exit
 	
 		Serial IO
 		=========
+		The serial IO server uses the UARTs to receive interrupts to get and send
+		data to either the train controller or the monitor/keyboard.
+		
+		UARTs
+		=====
+		We create 2 separate server and notifier pairs and each set handles events
+		for a particular UART. i
+
+		FIFO
+		====
+		We do not use the FIFO queues on either UART and disable both when our kernel
+		intitializes. Hence, the buffer on each UART is 1 entry deep. We can only
+		write 1 byte at a time to the UART before setting the transmit interrupt to 
+		know when that buffer is empty to write another byte.
 
 
+		Flow Control
+		============
+		I think you would better explain the CTS/RTS stuff.
+
+		Pseudo Code
+		===========
+		Here is the pseudo code for the serial IO server:
+
+		Initialize the server:
+			Create the notifier task to wait for interrupts.
+			Synchronize with the notifier to tell it the server tid and event.
+			Clear the send and receive buffers.
+			Clear the uart data buffer.
+			Enable the UART.
+			Turn the receive and modem status interrupts on.
+			Register with the Name Server.
+
+		FOREVER {
+			Receive a message from a client or the notifier.
+
+			If the notifier has a character,
+				Reply to the notifier immediately.
+				If there is a task waiting for a character,
+					Reply to the task with the char.
+					Clear the waiting task buffer.
+				Else,
+					Store the character.
+
+			If the server can write some data to a UART,
+				Reply to the notifier immediately.
+				Try to write the data to the UART.
+
+			If a user task wants a character,
+				If we have buffered a character,
+					Reply to the task with the first buffered char.
+					Clear the char from the receive buffer.
+				Else,
+					Put the user task on a waiting queue.
+
+			If the user task wants to put a character (or string),
+				Reply to the user task immediately.
+				Copy the char/str into the server's send buffer.
+				Attempt to write the data to the UART.
+
+			Else,
+				Error since this server cannot handle the request.
+		}
+
+		The serial io server takes care of handling client requests and also 
+		writes to the UART when it is available. 
+
+		The pseudo code for writing to the UART is as follows:
+		If the transmit line is busy,
+			Enable the transmit interrupt.
+		Else if we are Clear to Send,
+			Write 1 byte to the uart.
+			Clear the send buffer character.
+			If we have more characters to write,
+				Enable the transmit interrupt.
 
 		Serial IO Notifier
 		==================
-
 
 
 		Shell
