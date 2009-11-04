@@ -30,7 +30,7 @@ Question 1
 Question 2 
 ==========
 	
-	Preamble? Abstract?
+	Preamble
 	========
 	We have worked hard over the past two months to create the most efficient
 	kernel possible. Since we are implementing a Real-Time Operating System,
