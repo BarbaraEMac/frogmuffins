@@ -69,19 +69,19 @@ Question 2
 		
 		Hardware Interface
 		==================
-		Talking directly to harware is limited to trusted tasks - mostly the 
+		Talking directly to hardware is limited to trusted tasks - mostly the 
 		servers and drivers. Other tasks use the servers and do not access the
 		hardware directly. Thus within the servers, we pass around structs that
 		map directly to the memory-mapped hardware. Pointers to these structs
 		are defined as macro constants in <ts7200.h>. This improves the 
-		readability of the code and the effeciency in two different ways:
-		1) No unnecesary checks of what channel is which hardware
-			- the code is trusted and this value is allways precomputed
+		readability of the code and the efficiency in two different ways:
+		1) No unnecessary checks of what channel is which hardware
+			- the code is trusted and this value is always precomputed
 		2) Since there is only one struct pointer to the hardware
 			(instead of multiple int pointers), the compiler (w/o optimization)
 			produces shorter & faster code.
 		3) The struct is declared volatile, something that is easy to forget when
-		accesing each register separately. In fact the provided bwio code will not
+		accessing each register separately. In fact the provided bwio code will not
 		work if compiler optimized.
 
 
@@ -150,19 +150,19 @@ Question 2
 		7) switch to supervisor mode
 		8) restore the kernel's registers holding the address of TD and Request
 		9) put the sp, and spsr into the active task
-		10) fill the request with the arguments (request type = HARDWAREINT)bm
+		10) fill the request with the arguments (request type = HARDWAREINT)
 		11) restore the rest of kernel's registers & jump back to the kernel
 			(this returns to where kernelExit would return if it was a normal function)
 
 		Once kernel resumes execution after the interrupt context switch, it proceeds
 		as normally to check the request type, which will be marked as HARDWAREINT.
-		To handle the interrupt we do the folowing
+		To handle the interrupt, we do the following:
 		1) Get an index of the actual interrupt
 		2) Get the driver for the interrupt that happened (This is saved in the TDM)
 		3) Pass the event to the task waiting for it (if there is one)
-		4) Turn off interrupts as there is no-one to handle them
+		4) Turn off interrupts as there is no one to handle them
 		The notifier tasks by convention are some of the highest priority tasks
-		and so get to run within a short anmount of time after the interrupt.
+		and so get to run within a short amount of time after the interrupt.
 
 		Device Drivers
 		==============
@@ -173,18 +173,18 @@ Question 2
 
 		The drivers must turn off the interrupt and proceed to read and pass the data 
 		and clearing buffers, etc. Basically, the driver will handle the interrupt
-		once it has been triggered. The driver runs in kernel mode, and in a real-world
+		once it has been triggered. The driver runs in kernel mode, and in a real world
 		application it would have to be certified before we would allow it to do so.
 		Also, the MMU would be set up to limit the driver's 'reach'.
 		
-		To install a driver, the InstallDriver systemcall was implemented. It is 
+		To install a driver, the InstallDriver system call was implemented. It is 
 		documented further down in this document.
 
 		Another advantage of the driver approach is being able to run the driver 
 		directly using the vectored fast interrupts available in the ARM architecture
 		if we wish to do so in the future.
 
-		One driver should be instaled per interrupt type. 		
+		One driver should be installed per interrupt type. 		
 		
 		Timer Drivers
 		=============
@@ -216,7 +216,7 @@ Question 2
 			Turn the interrupt off.
 			Let the notifier handle the rest.
 		Else,
-			Signal an error since we couldn't handle ther interrupt type.
+			Signal an error since we couldn't handle the interrupt type.
 			
 		This way we grab the character almost right away as it comes in. 
 		We assume that a notifier is awaiting on a UART interrupt and will either
@@ -232,7 +232,7 @@ Question 2
 		volatile int spsr;				// Saved Processor State Register
 		union {
 			int volatile * volatile sp;	// Stack Pointer
-			ReqArgs * volatile a;		// request arguments in a neatly avaiable union
+			ReqArgs * volatile a;		// request arguments in a neatly available union
 		};
 		int returnValue;				// the value to return after syscall
 		int *sb;						// Stack base
@@ -496,14 +496,14 @@ Question 2
 		TD Manager. The interrupt type (0 -> 63) is used as an index into the array 
 		pointing to the head of each FIFO queue. If no task has called AwaitEvent() for
 		an interrupt type, that queue has a null (0) value. We recognize that we will
-		probably not turn on all 64 interrupt types and there may be some wastedspace
+		probably not turn on all 64 interrupt types and there may be some wasted space
 		here. However, we designed our kernel to be as flexible as possible with as 
 		little rewriting of code in the future.
 		
 		InstallDriver
 		=============
 		InstallDriver() takes an interrupt type and a pointer to the corresponding driver
-		function. This function is stored in the TD mananger in an array indexed by 
+		function. This function is stored in the TD manager in an array indexed by 
 		the interrupt type it handles. The TD manager has 1 entry for every interrupt
 		type (0->64). 
 		The driver function must have two input parameters: the event buffer and 
@@ -511,7 +511,7 @@ Question 2
 
 		Delay
 		=====
-		Delay() is a wrapper for send to the Clockserver and can be called by a user 
+		Delay() is a wrapper for send to the ClockServer and can be called by a user 
 		task to cause it to wait for a given amount	of ticks. Here is the pseudocode:
 
 			Grab an unused sleeper struct.
@@ -611,7 +611,7 @@ Question 2
 
 			Initialize the server by:
 				Registering with the Name Server.
-				Creating a helper Notifer task.
+				Creating a helper Notifier task.
 				Clearing the buffer of sleeping user tasks.
 
 			FOREVER {
@@ -717,7 +717,7 @@ Question 2
 		FIFO
 		====
 		We do not use the FIFO queues on either UART and disable both when our kernel
-		intitializes. Hence, the buffer on each UART is 1 entry deep. We can only
+		initializes. Hence, the buffer on each UART is 1 entry deep. We can only
 		write 1 byte at a time to the UART before setting the transmit interrupt to 
 		know when that buffer is empty to write another byte.
 
@@ -733,7 +733,7 @@ Question 2
 			Create the notifier task to wait for interrupts.
 			Synchronize with the notifier to tell it the server tid and event.
 			Clear the send and receive buffers.
-			Clear the uart data buffer.
+			Clear the UART data buffer.
 			Enable the UART.
 			Turn the receive and modem status interrupts on.
 			Register with the Name Server.
@@ -783,7 +783,7 @@ Question 2
 
 		Serial IO Notifier
 		==================
-		The notifer awaits interrupts on the given UART and alerts the 
+		The notifier awaits interrupts on the given UART and alerts the 
 		server when needed. The notifier passes received characters back to
 		the server.
 
@@ -795,7 +795,7 @@ Question 2
 			Await an interrupt on the UART.
 			If the data was overrun, 
 				Display an error.
-			If we 've received a character,
+			If we've received a character,
 				Pass it back to the server to store.
 			If a modem status bit changed OR
 			If the transmit buffer is not fully,
@@ -882,7 +882,7 @@ Question 2
 			INVALID_UART_SPEED,		// The uart speed specified is not valid
 			// --9975
 			UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
-			INVALID_UART_ADDR		// The addres passed in is not a UART
+			INVALID_UART_ADDR		// The address passed in is not a UART
 		} error;
 
 	The error names are pretty self explanatory and the comments help. Since
