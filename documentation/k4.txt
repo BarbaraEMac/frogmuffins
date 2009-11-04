@@ -857,7 +857,13 @@ Question 2
 		NOTE: The train controller uses the interrupt IO, in particular PutStr
 		allowing it to send a train command atomically. The polling loop also uses
 		interrupt IO removing busy waits as per a0.
-
+		
+		Game Server & Game Players (From K2)
+		==========================
+		Since the assignment only asked for a description of the kernel, we will not 
+		include a description of the game server and players. The code is heavily documented 
+		and easy to read, if needed. Or, we will be happy to provide written details.
+	
 	Error Codes
 	===========
 	We have a file in include/ named error.h. This file holds all of the error
