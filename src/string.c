@@ -4,7 +4,11 @@
  * dgoc
  */
 
+#define	DEBUG 1
 #include "string.h"
+#include "servers.h"
+#include "requests.h"
+#include "debug.h"
 
 // strncpy
 char * strncpy ( char *dest, const char * src, size_t num ) {
@@ -120,25 +124,25 @@ int sscanf( const char *src, const char *fmt, ... ) {
 char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
 	size_t len = strlen( src ); 
 	size_t pad = w - len;
+	debug( "strcpyw src:%s, fc:%c, w:%d, pad:%d\r\n", src, fc, w, pad );
 	// Pad the string beginning
-	if( pad > 0 ) 
-		src = memoryset( dest, fc, pad );
+	if( pad > 0 ) { dest = memoryset( dest, fc, pad ); }
 	// Copy the source into the destination
 	return strncpy( dest, src, len );
 }
 
-// format -- printf's helper
+// _sprintf -- printf's helper
 size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 	char bf[12];
 	char ch, lz, *s= str;
-	size_t w, len=0; // len holds the length of the sting generated so far
+	size_t w;
 	
 	while ( ( ch = *(fmt++) ) ) {
 		if ( ch != '%' ) {
-			str[len++] = ch;
+			*s++ = ch;
 		} else {
 			lz = ' '; w = 0;
-			ch = *(fmt++);
+			ch = *(fmt++);	// get the next character after '%'
 			if ( ch == '0' ) {
 				lz = '0'; ch = *(fmt++);
 			}
@@ -156,7 +160,7 @@ size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 				break;
 			}
 			switch( ch ) {
-			case 0: return len;
+			case 0: return(s - str);
 			case 'c':
 				*s++ = va_arg( va, char );
 				break;
@@ -181,7 +185,7 @@ size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 			}
 		}
 	}
-	return s-str;
+	return(s - str);
 }
 
 // sprintf
@@ -194,6 +198,27 @@ size_t sprintf ( char * str, const char * fmt, ... ) {
 	va_end(va);
 
 	return len;
+}
+// printf
+size_t cprintf ( int iosTid, const char * fmt, ... ) {
+	int			err;
+	char 		reply;
+	IORequest	req;
+	va_list 	va;
+	
+	debug( "printf: format '%s'\r\n", fmt );
+	va_start(va,fmt);
+	req.len = _sprintf( req.data, fmt, va );
+	va_end(va);
+	debug( "printf: printing len=%d '%s' \r\n", req.len, req.data );
+	
+	req.type    = PUTSTR;
+	assert( req.len < sizeof(req.data) );
+
+	err = Send(iosTid, (char*)&req, IO_REQUEST_SIZE + req.len,
+			(char*)&reply, sizeof(char));
+	if( err < NO_ERROR ) return error;
+	return req.len;
 }
 
 /********************************************
