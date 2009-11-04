@@ -124,16 +124,14 @@ int Getc (TID iosTid) {
 	IORequest req;
 	
 	req.type    = GETC;
-	req.data[0] = 0;
 	req.len     = 0;
 
-	Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&ret, sizeof(char));
+	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, (char*)&ret, sizeof(char));
 	
 	return ret;
 }
 
 int Putc (char ch, TID iosTid) {
-	int       err;
 	char 	  reply;
 	IORequest req;
 	
@@ -141,16 +139,12 @@ int Putc (char ch, TID iosTid) {
 	req.data[0] = ch;
 	req.len     = 1;
 
-	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
-			   sizeof(char));
-	
-	return err;
+	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + 1, &reply, sizeof(char));
 }
 
 int PutStr (const char *str, int strLen, TID iosTid) {
 	assert ( strLen <= 80 );
 	
-	int		  err;
 	char 	  reply;
 	IORequest req;
 	
@@ -158,14 +152,8 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 	memcpy (req.data, str, strLen);
 	req.len     = strLen;
 
-	err = Send(iosTid, (char*)&req, sizeof(IORequest), (char*)&reply, 
-		       sizeof(char));
+	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, &reply, sizeof(char));
 	
-	return err;
 }
 
-int cprintf ( TID iosTid, const char * format, ... ) {
 
-
-
-}
