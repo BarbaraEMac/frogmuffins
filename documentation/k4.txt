@@ -711,7 +711,9 @@ TODO**		Exit
 		UARTs
 		=====
 		We create 2 separate server and notifier pairs and each set handles events
-		for a particular UART. i
+		for a particular UART. ios1Server and ios2Server work on UART1 and UART2
+		respectively. We decided it would be easiest to separate the interrupts this 
+		way rather than having 1 server for writing and 1 server for reading.
 
 		FIFO
 		====
@@ -719,7 +721,6 @@ TODO**		Exit
 		intitializes. Hence, the buffer on each UART is 1 entry deep. We can only
 		write 1 byte at a time to the UART before setting the transmit interrupt to 
 		know when that buffer is empty to write another byte.
-
 
 		Flow Control
 		============
