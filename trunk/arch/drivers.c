@@ -94,8 +94,11 @@ int uart_install ( UART *uart, int speed, int fifo ) {
 	// Clear the buffer overrun error
 	uart->rsr = 0;
 
-	// Set up the Request to Send bit
-	uart->mctl = RTS_MASK;
+	// UART2 doesn't have the physical lines for RTS/CTS
+	if ( uart == UART1 ) { 
+		// Set the RTS bit
+		uart->mctl = RTS_MASK;
+	}
 
 	// Always set the HIGH bits after the Mid / Low
 	uart_setFifo( uart, fifo );
