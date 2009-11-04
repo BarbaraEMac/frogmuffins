@@ -14,6 +14,7 @@
 #define NUM_ENTRIES		256
 #define ENTRY_LEN		80
 #define NUM_NS_ENTRIES	256
+#define IO_REQUEST_SIZE (sizeof(IORequest) - ENTRY_LEN)
 
 #include "globals.h"
 #include "requests.h"
