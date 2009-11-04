@@ -19,8 +19,6 @@ typedef char *va_list;
 #define va_arg(ap, t)	\
 		 (((ap) = (ap) + __va_argsiz(t)), *((t*) (void*) ((ap) - __va_argsiz(t))))
 
-
-
 // ****************************************************************
 // * NOTE: Most descriptions copied from the standard c libraries *
 // ****************************************************************
@@ -98,6 +96,16 @@ int sscanf( const char * src, const char * format, ... );
  */
 size_t _sprintf ( char * str, const char * fmt, va_list va );
 size_t sprintf ( char * str, const char * format, ... );
+
+/**
+ * Write formatted data to a COM port
+ *
+ * Sends to the COM server a C string consisting on a sequence of 
+ * data formatted as the format argument specifies. After the format parameter, 
+ * the function expects at least as many additional arguments as specified 
+ * in format.
+ */
+size_t cprintf ( int iosTid, const char * format, ... ) ;
 
 /**
  * The following functions were borrowed and renamed from bwio.
