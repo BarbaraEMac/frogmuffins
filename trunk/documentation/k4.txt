@@ -14,7 +14,7 @@
 
 Question 1
 ==========
-	The executable is located at: /u8/becmacdonald/cs452/a4/handin/frogmuffins/main/main.elf.
+	The executable is located at: /u8/becmacdonald/cs452/a4/handin/main/main.elf.
 
 	To make the kernel, execute the following from the root directory:
 	cd src/
@@ -930,58 +930,100 @@ Question 3
 
 	Here are the md5 hashes for each file:
  
-	f9fefde96e0792be2e104decd0251115  ./frogmuffins/task/gameserver.c
-	859afe92549f15d283f5ab9095ef904b  ./frogmuffins/task/traincontroller.c
-	7fecead3c803ba05718cb88a4d42175a  ./frogmuffins/task/task.c
-	67176ab15a6023cb97879874dcb0c3b3  ./frogmuffins/task/gameplayer.c
-	fc23e9f77dfbf70c8544e4f47755fde0  ./frogmuffins/task/shell.c
-	50bd40ccb148c658b6d784d8bfe121a4  ./frogmuffins/task/requests.c
-
-	0c9edd4cf80d73163476c60a024a8c93  ./frogmuffins/include/servers.h
-	01d55af92db6df35ca61a6c6a0e0ef6f  ./frogmuffins/include/error.h
-	b61f00bc1ea8c5e399999e987c8dd469  ./frogmuffins/include/math.h
-	5efc2b57900cdd08ee04372ad606edde  ./frogmuffins/include/syscalls.h
-	5db889628ce8fcec3ee42134d32affd5  ./frogmuffins/include/ts7200.h
-	8146ed251b92ea06a95351da69340699  ./frogmuffins/include/gameserver.h
-	fb7609f4f9b67fa4c3c5f16b02330712  ./frogmuffins/include/bwio.h
-	2f03b38f8c205f7f1a08d5b2cfdcb169  ./frogmuffins/include/switch.h
-	5696d925f014e68d7d052d9a209125e7  ./frogmuffins/include/task.h
-	365dd33b5f269aa9259a21d33bd6286b  ./frogmuffins/include/string.h
-	9a9b2e58b88b5412afefe439cac97326  ./frogmuffins/include/td.h
-	f71703fd98030236f1f8bb301d3bba9c  ./frogmuffins/include/shell.h
-	85100ff8be5f33fd462703a058f1c1bb  ./frogmuffins/include/requests.h
-	67e70e8647557c6d928f15eab1381a49  ./frogmuffins/include/drivers.h
-	b7d9aa12c31f8712c85a85df0a933a69  ./frogmuffins/include/traincontroller.h
-	4cdafbed0b30d282fa12007097533e5a  ./frogmuffins/include/globals.h
-	ccf98888e8b4b6ad9b9cb429697942f4  ./frogmuffins/include/gameplayer.h
-	3a3ce59eb4a90dbf61fcaeb129e47763  ./frogmuffins/include/debug.h
-
-	4cbee1cc2c46d74ec7eac74d6caf7129  ./frogmuffins/main/main.c
-	624ad2e3c1a84422c3f72063731698af  ./frogmuffins/main/td.c
-	5ef12d7238e4be4ffe0bfcd1d4419e63  ./frogmuffins/main/orex.ld
-	6b8891ddf952a840c67a4d2abeffef90  ./frogmuffins/main/syscalls.c
-
-	0825df0333306c2b8e57bfbe5a7fcf9c  ./frogmuffins/server/clockserver.c
-	5cf469b48fbafcc7b85993eb2a254fcb  ./frogmuffins/server/nameserver.c
-	2bf46a556805de9ead44cb60bd9b06a8  ./frogmuffins/server/serialio.c
-
-	344dc6c5099b4d8e8ed6efe1bc7cc9bb  ./frogmuffins/src/bwio.c
-	9b9adf635a7d7d6661e76d005c6e1078  ./frogmuffins/src/debug.c
-	0113279b4bd6074f45b64cf754c18bb8  ./frogmuffins/src/string.c
-	0ab089e844e4e5a44a4c1376055e8504  ./frogmuffins/src/math.c
-	258148c6d8c137d46f6b80cecfd3e18a  ./frogmuffins/src/Makefile
-
-	52964ac97d4144df7768e6d5f4dba159  ./frogmuffins/documentation/syscall.txt
-	fe969235a8cc5bac3991570200e58ae1  ./frogmuffins/documentation/k1.txt
-	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./frogmuffins/documentation/k2.txt
-	9abe1c6037cfae6365900a5ba300df23  ./frogmuffins/documentation/k3.txt
-	6e3422ce06447f1140804df1fb3115a0  ./frogmuffins/documentation/k4.txt
-
-	2420fc161c0fc03e7c4fdbe0215485b0  ./frogmuffins/arch/drivers.c
-	a1b51c4b4da6e3096415d22c50a03450  ./frogmuffins/arch/ep93xx.c
-	751398e0370bcd05ee43cacb3ed33ee8  ./frogmuffins/arch/switch.S
-	8a714a74e007435dfb4fdc1499cefdf6  ./frogmuffins/arch/switch.c
-	5d24ba7361d220c5f7d987f978f1211f  ./frogmuffins/Makefile
+	5d24ba7361d220c5f7d987f978f1211f  ./Makefile
+	
+	51a29edd3601037c11532703b83f737e  ./arch/drivers.s
+	2420fc161c0fc03e7c4fdbe0215485b0  ./arch/drivers.c
+	a1b51c4b4da6e3096415d22c50a03450  ./arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+	7e692714540db065fe25669a74ce7a05  ./arch/drivers.o
+	b272bcab0f3c7818147d59a88ccc9c32  ./arch/switch.o
+	93eb37d3fa3ef656b539347adbabe995  ./arch/ep93xx.s
+	26a06209ee3bc136b460c59ea33cd837  ./arch/ep93xx.o
+	
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./documentation/k3.txt
+	b36805640a14c0c17add862b1d6eab53  ./documentation/k4.txt
+	
+	0c9edd4cf80d73163476c60a024a8c93  ./include/servers.h
+	01d55af92db6df35ca61a6c6a0e0ef6f  ./include/error.h
+	b61f00bc1ea8c5e399999e987c8dd469  ./include/math.h
+	5efc2b57900cdd08ee04372ad606edde  ./include/syscalls.h
+	5db889628ce8fcec3ee42134d32affd5  ./include/ts7200.h
+	8146ed251b92ea06a95351da69340699  ./include/gameserver.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./include/bwio.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./include/task.h
+	365dd33b5f269aa9259a21d33bd6286b  ./include/string.h
+	9a9b2e58b88b5412afefe439cac97326  ./include/td.h
+	f71703fd98030236f1f8bb301d3bba9c  ./include/shell.h
+	85100ff8be5f33fd462703a058f1c1bb  ./include/requests.h
+	67e70e8647557c6d928f15eab1381a49  ./include/drivers.h
+	b7d9aa12c31f8712c85a85df0a933a69  ./include/traincontroller.h
+	4cdafbed0b30d282fa12007097533e5a  ./include/globals.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./include/debug.h
+	
+	406bac9efc93b03aac8b867b65581948  ./lib/libbwio.a
+	739f3c5104c5e9581450b1f3ec453081  ./lib/libdebug.a
+	42707738e6c90e2b8c325661c3be8d08  ./lib/libstring.a
+	1e93624c937bc7d3f94d1486732458a7  ./lib/libmath.a
+	
+	916efbd678e15d8986556cbafaff88a5  ./main/main.s
+	4cbee1cc2c46d74ec7eac74d6caf7129  ./main/main.c
+	624ad2e3c1a84422c3f72063731698af  ./main/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./main/orex.ld
+	6b8891ddf952a840c67a4d2abeffef90  ./main/syscalls.c
+	8548f2ad1876404d2f5275198204ba50  ./main/main.o
+	5bc0a1ccd8b26ccde895642f7251cf26  ./main/syscalls.s
+	f5d99d32a7865a85c8d218a56016249b  ./main/syscalls.o
+	d6cf3dd7f4c5649775cbcc98b8af9843  ./main/td.s
+	05dd4ef5888e21fa124598b9ac77a16f  ./main/td.o
+	247f97118bd1b128af3f6d099984ec83  ./main/main.map
+	a8889979f917650d9adf8afa85a50b31  ./main/main.elf
+	
+	ab5c478cc6fdf90de9bd1645235c8704  ./server/clockserver.s
+	0825df0333306c2b8e57bfbe5a7fcf9c  ./server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./server/nameserver.c
+	2bf46a556805de9ead44cb60bd9b06a8  ./server/serialio.c
+	ebb3b3dc0e086f6ed59e62e7a6b0f2d4  ./server/clockserver.o
+	0056123ab4e25b6e2c14b8b81495dfee  ./server/nameserver.s
+	f63f6966daad1dcb8fbabd8ba21c91c7  ./server/nameserver.o
+	b8d999fcb9f47edb248063fc24b233c6  ./server/serialio.s
+	28352aa703dfec2e0bd0ac295e855eba  ./server/serialio.o
+	
+	344dc6c5099b4d8e8ed6efe1bc7cc9bb  ./src/bwio.c
+	9b9adf635a7d7d6661e76d005c6e1078  ./src/debug.c
+	0113279b4bd6074f45b64cf754c18bb8  ./src/string.c
+	0ab089e844e4e5a44a4c1376055e8504  ./src/math.c
+	258148c6d8c137d46f6b80cecfd3e18a  ./src/Makefile
+	406bac9efc93b03aac8b867b65581948  ./src/bwio.a
+	739f3c5104c5e9581450b1f3ec453081  ./src/debug.a
+	42707738e6c90e2b8c325661c3be8d08  ./src/string.a
+	1e93624c937bc7d3f94d1486732458a7  ./src/math.a
+	
+	8f487457dcd67883ef8db9a51dc30334  ./task/gameplayer.s
+	f9fefde96e0792be2e104decd0251115  ./task/gameserver.c
+	859afe92549f15d283f5ab9095ef904b  ./task/traincontroller.c
+	7fecead3c803ba05718cb88a4d42175a  ./task/task.c
+	67176ab15a6023cb97879874dcb0c3b3  ./task/gameplayer.c
+	fc23e9f77dfbf70c8544e4f47755fde0  ./task/shell.c
+	50bd40ccb148c658b6d784d8bfe121a4  ./task/requests.c
+	53079a67b557069a0e2d62e9e34f92cc  ./task/gameplayer.o
+	97ff7c54787d8fdf2e87713046db21ce  ./task/gameserver.s
+	a2a1a91e27d2536880dab8ec3579df99  ./task/gameserver.o
+	466508e8bd9949d393541638e472a194  ./task/requests.s
+	0c53e3025ebfe2232807a60c38f74d59  ./task/requests.o
+	ebbae86090bc12dc425641ece1a8fda8  ./task/shell.s
+	81922190e1f58009a4fde1a537c3f560  ./task/shell.o
+	647ebfcef066397a45eb43049dd00c5c  ./task/task.s
+	fbdc790f4dd919712af2368882e0ed5f  ./task/task.o
+	9f3b56e60b12183c3b420dd5f3d92f5b  ./task/traincontroller.s
+	f77ee35a555ff73e0f16a62cda97dd6b  ./task/traincontroller.o
 
 Question 4 
 ==========
