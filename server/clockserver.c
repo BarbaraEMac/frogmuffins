@@ -13,7 +13,8 @@
 #include "requests.h"
 #include "servers.h"
 
-#define NUM_SLEEPERS	1024
+#define NUM_SLEEPERS	64
+#define	UNUSED_TID		-1
 
 //-----------------------------------------------------------------------------
 /**
@@ -55,17 +56,21 @@ void cs_run () {
 	
 	int			 senderTid;					// The task id of the message sender
 	CSRequest	 req;						// A clock server request message
-	int			 len;
+	int			 len, idx;
 	
 	volatile int *time = clock_init ( TIMER3, 1, 0, 0 );
 	int			 ticks;
 	Sleeper		*sleepersQ;					// A queue of all sleeping user tasks
 	Sleeper		 memSleepers[NUM_SLEEPERS]; // For allocating memory
-	int			 numSleepers = 0;			// ptr into memSleepers array
 	Sleeper		*sleeper;					// tmp ptr
 
 	// Initialize the Clock Server
 	int notifierTid = cs_init (&sleepersQ);
+
+	// TODO move this into init
+	for( idx = 0; idx < NUM_SLEEPERS; idx ++ ) {
+		memSleepers[idx].tid = UNUSED_TID;
+	}
 
 	FOREVER {
 		// Receive a server request
@@ -88,10 +93,9 @@ void cs_run () {
 		switch (req.type) {
 			case DELAY:
 				debug ("cs: task %d delays %d ticks. (currently: %d)\r\n", senderTid, req.ticks, ticks);
-				sleeper = &memSleepers[numSleepers++];
-	
-				assert( numSleepers < NUM_SLEEPERS );
-				assert( sleeper != 0 );
+				idx = senderTid % NUM_SLEEPERS;
+				sleeper = &memSleepers[idx];
+				assert( sleeper->tid == UNUSED_TID );
 					
 				sleeper->endTime = ticks + req.ticks;
 				sleeper->tid	 = senderTid;
@@ -102,11 +106,10 @@ void cs_run () {
 			case DELAYUNTIL:
 				debug ("cs: task %d delays until %d ticks. (currently: %d)\r\n",
 					   senderTid, req.ticks, ticks);
-				sleeper = &memSleepers [numSleepers++];
+				idx = senderTid % NUM_SLEEPERS;
+				sleeper = &memSleepers[idx];
+				assert( sleeper->tid == UNUSED_TID );
 
-				assert( numSleepers < NUM_SLEEPERS );
-				assert( sleeper != 0 );
-					
 				sleeper->endTime = req.ticks;
 				sleeper->tid     = senderTid;
 
@@ -128,12 +131,13 @@ void cs_run () {
 				while ( sleeper != 0 && ticks >= sleeper->endTime ) {
 					assert( sleeper != 0 );
 					
-					// Remove from the list of sleeping tasks
-					list_remove ( &(sleepersQ), sleeper );
 					debug("cs: waking up tid: %d time: %d currentT: %d\r\n", sleeper->tid, sleeper->endTime, ticks);
 
 					// Wake it up!
 					Reply (sleeper->tid, (char*) &ticks, sizeof(int));
+					
+					// Remove from the list of sleeping tasks
+					list_remove ( &(sleepersQ), sleeper );
 
 					// Increment iterator pointer
 					sleeper = sleeper->next;
@@ -157,9 +161,8 @@ int cs_init (Sleeper **sleepersQ) {
 	RegisterAs (CLOCK_NAME);
 	
 	// Spawn a notifying helper task
-	if ( (err = Create( 1, &notifier_run )) < NO_ERROR ) {
-		error (err, "Cannot create the clock notifier.");
-	}
+	err = Create( 1, &notifier_run );
+	if_error (err, "Cannot create the clock notifier.");
 
 	// No tasks are currently waiting
 	*sleepersQ = 0;
@@ -257,6 +260,7 @@ void list_remove ( Sleeper **head, Sleeper *toRm ) {
 	// Reset these links just incase something screwy happens
 	toRm->next = 0;
 	toRm->prev = 0;
+	toRm->tid = UNUSED_TID;
 }
 
 void notifier_run() {
@@ -265,7 +269,7 @@ void notifier_run() {
 	int 	  err;
 	int 	  clockServerId = MyParentTid();
 	int 	  reply;
-	char 	  awaitBuffer[10];
+	char 	  awaitBuffer[1];
 	CSRequest req;
 
 	req.type  = NOTIFY;
@@ -275,25 +279,14 @@ void notifier_run() {
 	notifier_init ();
 	
 	FOREVER {
-	//	bwprintf (COM2, "Notifier is awaiting an event\r\n");
 		// Wait for 1 "tick" (50ms) to pass
-		if ( (err = AwaitEvent( TC1UI, awaitBuffer, sizeof(char)*10 )) 
-				< NO_ERROR ) {
-			// Handle errors
-			assert ('a'=='b');
-		}
-	
-		// Check the return buffer?
-
+		err = AwaitEvent( TC1UI, awaitBuffer, sizeof(awaitBuffer) );
+		if_error( err, "cs: awaitEvent failed." );
 
 		// Tell the Clock Server 1 tick has passed
-//		bwprintf (COM2, "Notifier->ClockServer\r\n");
-		if ( (err = Send( clockServerId, (char*) &req, sizeof(CSRequest),
-					      (char *) &reply, sizeof(int) )) < NO_ERROR ) {
-			// Handle errors
-			
-		}
-
+		err = Send( clockServerId, (char*) &req, sizeof(CSRequest),
+					      (char *) &reply, sizeof(int) );
+		if_error( err, "cs: send from notifier to server failed.");
 		// The device driver will clear the interrupt
 	}
 
@@ -307,9 +300,8 @@ void notifier_init () {
 	RegisterAs ("ClkNotifier");
 	
 	// Install the clock driver
-	if ( InstallDriver( TC1UI, &timer1Driver ) < NO_ERROR ) {
-		assert (1==0);
-	}
+	int err = InstallDriver( TC1UI, &timer1Driver );
+	if_error( err, "cs: timer driver not installed.");
 
 	// Init clock stuff
 	clock_init ( TIMER1, 1, 1, 100 );
