@@ -5,7 +5,6 @@
  */
 #define DEBUG 1 
 
-#include <bwio.h>
 #include <string.h>
 #include <ts7200.h>
 
@@ -19,8 +18,9 @@
 #define FOREVER     for( ; ; )
 #define INPUT_LEN   60
 #define INPUT_HIST  1
+#define IO			ios2Tid
 
-#define output(args...) bwputstr(COM2, "\033[36m"); bwprintf(COM2, args); bwputstr(COM2,"\033[37m")
+#define output(args...) cprintf(IO, "\033[36m"); cprintf(IO, args); cprintf(IO, "\033[37m")
 
 // A fun idle task that counts to high numbers
 void idleTask () {
@@ -54,21 +54,22 @@ void shell_run ( ) {
 	csReq.ticks = 0;
 
 	// Create the name server
-	output ("Creating the name server. \r\n");
+//	output ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
 	
-	// Create the clock server
-	output ("Creating the clock server. \r\n");
-	csTid = Create (2, &cs_run);
-
 	// Create the Serial I/O server
-	output ("Creating the serial io server. \r\n");
 	ios1Tid = Create (2, &ios1_run);
 	ios2Tid = Create (2, &ios2_run);
+	output ("Initialized the serial io servers. \r\n");
+	
+	// Create the clock server
+	csTid = Create (2, &cs_run);
+	output ("Initialized the clock server. \r\n");
+
 	
 	// Create the train controller
-	output ("Creating the train controller. \r\n");
 	tcTid = Create (2, &tc_run);
+	output ("Initialized the train controller. \r\n");
 	
 	output ("Type 'h' for a list of commands.\r\n");
 	
@@ -84,6 +85,7 @@ void shell_run ( ) {
 	mins = time / 600;
 	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
 	
+	i=0;
 	// Main loop
     FOREVER {
 
@@ -100,7 +102,7 @@ void shell_run ( ) {
 
 		// Enter was pressed
 		if( input[i] == '\r' ) {        
-			bwputstr ( COM2, "\n\r");
+			output( "\n\r" );
 			input[i+1] = 0;
 			
 			shell_exec(input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
@@ -113,14 +115,14 @@ void shell_run ( ) {
 		// Backspace was pressed
 		} else if( input[i] == '\b' || input[i] == 127) {
 			if( i > 0 ) {
-				bwputstr ( COM2, "\b \b");
+				output( "\b \b" );
 				
 				input[i] = 0;
 				i --;
 			}
 		// Update the position in the command string
 		} else {
-			output ("%c", input[i]);
+			output( "%c", input[i] );
 			if( input[i] < 32 || input[i] > 126 ) {
 				output("%d", input[i]);
 			}
