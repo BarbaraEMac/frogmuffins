@@ -246,6 +246,7 @@ inline void uart_write( UART *uart, char ch ) ;
 
 void cache_on() ;
 void cache_off() ;
+int cache_type() ;
 
 int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) ;
 void clock_stop( Clock *clock ) ;
