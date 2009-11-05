@@ -119,8 +119,8 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 	}
 	if ( ret < NO_ERROR ) {
 		error( td->returnValue, "Kernel request failed.");
-		bwprintf( COM2, "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n", td->id, td, 
-			req->type, req->a->arg[0], req->a->arg[1], 
+		bwprintf( COM2, "service: (%d) @%x type:%d args:%x %x %x %x %x \r\n",
+			td->id, td, req->type, req->a->arg[0], req->a->arg[1], 
 			req->a->arg[2], req->a->arg[3], req->a->arg[FRAME_SIZE] );
 		bwgetc(COM2);
 	}
@@ -175,11 +175,7 @@ int main( int argc, char* argv[] ) {
 
 	// Create the shell task and set it as the active one
 	active = td_create ( NUM_PRIORITY-2, &shell_run, -1, &mgr );
-	//active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
-
-	if ( active < NO_ERROR ) {
-		error ( (int) active, "Initializing the first task");
-	}
+	if_error ( (int) active, "Error initializing the shell.");
 
 	FOREVER {	
 		active = schedule (active, &mgr);
