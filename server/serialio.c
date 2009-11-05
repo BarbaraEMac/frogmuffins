@@ -110,11 +110,7 @@ void ios_run (UART *uart) {
 
 	FOREVER {
 		// Receive a server request
-		debug ("ios: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(IORequest) );
-		
-		debug ("ios: Received: Tid=%d  type=%d len=%d\r\n", 
-				senderTid, req.type, len);
 		
 		assert( len >= IO_REQUEST_SIZE + req.len );
 		assert( senderTid >= 0 );
@@ -283,7 +279,7 @@ void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
 	
 	// Otherwise, write a single byte
 	} else if( (uart->flag & CTS_MASK) || (uart != UART1) ) {	
-		debug ("writing %c to uart\r\n", ios->sendBuffer[ios->sFulIdx]);
+		debug ("ios: writing '%c' to uart\r\n", ios->sendBuffer[ios->sFulIdx]);
 
 		uart_write ( uart, ios->sendBuffer[ios->sFulIdx] );
 	

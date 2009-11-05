@@ -109,7 +109,6 @@ void service ( TD *td, Request *req, TDM *mgr ) {
 			break;
 
 		case HARDWAREINT:
-			debug("HANDLING INTERRUPT type=%d\r\n", req->type);
 			handleInterrupt( mgr );
 			// fall through
 		case PASS:
@@ -174,9 +173,8 @@ int main( int argc, char* argv[] ) {
 	// Initialize the priority queues
 	mgr_init ( &mgr );
 
-	// Create the first task and set it as the active one
-	// Set priority = 0 to ensure that this task completes
-	active = td_create ( NUM_PRIORITY-1, &shell_run, -1, &mgr );
+	// Create the shell task and set it as the active one
+	active = td_create ( NUM_PRIORITY-2, &shell_run, -1, &mgr );
 	//active = td_create ( 0, &k3_firstUserTask, -1, &mgr );
 
 	if ( active < NO_ERROR ) {
