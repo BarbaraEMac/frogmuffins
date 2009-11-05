@@ -1,0 +1,45 @@
+TODO FOR PROJECT
+
+	* Design a UI
+		- Position of train
+		- State of each switch
+		- List of recently triggered sensors & updated times
+		- Splash Screen
+		- shell prompt
+	
+	* Calibrate the speeds
+		- Run tests to determine the speeds for each train
+	
+	* Error / Fault Detection
+		- Faulty sensor (mis-trigger)
+		- Faulty switch (switch during running)
+		- Train getting stuck on switch during reverse
+		- UART1 becomes unplugged - no commands go through
+		- Faulty state after running for a long time
+		- 
+		- How else can the train fail?
+
+	* Track Layout
+		- Need to store:
+			- switches
+			- sensors
+			- stops
+			- distances between everything
+			- state of everything
+		- Need to parse model file to hardcode the data into our code
+	
+	* Keep track of the train
+		- THIS MUST BE EXTENSIBLE TO MULTIPLE TRAINS
+		- distance
+		- speed
+		- location
+		- destination 
+		- currently allocated track
+	
+	* Prediction System (Detective - his name should be Watson)
+		- Use the train data to predict where train will be
+		- Plan routes (source -> dest)
+		- Reserve tracks
+		- Spawns workers to get work done
+
+	* Documentation
