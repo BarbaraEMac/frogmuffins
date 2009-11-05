@@ -132,7 +132,7 @@ void k2_firstUserTask () {
 	// Let's make 50 players to test the td recycling
 	debug ("Creating 50 players at the lowest priority. \r\n");
 	int i;
-	for (i = 0; i < 50; i += 5) {
+	for (i = 0; i < 40; i += 5) {
 		Create ((i%5)+5, &robinPlayer);
 		Create ((i%5)+5, &clonePlayer);
 		Create ((i%5)+5, &robinPlayer);
