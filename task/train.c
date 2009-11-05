@@ -22,7 +22,7 @@
 #include "shell.h"
 #include "string.h"
 #include "task.h"
-#include "traincontroller.h"
+#include "train.h"
 
 /* FORWARD DECLARATIONS */
 
