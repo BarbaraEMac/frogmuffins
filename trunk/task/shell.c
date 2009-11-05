@@ -36,22 +36,17 @@ void idleTask () {
 	}
 }
 
-
 void shell_run ( ) {
     debug ("shell_run\r\n");
 
 	// Initialize variables
-    char *input, history[INPUT_HIST][INPUT_LEN];
+    char cmd, *input, history[INPUT_HIST][INPUT_LEN];
     int i = 0, h = 0;
 	TID nsTid;
 	TID csTid;
 	TID ios1Tid, ios2Tid;
 	TID tcTid;
 	TID idle;
-	CSRequest csReq;
-
-	csReq.type  = TIME;
-	csReq.ticks = 0;
 
 	// Create the name server
 //	output ("Creating the name server. \r\n");
@@ -71,10 +66,11 @@ void shell_run ( ) {
 	tcTid = Create (2, &tc_run);
 	output ("Initialized the train controller. \r\n");
 	
-	output ("Type 'h' for a list of commands.\r\n");
-	
 	// Create the idle task
 	idle = Create (9, &idleTask);
+
+	output ("Type 'h' for a list of commands.\r\n");
+
 
     input = history[h++];
 	int	time, tens, secs, mins;
@@ -90,43 +86,52 @@ void shell_run ( ) {
     FOREVER {
 
         input[i] = 0;						// Clear the next character
-
-	
 		input[i] = Getc( ios2Tid );
-		//Putc(input[i], ios1Tid);
-		//Putc(input[i], ios2Tid);
-		time = Time(csTid)/2;
+
+		time = Time( csTid ) / 2;
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
 
-		// Enter was pressed
-		if( input[i] == '\r' ) {        
-			output( "\n\r" );
-			input[i+1] = 0;
-			
-			shell_exec(input, tcTid, ios1Tid, ios2Tid);// This may call Exit();
-			
-			// Clear the input for next line
-			//input = history[h++];
-			//h++; h &= INPUT_HIST;
-			i = 0;
-			output ("\r%02d:%02d:%02d> ", mins, secs, tens);
-		// Backspace was pressed
-		} else if( input[i] == '\b' || input[i] == 127) {
-			if( i > 0 ) {
-				output( "\b \b" );
+		switch ( input[i] ) {
+			case '\r': // Enter was pressed
+				output( "\n\r" );
+				input[i+1] = 0;
 				
-				input[i] = 0;
-				i --;
-			}
-		// Update the position in the command string
-		} else {
-			output( "%c", input[i] );
-			if( input[i] < 32 || input[i] > 126 ) {
-				output("%d", input[i]);
-			}
-			i++;
+				shell_exec(input, tcTid, ios1Tid, ios2Tid);
+				
+				// Clear the input for next line
+				input = history[h++];
+				h %= INPUT_HIST;
+				i = 0;
+				output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+				break;
+			case '\b': // Backspace was pressed
+			case 127:
+				if( i > 0 ) {
+					output( "\b \b" );
+					input[i] = 0;
+					i --;
+				}
+				break;
+			case '\033': // Escape sequence
+				input[i] = Getc( ios2Tid );	// read the '['
+				if( input[i] != '[' ) break;
+				cmd = Getc( ios2Tid );
+				switch( cmd ) {
+					case 'A': // Up was pressed
+						
+				}
+
+				break;
+
+			default:	// Update the position in the command string
+				output( "%c", input[i] );
+				if( input[i] < 32 || input[i] > 126 ) {
+					output("%d", input[i]);
+				}
+				i++;
+				break;
 		}
         if( i == INPUT_LEN - 1 ) {	i-- ; }
     }
