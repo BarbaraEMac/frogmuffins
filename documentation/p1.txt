@@ -1,0 +1,53 @@
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
+		________             ________           _____     ______
+		___  __ \__________________(_)____________  /_    __<  /
+		__  /_/ /_  ___/  __ \____  /_  _ \  ___/  __/    __  / 
+		_  ____/_  /   / /_/ /___  / /  __/ /__ / /_      _  /  
+		/_/     /_/    \____/___  /  \___/\___/ \__/      /_/   
+		                     /___/                              
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||1 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The executable is located at: /u8/becmacdonald/cs452/p1/handin/main/main.elf.
+
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_p1.elf
+
+	To load the program, type 'load ARM/becmacdo_p1.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||2 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+algorithms - how they work
+			- why we chose them
+			error codes
+			data structures
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The source code is located in: /u8/becmacdonald/cs452/p1/handin.
+
+	Here are the md5 hashes for each file:
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+	
+	Here are all of the files we are submitting:
+
+
+
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
