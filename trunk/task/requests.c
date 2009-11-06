@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-//#define DEBUG 1
+#define DEBUG 2
 #include <string.h>
 
 #include "debug.h"
@@ -155,5 +155,20 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, &reply, sizeof(char));
 	
 }
+/*
 
+void WaitFor ( int n ) {
+	debug("WaitFor: tid:%d, n:%d\r\n", MyTid(), n );
+	TID 	tid;
+	char	msg;
+	while( n-- ) {
+		Receive( &tid, &msg, sizeof(msg) );
+		Reply( tid, &msg, sizeof(msg) );
+	}
+}
 
+int Sync ( TID tid ) {
+	debug("Sync: tid:%d, with:%d\r\n", MyTid(), tid );
+	char msg, rpl;
+	return Send( tid, &msg, sizeof(msg), &rpl, sizeof(rpl) );
+}*/

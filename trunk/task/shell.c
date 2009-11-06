@@ -55,16 +55,16 @@ void shell_run ( ) {
 	// Create the Serial I/O server
 	ios1Tid = Create (2, &ios1_run);
 	ios2Tid = Create (2, &ios2_run);
-	output ("Initialized the serial io servers. \r\n");
+	output ("Initializing the serial io servers. \r\n");
 	
 	// Create the clock server
 	csTid = Create (2, &cs_run);
-	output ("Initialized the clock server. \r\n");
+	output ("Initializing the clock server. \r\n");
 
 	
 	// Create the train controller
 	tcTid = Create (2, &tc_run);
-	output ("Initialized the train controller. \r\n");
+	output ("Initializing the train controller. \r\n");
 	
 	// Create the idle task
 	idle = Create (9, &idleTask);
@@ -79,7 +79,7 @@ void shell_run ( ) {
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
-	output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+	output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 	
 	i=0;
 	// Main loop
@@ -101,10 +101,10 @@ void shell_run ( ) {
 				shell_exec(input, tcTid, ios1Tid, ios2Tid);
 				
 				// Clear the input for next line
-				input = history[h++];
-				h %= INPUT_HIST;
+				/*input = history[h++];
+				h %= INPUT_HIST;*/
 				i = 0;
-				output ("\r%02d:%02d:%02d> ", mins, secs, tens);
+				output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 				break;
 			case '\b': // Backspace was pressed
 			case 127:
@@ -118,9 +118,14 @@ void shell_run ( ) {
 				input[i] = Getc( ios2Tid );	// read the '['
 				if( input[i] != '[' ) break;
 				cmd = Getc( ios2Tid );
+				output( "\r\n command %c detected.", cmd );
 				switch( cmd ) {
 					case 'A': // Up was pressed
-						
+					
+						break;
+					default:
+
+						break;
 				}
 
 				break;

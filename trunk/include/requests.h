@@ -202,4 +202,16 @@ int Putc (char ch, TID iosTid);
  */
 int PutStr (const char *str, int strLen, TID iosTid);
 
+/**
+ * Waits for n tasks to Sync() with this task
+ * n - number of Sync() calls to wait for
+ */
+//void WaitFor ( int n );
+
+/**
+ * Sends a Sync() event to the task provided
+ * Returns error codes on failure
+ */
+//int Sync ( TID tid );
+
 #endif
