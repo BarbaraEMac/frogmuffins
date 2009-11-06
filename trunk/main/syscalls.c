@@ -13,12 +13,11 @@
 #include "syscalls.h"
 #include "td.h"
 
-int isValidMem ( const char *addr, const TD *td ) {
-	if ( addr == 0 ) {
-		return NULL_ADDR;
-	}
+int isValidMem ( const char *addr, const size_t size, const TD *td ) {
+	if ( size == 0 ) return NO_ERROR;		// if no message to pass we don't care
+	if ( addr == 0 ) return NULL_ADDR;		// a very special case here
 
-	if ( ((int *) addr >= td->sb) || ((int*) addr < td->sb-STACK_SIZE) ) {
+	if ( (addr + size >= (char *) td->sb) || ((int*)addr < td->sb-STACK_SIZE) ) {
 		return OUT_OF_BOUNDS;
 	}
 
@@ -38,11 +37,11 @@ int send (TD *sender, TDM *mgr, TID tid) {
 		return INVALID_TID;
 
 	// Verify the pointers point to valid memory addresses
-	if ( (ret = isValidMem(sender->a->send.msg, sender)) != NO_ERROR ) 
-		return ret;
+	ret = isValidMem( sender->a->send.msg, sender->a->send.msglen, sender );
+	if (ret != NO_ERROR ) return ret; 
 
-	if ( (ret = isValidMem(sender->a->send.reply, sender)) != NO_ERROR ) 
-		return ret; // TODO Add a mask here so that we can tell is apart
+	ret = isValidMem( sender->a->send.reply, sender->a->send.rpllen, sender );
+	if (ret != NO_ERROR ) return ret; // TODO Add a mask here so that we can tell is apart
 
 	
 	TD *receiver = mgr_fetchById (mgr, tid);
@@ -84,9 +83,8 @@ int receive (TD *receiver, TID *tid) {
 	int ret = NO_ERROR;
 
 	// Verify stack addresses are valid
-	if ((ret = isValidMem(receiver->a->receive.msg, receiver)) != NO_ERROR ){
-		return ret;
-	}
+	ret = isValidMem(receiver->a->receive.msg, receiver->a->receive.msglen, receiver );
+	if (ret != NO_ERROR ) return ret; 
 
 	// Change the state to SEND_BLKD
 	receiver->state = SEND_BLKD;
@@ -133,9 +131,8 @@ int reply (TD *from, TDM *mgr, TID tid) {
 	}
 	
 	// Check the msg pointer
-	if ((ret = isValidMem(from->a->reply.reply, from)) != NO_ERROR ){
-		return ret;
-	}
+	ret = isValidMem( from->a->reply.reply, from->a->reply.rpllen, from );
+	if (ret != NO_ERROR ) return ret; 
 
 	// Copy the data over
 	ret = passMessage ( from, to, REPLY_2_SEND );
@@ -175,8 +172,8 @@ int passMessage ( TD *from, TD *to, MsgType type ) {
 	debug("passMessage: from (%d) [%d]bytes to (%d) [%d]bytes\r\n", from->id, sourceLen, to->id, destLen);
 
 	// Verify the pointers point to valid memory addresses
-	assert( isValidMem(source, from) == NO_ERROR );
-	assert( isValidMem(dest, to) == NO_ERROR );
+	assert( isValidMem( source, sourceLen, from ) == NO_ERROR );
+	assert( isValidMem( dest, destLen, to ) == NO_ERROR );
 
 	// Copy the message over to this task 
 	// Copy as much as we can and return the copied amount
