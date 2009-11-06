@@ -66,6 +66,7 @@ void k3_firstUserTask () {
 		Reply ( id, (char *) &msgs[i], sizeof(clientMsg) );
 	}
 	
+//	WaitFor ( 4 );
 	// Quit since this task is done
 	debug ("First user task exiting.\r\n");
 	Exit();
@@ -93,6 +94,7 @@ void k3_client () {
 				MyTid(), msg.delayLen, i+1);
 	}
 
+//	Sync( MyParentTid() );
 	// Exit!
 	debug ("Client %d is exiting.\r\n", MyTid());
 	Exit();

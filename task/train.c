@@ -22,7 +22,7 @@
 #include "shell.h"
 #include "string.h"
 #include "task.h"
-#include "train.h"
+#include "traincontroller.h"
 
 /* FORWARD DECLARATIONS */
 
@@ -62,7 +62,6 @@ void tc_run () {
 
 	// Initialize the Train Controller
 	if_error( tc_init (&tc), "Initializing Train Controller failed.");
-	 
 
 	FOREVER {
 		// Receive a server request
@@ -108,7 +107,7 @@ void tc_run () {
 				debug ("tc: WHing\r\n");
 				reply.sensor = tc.lstSensorNum;
 				reply.channel = tc.lstSensorCh;
-				reply.ticks = (char) (Time( tc.csTid ) - tc.lstSensorUpdate);
+				reply.ticks = (Time( tc.csTid ) - tc.lstSensorUpdate);
 				break;
 
 			case POLL:
@@ -243,8 +242,9 @@ void poll() {
 	TID ioTid = WhoIs( SERIALIO1_NAME );
 	char poll_req[2] = { 133, 192 }, ch;
 	// We need the braces around the 0s because they're in unions
-	TCRequest req = { POLL, {0}, {0} };
-	int i, res;
+	TCRequest 	req = { POLL, {0}, {0} };
+	TCReply		rpl;
+	int 		i, res;
 
 	FOREVER {
 
@@ -266,7 +266,7 @@ void poll() {
 		}
 
 		// Let the train controller know
-		Send( tcTid, (char *) &req, sizeof(req), (char*) &res, sizeof(res));
+		Send( tcTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
 	}
 
 }

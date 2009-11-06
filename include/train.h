@@ -39,14 +39,14 @@ typedef struct {
 } TCRequest;
 
 
-typedef union { 
+typedef struct { 
 	struct {
 		char sensor;
 		char channel;
 		char dir;
-		char ticks;		// hopefully this is never more than 255
 	};
 	int ret;
+	int ticks;		// hopefully this is never more than 255
 } TCReply;
 
 /**
