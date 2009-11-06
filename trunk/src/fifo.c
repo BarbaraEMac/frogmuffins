@@ -51,35 +51,36 @@ struct fifo {
 // void fifo_insertD ( Fifo *head, int elem );
 //
 
-void fifo_init ( Fifo head ) {
+void fifo_init ( Fifo *fifo ) {
 
+	// The fifo starts empty
+	fifo->head = 0;
 
-
-	// No tasks are currently waiting
-	*entrysQ = 0;
-
-	return err;
+	// Set the ptr to the next unused Entry elem to 0.
+	fifo->ptr = 0;
 }
 
-void fifo_insert ( Fifo *fifo, int value ) {
-	
+void fifo_insertD ( Fifo *fifo, int value ) {
+	Entry *head = fifo->head;
+	Entry toAdd = fifo_newEntry (fifo, value);
+
 	assert( head != 0 );
-	assert( toAdd != 0 );
+	assert( toAdd != 0 )
 
 	// The empty list
 	if ( *head == 0 ) {
-		debug ("	fifo: add %d %d as head \r\n", toAdd->tid,toAdd->endTime);
+		debug ("	fifo: add %d %d as head \r\n", toAdd->tid,toAdd->value);
 		toAdd->next = toAdd;
 		toAdd->prev = toAdd;
 
 		*head = toAdd;
 	}
 	// New Element is the new head
-	else if ( toAdd->endTime < (*head)->endTime ) {
+	else if ( toAdd->value < (*head)->value ) {
 		Entry *oldHead = *head;
 		Entry *tail    = oldHead->prev;
 
-		debug("		fifo: add as new head %d %d (old: %d %d) \r\n", toAdd->tid, toAdd->endTime, oldHead->tid, oldHead->endTime);
+		debug("		fifo: add as new head %d %d (old: %d %d) \r\n", toAdd->tid, toAdd->value, oldHead->tid, oldHead->value);
 		toAdd->next = oldHead;
 		toAdd->prev = tail;
 
@@ -92,7 +93,7 @@ void fifo_insert ( Fifo *fifo, int value ) {
 	// The new element needs to be inserted in the middle
 	else {
 		Entry *itr = (*head)->next;
-		while ( toAdd->endTime > itr->endTime && itr != *head ) {
+		while ( toAdd->value > itr->value && itr != *head ) {
 			assert ( itr != 0 );
 			assert ( itr->next != 0 );
 			assert ( itr->prev != 0 );
@@ -100,7 +101,7 @@ void fifo_insert ( Fifo *fifo, int value ) {
 			itr = itr->next;
 		}
 	
-		debug("		fifo: add in middle to: %d %d prev: %d %d, next: %d %d\r\n", toAdd->tid, toAdd->endTime, itr->prev->tid, itr->prev->endTime, itr->prev->next->tid, itr->prev->next->endTime);
+		debug("		fifo: add in middle to: %d %d prev: %d %d, next: %d %d\r\n", toAdd->tid, toAdd->value, itr->prev->tid, itr->prev->value, itr->prev->next->tid, itr->prev->next->value);
 		// Insert in the middle
 		toAdd->next = itr;
 		toAdd->prev = itr->prev;
@@ -110,15 +111,15 @@ void fifo_insert ( Fifo *fifo, int value ) {
 	}
 
 
-	debug ("\tfifo: added tid: %d time: %d\r\n", toAdd->tid, toAdd->endTime);
+	debug ("\tfifo: added tid: %d value: %d\r\n", toAdd->tid, toAdd->value);
 
 	assert( *head != 0 );
 	assert( toAdd->next != 0 );
 	assert( toAdd->prev != 0 );
 }
 
-void list_remove ( Entry **head, Entry *toRm ) {
-	debug ("\tfifo: removing tid: %d time: %d\r\n", toRm->tid, toRm->endTime);
+int fifo_removeValue ( Fifo *fifo, int value  ) {
+	debug ("\tfifo: removing value: %d\r\n", >value);
 	
 	// Remove the head - this is the last element
 	if ( *head == toRm ) {
