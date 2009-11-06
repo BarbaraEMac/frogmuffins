@@ -15,6 +15,7 @@
 
 #define NUM_SLEEPERS	64
 #define	UNUSED_TID		-1
+#define HARDWARE_TICKS	(MS_IN_TICK * 2)
 
 //-----------------------------------------------------------------------------
 /**
@@ -84,8 +85,8 @@ void cs_run () {
 		assert( req.ticks >= 0 );
 		
 		// Calculate the current time in ticks in case a task wants to know
-		ticks  = 0 - *time; // since the timer counts down
-		ticks /= 100;	// convert to ticks (where 50ms = 1 tick)
+		ticks  = 0 - *time; 		// since the timer counts down
+		ticks /= HARDWARE_TICKS;	// convert to ticks (where 50ms = 1 tick)
 		debug ("cs: time is %d\r\n", ticks);
 		assert( ticks >= 0 );
 
@@ -304,5 +305,5 @@ void notifier_init () {
 	if_error( err, "cs: timer driver not installed.");
 
 	// Init clock stuff
-	clock_init ( TIMER1, 1, 1, 100 );
+	clock_init ( TIMER1, 1, 1, HARDWARE_TICKS );
 }	
