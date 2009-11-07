@@ -13,6 +13,15 @@
 
 #define SWI(n) asm("swi #" #n)
 
+typedef struct {
+	TID tid;
+	union {
+		int result;
+		int ticks;
+	};
+} helperMsg;
+	
+
 int Create (int priority, Task code ) {
 	SWI(1);
 	//return syscall(priority, (int) code, 0, CREATE);
@@ -126,34 +135,76 @@ int Getc (TID iosTid) {
 	req.type    = GETC;
 	req.len     = 0;
 
-	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, (char*)&ret, sizeof(char));
+	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, &ret, sizeof(char));
 	
 	return ret;
 }
 
 int Putc (char ch, TID iosTid) {
-	char 	  reply;
 	IORequest req;
 	
 	req.type    = PUTC;
 	req.data[0] = ch;
 	req.len     = 1;
 
-	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + 1, &reply, sizeof(char));
+	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + 1, 0, 0);
 }
 
 int PutStr (const char *str, int strLen, TID iosTid) {
 	assert ( strLen <= 80 );
 	
-	char 	  reply;
 	IORequest req;
 	
 	req.type    = PUTSTR;
 	memcpy (req.data, str, strLen);
 	req.len     = strLen;
 
-	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, &reply, sizeof(char));
+	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, 0, 0);
 	
+}
+
+void getcHelper() {
+	helperMsg 	msg;
+	TID			parent;
+	// Get instructions on what to do
+	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Reply( parent, 0 , 0 );
+	// Get a character from the IO server
+	msg.result = Getc( msg.tid );
+	// Return result back to parent
+	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+}
+
+void delayHelper() {
+	helperMsg 	msg;
+	TID			parent;
+	// Get instructions on what to do
+	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Reply( parent, 0 , 0 );
+	// Wait for specified number of ticks
+	msg.result = Delay( msg.ticks, msg.tid );
+	// Return result back to parent
+	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+}
+
+	
+int TimeoutGetc( TID iosTid, TID csTid, int timeout ) {
+	helperMsg 	msg;
+	TID 		getcTid = Create(3, &getcHelper );
+	TID 		delayTid = Create(3, &delayHelper );
+	TID			tid;
+	// Start off the getc helper
+	msg.tid = iosTid;
+	Send( getcTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	// Start off the delay helper
+	msg.tid = csTid;
+	msg.ticks = timeout;
+	Send( delayTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	// Wait for one of them to finish
+	Receive( &tid, (char *) &msg, sizeof(helperMsg) );
+	// Destroy them
+	Destroy( getcTid );
+	Destroy( delayTid );
 }
 /*
 
