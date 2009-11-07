@@ -95,6 +95,7 @@ typedef struct {
 
 /**
  * Create a new task with given priority and start function
+ * Return error code on failure, the child's tid otherwise
  */
 int Create (int priority, Task code);
 
@@ -201,6 +202,15 @@ int Putc (char ch, TID iosTid);
  * iosTid - The task id of the serial io server
  */
 int PutStr (const char *str, int strLen, TID iosTid);
+
+/**
+ * Similar to getc, but returns TIMEOUT_ERROR if getc does not acquire
+ * a character within prescribed amount of time;
+ * iosTid - The task id of the serial io server
+ * csTid - The task id of the clock server
+ * timeout - the number of ticks to wait before sending the timeout err;
+ */
+int TimeoutGetc( TID iosTid, TID csTid, int timeout );
 
 /**
  * Waits for n tasks to Sync() with this task
