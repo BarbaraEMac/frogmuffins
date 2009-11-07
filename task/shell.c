@@ -13,7 +13,7 @@
 #include "servers.h"
 #include "shell.h"
 #include "task.h"
-#include "traincontroller.h"
+#include "train.h"
 
 #define FOREVER     for( ; ; )
 #define INPUT_LEN   60
@@ -30,7 +30,7 @@ void idleTask () {
 
 	while ( 1 ) {
 		//if ( (i % 20) == 0 ) {
-		//	bwprintf(COM2, "IDLE=%d\r\n", i);
+		//	printf(COM2, "IDLE=%d\r\n", i);
 		//}
 		i = i + 1;
 	}
@@ -88,7 +88,7 @@ void shell_run ( ) {
         input[i] = 0;						// Clear the next character
 		input[i] = Getc( ios2Tid );
 
-		time = Time( csTid ) / 2;
+		time = Time( csTid ) / (100 / MS_IN_TICK);
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
@@ -138,7 +138,7 @@ void shell_run ( ) {
 				i++;
 				break;
 		}
-        if( i == INPUT_LEN - 1 ) {	i-- ; }
+        if( i == INPUT_LEN - 1 ) {	i-- ; output("\b");}
     }
 }
 
@@ -215,7 +215,7 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 			output( "No sensor triggered yet.\r\n" );
 		} else {
 			output( "Last sensor triggered was %c%d (updated %d ms ago).\r\n", 
-					tcRpl.channel, tcRpl.sensor, tcRpl.ticks * 50 );
+					tcRpl.channel, tcRpl.sensor, tcRpl.ticks * MS_IN_TICK );
 		}
 	// start
     } else if( sscanf(command, "start\r") >=0 ) {
