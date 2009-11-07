@@ -19,6 +19,10 @@ typedef char *va_list;
 #define va_arg(ap, t)	\
 		 (((ap) = (ap) + __va_argsiz(t)), *((t*) (void*) ((ap) - __va_argsiz(t))))
 
+
+#define printf(args...) cprintf(WhoIs(SERIALIO2_NAME), args)
+
+
 // ****************************************************************
 // * NOTE: Most descriptions copied from the standard c libraries *
 // ****************************************************************
