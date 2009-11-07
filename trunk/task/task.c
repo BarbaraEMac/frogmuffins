@@ -7,7 +7,7 @@
  */
 
 #define DEBUG 1
-#include <bwio.h>
+
 #include <ts7200.h>
 
 #include "debug.h"
@@ -16,6 +16,8 @@
 #include "requests.h"
 #include "servers.h"
 #include "task.h"
+
+
 //-------------------------------------------------------------------------
 //---------------------------Kernel 4--------------------------------------
 //-------------------------------------------------------------------------
@@ -60,9 +62,8 @@ void k3_firstUserTask () {
 	debug ("First user task is receiving.\r\n");
 	int i;
 	for ( i = 0; i < 4; i ++ ) {
-		len = Receive (&id, (char*) &req, sizeof(char));
+		len = Receive (&id, &req, sizeof(char));
 		assert ( len == sizeof(char) );
-	
 		Reply ( id, (char *) &msgs[i], sizeof(clientMsg) );
 	}
 	
@@ -90,7 +91,7 @@ void k3_client () {
 	debug("delayLen= %d, numDelays = %d\r\n", msg.delayLen, msg.numDelays );
 	for ( i = 0; i < msg.numDelays; i ++ ) {
 		Delay (msg.delayLen, csTid);
-		bwprintf(COM2, "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
+		printf( "Tid: %d \t Delay Interval: %d \t Num of Completed Delays: %d \r\n", 
 				MyTid(), msg.delayLen, i+1);
 	}
 
@@ -117,19 +118,19 @@ void k2_firstUserTask () {
 	debug ("Creating 8 players. \r\n");
 	
 	// Same priorities
-	Create (2, &rockPlayer);
-	Create (2, &clonePlayer);
+	Create (4, &rockPlayer);
+	Create (4, &clonePlayer);
 	
-	Create (2, &paperPlayer);
-	Create (2, &clonePlayer);
+	Create (4, &paperPlayer);
+	Create (4, &clonePlayer);
 	
 	// 2 at same priority
-	Create (1, &scissorsPlayer);
-	Create (1, &clonePlayer);
+	Create (3, &scissorsPlayer);
+	Create (3, &clonePlayer);
 	
 	// 2 at different priorities
-	Create (3, &clonePlayer);
-	Create (4, &clonePlayer);
+	Create (5, &clonePlayer);
+	Create (6, &clonePlayer);
 
 	// Let's make 50 players to test the td recycling
 	debug ("Creating 50 players at the lowest priority. \r\n");
@@ -185,28 +186,28 @@ void k2_registerTask2 () {
 
 void k2_senderTask () {
 
-    bwputstr (COM2, "Sender: starting.\r\n");
+    printf( "Sender: starting.\r\n");
 	char msg[] = "I CAN HAS", reply[12];
 	int len;
 	len = Send(0, msg, sizeof(msg), reply, sizeof(reply));
-	bwprintf (COM2, "Received reply: '%s' of length: %d.\r\n", reply, len);
+	printf( "Received reply: '%s' of length: %d.\r\n", reply, len);
 
-    bwputstr (COM2, "Sender: exiting.\r\n");
+    printf( "Sender: exiting.\r\n");
     Exit();
 
 }
 
 void k2_receiverTask () {
-    bwputstr (COM2, "Receiver: starting.\r\n");
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &k2_senderTask)); 
+    printf( "Receiver: starting.\r\n");
+    printf( "Created: %d.\r\n", Create (0, &k2_senderTask)); 
 	char msg[12], reply[]="KTHXBAI";
 	int len, tid;
-    bwputstr (COM2, "Receiver: listening.\r\n");
+    printf( "Receiver: listening.\r\n");
 	len = Receive(&tid, msg, sizeof(msg));
-	bwprintf (COM2, "Received msg: '%s' of length: %d from tid: %d.\r\n", msg, len, tid);
+	printf( "Received msg: '%s' of length: %d from tid: %d.\r\n", msg, len, tid);
 	len = Reply(tid, reply, sizeof(reply));
 
-    bwprintf (COM2, "Receiver: reply to tid: %d with result %d, exiting.\r\n", tid, len);
+    printf( "Receiver: reply to tid: %d with result %d, exiting.\r\n", tid, len);
     Exit();
 }
 
@@ -221,15 +222,15 @@ void k1_firstUserTask () {
 	debug( "First task started. \r\n");
 
     // Create low priority
-    bwprintf (COM2, "Created: %d.\r\n", Create (2, &k1_userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\r\n", Create (2, &k1_userTaskStart)); 
+    printf( "Created: %d.\r\n", Create (2, &k1_userTaskStart)); 
+    printf( "Created: %d.\r\n", Create (2, &k1_userTaskStart)); 
     
 	// Create high priority
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &k1_userTaskStart)); 
-    bwprintf (COM2, "Created: %d.\r\n", Create (0, &k1_userTaskStart)); 
+    printf( "Created: %d.\r\n", Create (0, &k1_userTaskStart)); 
+    printf( "Created: %d.\r\n", Create (0, &k1_userTaskStart)); 
 
 	// Exit
-    bwputstr (COM2, "First: exiting.\r\n");
+    printf( "First: exiting.\r\n");
     Exit();
 }
 
@@ -239,13 +240,13 @@ void k1_firstUserTask () {
 void k1_userTaskStart ( ) {
     
 	// Print your information
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
+    printf( "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
 
 	// Let someone else run
     Pass();
     
 	// Print your information again
-    bwprintf (COM2, "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
+    printf( "Tid: %d Parent Tid: %d\r\n", MyTid(), MyParentTid());
 
     Exit();
 }

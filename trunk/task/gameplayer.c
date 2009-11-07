@@ -8,13 +8,13 @@
 
 //#define DEBUG
 
-#include <bwio.h>
 #include <ts7200.h>
 #include <string.h>
 
 #include "debug.h"
 #include "globals.h"
 #include "requests.h"
+#include "servers.h"
 
 #include "gameplayer.h"
 
@@ -35,31 +35,31 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 	assert ( WhoIs(name) == MyTid() );
 
 	// Sign up for a game
-	bwprintf (COM2, "Player: %s (%d): Signing up for a game.\r\n", name, myTid);
+	printf ( "Player: %s (%d): Signing up for a game.\r\n", name, myTid);
 	req.type = SIGNUP;
 	Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 	
 	// Play the game
 	req.type = PLAY;
 	for ( i = 0; i < timesToPlay; i ++ ) {
-		bwprintf (COM2, "Player: %s (%d): Playing %c.\r\n", name, myTid, req.move);
+		printf ( "Player: %s (%d): Playing %c.\r\n", name, myTid, req.move);
 		Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 
 		// Process the server's reply
 		// Print the appropriate message.
 		switch ( reply.result ) {
 			case WIN:
-				bwprintf (COM2, "Player: %s (%d): Won against %s (%d)!\r\n", 
+				printf ( "Player: %s (%d): Won against %s (%d)!\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent.tid);
 				break;
 			
 			case LOSE:
-				bwprintf (COM2, "Player: %s (%d): Lost to %s (%d) :\(.\r\n", 
+				printf ( "Player: %s (%d): Lost to %s (%d) :\(.\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent.tid);
 				break;
 			
 			case TIE:
-				bwprintf (COM2, "Player: %s (%d): Tied with %s (%d).\r\n", 
+				printf ( "Player: %s (%d): Tied with %s (%d).\r\n", 
 						  name, myTid, reply.opponent.name, reply.opponent.tid);
 				break;
 
@@ -71,11 +71,11 @@ void genericPlayer (char *name, GameMove start, NextMove getNext, int timesToPla
 	}
 
 	// This player is bored. Quit playing.
-	bwprintf (COM2, "Player: %s (%d): Quitting.\r\n", name, myTid);
+	printf ( "Player: %s (%d): Quitting.\r\n", name, myTid);
 	req.type = QUIT;
 	Send (gameServer, (char*)&req, sizeof(PlayerRequest), (char*)&reply, sizeof(ServerReply));
 
-	bwprintf (COM2, "Player: %s (%d): Quit.\r\n", name, myTid);
+	printf ( "Player: %s (%d): Quit.\r\n", name, myTid);
 	// Exit the player
 	Exit();
 }
