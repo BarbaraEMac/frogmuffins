@@ -124,27 +124,26 @@ void ios_run (UART *uart) {
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
+				// store the character on the buffer
+				debug("ios: notified is storing ch=%c\r\n", req.data[0]);
+				assert (ios.recvBuffer[ios.rEmpIdx] == DUMMY_CH);
+				storeCh(ios.recvBuffer, &ios.rEmpIdx, req.data[0]);
+
 				// If we have a character and someone is blocked, wake them up
-				if ( ios.wEmpIdx != ios.wFulIdx ) {
-					assert (ios.waiting[ios.wFulIdx] != DUMMY_TID);
-					
+				// Keep replying until it works
+				while ( ios.wEmpIdx != ios.wFulIdx ) {
+					senderTid = ios.waiting[ios.wFulIdx];
 					debug ("ios: waking up task %d to give ch=%c\r\n",
-							ios.waiting[ios.wFulIdx], req.data[0]);
-					Reply ((int)ios.waiting[ios.wFulIdx], (char *)&req.data, 
-							sizeof(char));
-					
+							senderTid, req.data[0]);
 					storeInt(ios.waiting, &ios.wFulIdx, DUMMY_TID);
+					if(Reply( senderTid, req.data, sizeof(char)) >= NO_ERROR) {
+					
+						// Empty the slot and advance the pointer
+						storeCh(ios.recvBuffer, &ios.rFulIdx, DUMMY_CH);
+						break;
+					}
 				}
 				
-				// If we have a character and no one is waiting, store ch
-				else {
-					debug("ios: notified is storing ch=%c\r\n", req.data[0]);
-					assert (ios.recvBuffer[ios.rEmpIdx] == DUMMY_CH);
-					assert (ios.waiting[ios.wFulIdx] == DUMMY_TID);
-					
-					storeCh(ios.recvBuffer, &ios.rEmpIdx, req.data[0]);
-				}
-			
 				break;
 
 			case NOTIFY_PUT:
@@ -193,7 +192,7 @@ void ios_run (UART *uart) {
 			case PUTSTR:
 				debug ("ios: putstr str=%s len=%d\r\n", req.data, req.len);
 				// Do not let the sender stay blocked for long.
-				Reply (senderTid, (char*)&req.data, sizeof(char));
+				Reply (senderTid, 0, 0);
 
 				// Copy the data to our send buffer
 				for ( i = 0; i < req.len; i ++ ) {
