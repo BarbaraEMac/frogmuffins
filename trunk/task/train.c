@@ -8,7 +8,7 @@
 #define NUM_SWTS    256
 #define SW_CNT      22
 #define SW_WAIT     2	// ticks
-#define SNSR_WAIT   2	// ticks
+#define SNSR_WAIT   1	// ticks
 #define TRAIN_WAIT	10	// ticks
 
 #include <string.h>
@@ -22,7 +22,7 @@
 #include "shell.h"
 #include "string.h"
 #include "task.h"
-#include "traincontroller.h"
+#include "train.h"
 
 /* FORWARD DECLARATIONS */
 
