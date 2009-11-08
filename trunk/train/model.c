@@ -27,8 +27,9 @@ int parse_model_str(char* str, track_model_t* model)
     fprintf(stderr, "num_nodes must be positive\n");
     return -1;
   }
-  model->nodes = malloc(sizeof(track_node_t)*model->num_nodes);
-  if (!model->nodes) {
+  //model->nodes = malloc(sizeof(track_node_t)*model->num_nodes);
+
+  if (model->num_nodes > MAX_NUM_NODES) {
     fprintf(stderr, "Could not allocate space for %d nodes.\n", model->num_nodes);
     return -1;
   }
@@ -248,11 +249,12 @@ int parse_model(const char* filename, track_model_t* model)
   return rval;
 }
 
+/*
 void free_model(track_model_t* model)
 {
   if (model->nodes == 0) return;
 
   free(model->nodes);
   model->nodes = 0;
-}
+}*/
 
