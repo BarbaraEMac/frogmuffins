@@ -9,6 +9,7 @@
 
 #define NUM_SENSOR_BANKS 5
 #define MAX_NUM_TRAINS 10
+#define MAX_NUM_NODES 80
 
 typedef struct track_edge {
   int dest;
@@ -54,7 +55,7 @@ typedef struct track_node {
 
 typedef struct track_model {
   int num_nodes;
-  track_node_t* nodes;
+  track_node_t nodes[MAX_NUM_NODES];
   int sensor_nodes[NUM_SENSOR_BANKS*16];
 } track_model_t;
 
