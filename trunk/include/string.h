@@ -122,9 +122,10 @@ size_t cprintf ( int iosTid, const char * format, ... ) ;
 int atod( char ch );
 
 /**
- * Convert the given string to into an integer.
+ * Convert the given string to into an integer stopping at whitespace.
+ * Returns the number read, 0 if no match is found
  */
-char atoi( char ch, const char **src, int base, int *nump );
+int atoi( const char **src, int base );
 
 /**
  * Converts a given unsigned integer into a string.
