@@ -177,22 +177,12 @@ void bwformat ( int channel, const char *fmt, va_list va ) {
 			ch = *(fmt++);
 			if ( ch == '0' ) {
 				lz = '0'; ch = *(fmt++);
-            }
-			switch ( ch ) {
-			//case '0':
-			//	lz = '0'; ch = *(fmt++);
-			//	break;
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				ch = atoi( ch, &fmt, 10, &w );
-				break;
+			}
+			// See if the width is set
+            if( ch >= '1' && ch <= '9' ) {
+				fmt--;		// we already read one of the digits
+				w = atoi( &fmt, 10 );
+				ch = *(fmt++);
 			}
 			switch( ch ) {
 			case 0: return;
