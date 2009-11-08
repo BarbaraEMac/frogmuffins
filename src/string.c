@@ -42,70 +42,63 @@ inline size_t strlen ( const char * str ) {
 	return(s - str);
 }
 
-// scan -- sscanf helper
-int scan ( const char *src, const char *fmt, va_list va ) {
-	char ch, ig, rd, *dest;
-	int w, *val;
+// _sscanf -- sscanf helper
+int _sscanf ( const char *src, const char *fmt, va_list va ) {
+	char ig, *dest;
+	int w, *val, ret=0;
 	unsigned int *uval;
 
-	rd = *(src++);	
-	while ( ( ch = *(fmt++) ) && rd ) {
-		if ( ch != '%' ) {
-			if( ch != rd )	return -1;
-			rd = *(src++);
+	for ( ; *fmt && *src; fmt++ ) {
+		if ( *fmt != '%' ) {
+			if( *fmt != *src )	return -1;
+			src++;
 		} else {
-			ig =0; w = 0;
-			ch = *(fmt++);
-			if ( ch == '*' ) {
-				ig = 1; ch = *(fmt++);
+			ig =0; w = 0; fmt++;
+
+			if ( *fmt == '*' ) {
+				ig = 1; fmt++; // TODO ignore it not implemented
 			}
-			switch ( ch ) {
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				ch = atoi( ch, &fmt, 10, &w );
-				break;
+			if( *fmt >= '1' && *fmt <= '9' ) {
+				w = atoi( &fmt, 10 );
 			}
-			switch( ch ) {
-			case 'c':
-				*(va_arg( va, char* ) ) = rd;
-				rd = *(src++);
+			switch( *fmt ) {
+			  case 'c':
+				*(va_arg( va, char* ) ) = *src;
+				src++;
 				break;
-			case 's':
+			  case 's':
 				dest = va_arg( va, char* );
-				if( ws(rd) ) return -5;
-				while( !ws(rd) ) { // stop at whitespace
-					*dest++ = rd;
-					rd = *src++;
+				if( ws(*src) ) return -5;
+				while( !ws(*src) ) { // stop at whitespace
+					*dest++ = *src++;
 				}
+				*dest = '\0'; // terminate the destination string
 				break;
-			case 'u':
+			  case 'u':
+				if( atod( *src ) < 0 ) return -7;
 				uval =	va_arg( va, unsigned int *);
-				rd = atoi(rd, &src, 10, uval );
+				*uval = atoi( &src, 10 );
 				break;
-			case 'd':
+			  case 'd':
+				//if( atod( *src ) < 0 ) return -8; //does not handle '-'
 				val= va_arg( va, int *);
-				rd = atoi(rd, &src, 10, val );
+				*val = atoi( &src, 10 );
 				break;
-				case 'x':
+			  case 'x':
+				if( atod( *src ) < 0 ) return -9;
 				val= va_arg( va, int *);
-				rd = atoi(rd, &src, 16, val );
+				*val = atoi( &src, 16 );
 				break;
-			case '%':
-				if( rd != ch ) return -3;
-				rd = *(src++);
+			  case '%':
+				if( *src != *fmt ) return -3;
+				src++;
 				break;
 			}
+			ret++;
 		}
 	}
-	if( !rd && ch ) return -2; // we ran out of input
-	return 0;
+	if( !*src && *fmt ) return -2; // we ran out of input
+	return ret;
 }
 
 //sscanf
@@ -114,9 +107,10 @@ int sscanf( const char *src, const char *fmt, ... ) {
 	va_list va;
 	
 	va_start(va,fmt);
-	res = scan( src, fmt, va );
+	res = _sscanf( src, fmt, va );
 	va_end(va);
 
+	debug("sscanf: res=%d, src='%s', fmt='%s'\r\n", res, src, fmt);
 	return res;
 }
 
@@ -124,7 +118,7 @@ int sscanf( const char *src, const char *fmt, ... ) {
 char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
 	size_t len = strlen( src ); 
 	size_t pad = w - len;
-	debug( "strcpyw src:%s, fc:%c, w:%d, pad:%d\r\n", src, fc, w, pad );
+//	debug( "strcpyw src:%s, fc:%c, w:%d, pad:%d\r\n", src, fc, w, pad );
 	// Pad the string beginning
 	if( pad > 0 ) { dest = memoryset( dest, fc, pad ); }
 	// Copy the source into the destination
@@ -134,53 +128,42 @@ char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
 // _sprintf -- printf's helper
 size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 	char bf[12];
-	char ch, lz, *s= str;
+	char lz, *s= str;
 	size_t w;
 	
-	while ( ( ch = *(fmt++) ) ) {
-		if ( ch != '%' ) {
-			*s++ = ch;
+	for ( ; *fmt ; fmt++ ) {
+		if ( *fmt != '%' ) {
+			*s++ = *fmt;
 		} else {
-			lz = ' '; w = 0;
-			ch = *(fmt++);	// get the next character after '%'
-			if ( ch == '0' ) {
-				lz = '0'; ch = *(fmt++);
+			lz = ' '; w = 0; fmt++;	// get the next character after '%'
+			if ( *fmt == '0' ) {
+				lz = '0'; fmt++;
 			}
-			switch ( ch ) {
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				ch = atoi( ch, &fmt, 10, &w );
-				break;
+			if( *fmt >= '1' && *fmt <= '9' ) {
+				w = atoi( &fmt, 10 );
 			}
-			switch( ch ) {
-			case 0: return(s - str);
-			case 'c':
+			switch( *fmt ) {
+			  case 0: return(s - str);
+			  case 'c':
 				*s++ = va_arg( va, char );
 				break;
-			case 's':
+			  case 's':
 				s = strcpyw( s, va_arg( va, char* ), ' ', w );
 				break;
-			case 'u':
+			  case 'u':
 				uitoa( va_arg( va, unsigned int ), 10, bf );
 				s = strcpyw( s, bf, lz, w );
 				break;
-			case 'd':
+			  case 'd':
 				itoa( va_arg( va, int ), bf );
 				s = strcpyw( s, bf, lz, w );
 				break;
-			case 'x':
+			  case 'x':
 				uitoa( va_arg( va, unsigned int ), 16, bf );
 				s = strcpyw( s, bf, lz, w );
 				break;
-			case '%':
-				*s++ = ch;
+			  case '%':
+				*s++ = *fmt;
 				break;
 			}
 		}
@@ -226,7 +209,7 @@ size_t cprintf ( int iosTid, const char * fmt, ... ) {
  ********************************************/
 
 /** 
- * The following functions have been borrowed from bwio and 
+ * The following functions have been borrowed from bwio modified and 
  * renamed. We did not write them ourselves.
  */
 int atod( char ch ) {
@@ -236,22 +219,24 @@ int atod( char ch ) {
 	return -1;
 }
 
-char atoi( char ch, const char **src, int base, int *nump ) {
-	int num, digit, sign;
-	const char *p;
+int atoi( const char **src, int base ) {
+	debug( "atoi: src='%s', base=%d\r\n", *src, base );
+	int num = 0, digit, sign = 1;
+	const char *s = *src;
 
-	p = *src; num = 0; sign = 1;
-	if( ch == '-' ) {
+	if( *s == '-' ) {
 		sign = -1;
-		ch = *p++;
+		s++;
 	}
-	while( ( digit = atod( ch ) ) >= 0 ) {
+	while( ( digit = atod( *s ) ) >= 0 ) {
 		if ( digit > base ) break;
 		num = num*base + digit;
-		ch = *p++;
+		s++;
 	}
-	*src = p; *nump = num * sign;
-	return ch;
+	*src = s;
+
+	debug( "\tatoi: newsrc='%s', result=%d\r\n", *src, num*sign );
+	return (num * sign);
 }
 
 size_t uitoa( unsigned int num, unsigned int base, char *bf ) {
