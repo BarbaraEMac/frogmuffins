@@ -35,7 +35,7 @@ all: main/main.elf
 libraries: 
 	cd src && make && cd ..
 
-main/main.elf: $(OBJECTS) libraries
+main/main.elf: libraries $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lstring -lmath -lgcc 
 
 arch/switch.o: arch/switch.S
