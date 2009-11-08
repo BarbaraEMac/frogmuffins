@@ -40,7 +40,7 @@ void shell_run ( ) {
     debug ("shell_run\r\n");
 
 	// Initialize variables
-    char cmd, *input, history[INPUT_HIST][INPUT_LEN];
+    char ch, *input, history[INPUT_HIST][INPUT_LEN];
     int i = 0, h = 0;
 	TID nsTid;
 	TID csTid;
@@ -86,18 +86,16 @@ void shell_run ( ) {
     FOREVER {
 
         input[i] = 0;						// Clear the next character
-		input[i] = Getc( ios2Tid );
+		ch = Getc( ios2Tid );
 
 		time = Time( csTid ) / (100 / MS_IN_TICK);
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
 
-		switch ( input[i] ) {
+		switch ( ch ) {
 			case '\r': // Enter was pressed
 				output( "\n\r" );
-				input[i+1] = 0;
-				
 				shell_exec(input, tcTid, ios1Tid, ios2Tid);
 				
 				// Clear the input for next line
@@ -110,16 +108,15 @@ void shell_run ( ) {
 			case 127:
 				if( i > 0 ) {
 					output( "\b \b" );
-					input[i] = 0;
 					i --;
 				}
 				break;
 			case '\033': // Escape sequence
-				input[i] = Getc( ios2Tid );	// read the '['
-				if( input[i] != '[' ) break;
-				cmd = Getc( ios2Tid );
-				output( "\r\n command %c detected.", cmd );
-				switch( cmd ) {
+				ch = Getc( ios2Tid );	// read the '['
+				if( ch != '[' ) break;
+				ch = Getc( ios2Tid );
+				output( "\r\n command %c detected.", ch );
+				switch( ch ) {
 					case 'A': // Up was pressed
 					
 						break;
@@ -131,11 +128,11 @@ void shell_run ( ) {
 				break;
 
 			default:	// Update the position in the command string
-				output( "%c", input[i] );
-				if( input[i] < 32 || input[i] > 126 ) {
+				output( "%c", ch );
+				if( ch < 32 || ch > 126 ) {
 					output("%d", input[i]);
 				}
-				i++;
+				input[i++] = ch;
 				break;
 		}
         if( i == INPUT_LEN - 1 ) {	i-- ; output("\b");}
@@ -172,43 +169,43 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 	int i;
 
 	// Quit
-    if ( sscanf(command, "q\r") >= 0 ) {
+    if ( sscanf(command, "q") >= 0 ) {
 		output( "Shell exiting.\r\n" );
 		Destroy( WhoIs("Idle") );
         Exit();
 	// k1
-    } else if( sscanf(command, "k1\r") >=0 ) {	// Run Kernel 1
+    } else if( sscanf(command, "k1") >=0 ) {	// Run Kernel 1
 		Create (0, &k1_firstUserTask);
 		output( "K1 is done executing.\r\n" );
     // k2
-	} else if( sscanf(command, "k2\r") >=0 ) {	// Run Kernel 2
+	} else if( sscanf(command, "k2") >=0 ) {	// Run Kernel 2
 		Create (0, &k2_firstUserTask);
 		Destroy ( WhoIs("GameServer") );
 		output( "K2 is done executing.\r\n" );
     // k3
-	} else if( sscanf(command, "k3\r") >=0 ) {	// Run Kernel 3
+	} else if( sscanf(command, "k3") >=0 ) {	// Run Kernel 3
 		Create (0, &k3_firstUserTask);
 		// K3 is asynchronous so we don't know when it will end
 		//output( "K3 is done executing.\r\n" );
 	// rv
-	} else if( sscanf(command, "rv %d\r", &tcReq.train) >=0 ) {
+	} else if( sscanf(command, "rv %d", &tcReq.train) >=0) {
     	tcReq.type = RV;
 		trainCmd( &tcReq, tcTid );
 	// st
-    } else if( sscanf(command, "st %d\r", &tcReq.sw) >=0 ) {
+    } else if( sscanf(command, "st %d", &tcReq.sw) >=0 ) {
 		tcReq.type = ST;
 		tcRpl = trainCmd( &tcReq, tcTid );
 		output( "Switch %d is set to %c. \r\n", tcReq.sw, tcRpl.dir );
 	// sw
-    } else if( sscanf(command, "sw %d %c\r", &tcReq.sw, &tcReq.dir) >=0 ) {
+    } else if( sscanf(command, "sw %d %c", &tcReq.sw, &tcReq.dir) >=0 ) {
 		tcReq.type = SW;
 		trainCmd( &tcReq, tcTid );
 	// tr
-	} else if( sscanf(command, "tr %d %d\r", &tcReq.train, &tcReq.speed) >= 0 ) {
+	} else if( sscanf(command, "tr %d %d", &tcReq.train, &tcReq.speed) >= 0 ) {
 		tcReq.type = TR;
 		trainCmd( &tcReq, tcTid );
 	// wh
-    } else if( sscanf(command, "wh\r") >=0 ) {
+    } else if( sscanf(command, "wh") >=0 ) {
 		tcReq.type = WH;
 		tcRpl = trainCmd( &tcReq, tcTid );
 		if( tcRpl.sensor == 0 ) {
@@ -218,29 +215,30 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 					tcRpl.channel, tcRpl.sensor, tcRpl.ticks * MS_IN_TICK );
 		}
 	// start
-    } else if( sscanf(command, "start\r") >=0 ) {
+    } else if( sscanf(command, "start") >=0 ) {
 		tcReq.type = START;
 		trainCmd( &tcReq, tcTid );
 	// stop
-    } else if( sscanf(command, "stop\r") >=0 ) {
+    } else if( sscanf(command, "stop") >=0 ) {
 		tcReq.type = STOP;
 		trainCmd( &tcReq, tcTid );
 	// cache ON
-	} else if( sscanf(command, "cache ON\r") >= 0 ) {
+	} else if( sscanf(command, "cache ON") >= 0 ) {
 		cache_on();
 	// cache OFF
-	} else if( sscanf(command, "cache OFF\r") >= 0 ) {
+	} else if( sscanf(command, "cache OFF") >= 0 ) {
 		cache_off();
     // Help
-	} else if( sscanf(command, "h\r") >=0 ) {
+	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
 			output( "\t%s\r\n", commands[i] );
 		}
+		assert( 1 == 0 );
 	// Nothing was entered
-	} else if( command[0] == '\r' ) {
+	} else if( command[0] == '\0' ) {
 	// Unkknown command
 	} else {
-		output("Unknown command: %s\r\n", command);
+		output("Unknown command: '%s'\r\n", command );
 	}
 }
 
