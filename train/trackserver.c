@@ -25,6 +25,7 @@
 #include "string.h"
 #include "task.h"
 #include "train.h"
+#include "model.h"
 
 /* FORWARD DECLARATIONS */
 
@@ -39,6 +40,7 @@ typedef struct {
     char switches [NUM_SWTS];
 	TID  iosTid;
 	TID  csTid;
+	TrackModel model;
 } TC;
 
 int tc_start		( TC *tc );
@@ -151,6 +153,7 @@ void tc_run () {
 
 int tc_init( TC *tc ) {
 	debug ("tc_init: train controller=%x \r\n", tc);
+	int err = NO_ERROR;
 
 	tc->lstSensorCh  = 0;
 	tc->lstSensorNum = 0;
@@ -162,9 +165,14 @@ int tc_init( TC *tc ) {
 	memoryset ( tc->speeds, 0, NUM_TRNS );
 	tc_switchSetAll( tc, 'C' );
 	
-	return Create( 3, &poll ) 
-		& Create( 3, &pollWatchDog )
-		& RegisterAs( TRAIN_CONTROLLER_NAME );
+	parse_model( TRACK_A, &tc->model ); 
+
+	err =  Create( 3, &poll );
+	if( err < NO_ERROR ) return err;
+	err = Create( 3, &pollWatchDog )
+	if( err < NO_ERROR ) return err;
+	err = RegisterAs( TRAIN_CONTROLLER_NAME );
+	return err;
 }
 
 int tc_start( TC *tc ) {

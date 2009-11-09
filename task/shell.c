@@ -13,7 +13,7 @@
 #include "servers.h"
 #include "shell.h"
 #include "task.h"
-#include "train.h"
+#include "trackserver.h"
 
 #define FOREVER     for( ; ; )
 #define INPUT_LEN   60
