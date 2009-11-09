@@ -64,7 +64,7 @@ typedef struct {
 } TrackModel;
 
 // Returns 0 on success, < 0 otherwise.
-int parse_model(const char* filename, TrackModel* model);
+int parse_model(int trackId, TrackModel* model);
 
 void free_model(TrackModel* model);
 

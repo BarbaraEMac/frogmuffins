@@ -232,36 +232,9 @@ int parse_model_str(char* str, TrackModel* model)
   return 0;
 }
 
-int parse_model(const char* filename, TrackModel* model)
+int parse_model(int trackId, track_model_t* model)
 {
-	/*
-  FILE* file;
-  file = fopen(filename, "r");
-  if (file == 0) {
-    eprintf("Could not open %s.\n", filename);
-    return -1;
-  }
-
-  model->nodes = 0;
-  int rval = parse_model_file(file, model);
-  if (rval < 0) {
-    free_model(model);
-  }
-  
-  fclose(file);
-  return rval;*/
-
-
-/*
-void free_model(TrackModel* model)
-{
-  if (model->nodes == 0) return;
-
-  free(model->nodes);
-  model->nodes = 0;
-}*/
-
-char * trackA = 
+char * track[] = {
 "track 72\
 0 A1 sensor 0 100 10 2\
   51 ahead 218\
@@ -490,10 +463,9 @@ char * trackA =
 70 DE9 stop 8 10 285 1\
   12 ahead 70\
 71 DE10 stop 9 10 265 1\
-  13 ahead 70";
-  }
+  13 ahead 70",
 
-char * trackB = 
+
 "track 70\
 0 A1 sensor 0 100 10 2\
   51 ahead 218\
@@ -718,4 +690,31 @@ char * trackB =
 68 DE9 stop 8 10 285 1\
   12 ahead 70\
 69 DE10 stop 9 10 265 1\
-  13 ahead 70";
+  13 ahead 70"};
+
+
+	/*
+  FILE* file;
+  file = fopen(filename, "r");
+  if (file == 0) {
+    eprintf("Could not open %s.\n", filename);
+    return -1;
+  }
+  */
+	if( trackId < 0 || trackId > 1 ) {
+		eprintf("Invalid track id %d.\r\n", trackId);
+	}
+	model->nodes = 0;
+	return parse_model_file(track[track_id], model);
+  
+}
+
+
+/*
+void free_model(track_model_t* model)
+{
+  if (model->nodes == 0) return;
+
+  free(model->nodes);
+  model->nodes = 0;
+}*/
