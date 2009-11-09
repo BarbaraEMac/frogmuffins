@@ -11,6 +11,8 @@
 #define MAX_NUM_TRAINS 		10
 #define MAX_NUM_NODES		80
 #define NODE_MAX_EDGES 		3
+#define TRACK_A				0
+#define	TRACK_B				1
 
 typedef enum {
 	SWITCH_STRAIGHT,
