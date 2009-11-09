@@ -10,6 +10,8 @@
 #define SW_WAIT     2	// ticks
 #define SNSR_WAIT   1	// ticks
 #define TRAIN_WAIT	10	// ticks
+#define POLL_WAIT 	(1000/ MS_IN_TICK)
+#define POLL_CHAR	133
 
 #include <string.h>
 #include <ts7200.h>
@@ -49,6 +51,7 @@ void tc_pollSensors	( TC *tc );
 int checkTrain		( int train );
 int checkDir		( int dir );
 void poll			();
+void pollWatchDog	();
 
 /* ACTUAL CODE */
 
@@ -117,6 +120,14 @@ void tc_run () {
 				tc.lstSensorUpdate = Time( tc.csTid );
 				break;
 
+			case WATCH_DOG:
+				debug("tc: Watchdog stamp %d ticks\r\n", req.timeStamp );
+				if( tc.lstSensorUpdate < req.timeStamp ) {
+					error( TIMEOUT, "tc: Polling timed out. Retrying." );
+					Putc( POLL_CHAR, tc.iosTid );
+				}
+				break;
+
 			case START:
 				tc_start( &tc );
 				break;
@@ -151,7 +162,9 @@ int tc_init( TC *tc ) {
 	memoryset ( tc->speeds, 0, NUM_TRNS );
 	tc_switchSetAll( tc, 'C' );
 	
-	return Create( 3, &poll ) & RegisterAs( TRAIN_CONTROLLER_NAME );
+	return Create( 3, &poll ) 
+		& Create( 3, &pollWatchDog )
+		& RegisterAs( TRAIN_CONTROLLER_NAME );
 }
 
 int tc_start( TC *tc ) {
@@ -240,7 +253,7 @@ void poll() {
 	TID tcTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	TID ioTid = WhoIs( SERIALIO1_NAME );
-	char poll_req[2] = { 133, 192 }, ch;
+	char ch;
 	// We need the braces around the 0s because they're in unions
 	TCRequest 	req = { POLL, {0}, {0} };
 	TCReply		rpl;
@@ -252,9 +265,9 @@ void poll() {
 		Delay( SNSR_WAIT, csTid );
 
 		// Poll the train box
-		PutStr( poll_req, 1, ioTid );
+		Putc( POLL_CHAR, ioTid );
 		for( i = 0; i < POLL_SIZE; i++ ) {
-			res = TimeoutGetc( ioTid, csTid, 500 / MS_IN_TICK );
+			res = Getc( ioTid );
 			if( res < NO_ERROR ) {
 				error( res, "tc: Polling train box failed" );
 				break;
@@ -273,3 +286,72 @@ void poll() {
 	}
 
 }
+
+void pollWatchDog () {
+
+	debug( "tc: poll watchdog task started\r\n" );
+
+	TID tcTid = MyParentTid();
+	TID csTid = WhoIs( CLOCK_NAME );
+	// We need the braces around the 0s because they're in unions
+	TCRequest 	req = { WATCH_DOG, {0}, {0} };
+	TCReply		rpl;
+
+	FOREVER {
+		// Watch dog timeout ever so often
+		req.timeStamp =  Time( csTid );
+		Delay( POLL_WAIT, csTid );
+
+		// Let the train controller know
+		Send( tcTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+	}
+
+
+}
+/*
+void getcHelper() {
+	helperMsg 	msg;
+	TID			parent;
+	TID			iosTid = WhoIs( SERIALIO1_NAME );
+	// Get instructions on what to do
+	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Reply( parent, 0 , 0 );
+	// Get a character from the IO server
+	msg.result = Getc( iosTid );
+	// Return result back to parent
+	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+}
+
+void delayHelper() {
+	helperMsg 	msg;
+	TID			parent;
+	TID			csTid = WhoIs( CLOCK_NAME );
+	// Get instructions on what to do
+	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Reply( parent, 0 , 0 );
+	// Wait for specified number of ticks
+	msg.result = Delay( msg.ticks, csTid );
+	// Return result back to parent
+	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+}
+
+	
+timeoutPoll( TID delay, TID getc, int ticks ) {
+	helperMsg 	msg;
+	TID 		getcTid = Create(3, &getcHelper );
+	TID 		delayTid = Create(3, &delayHelper );
+	TID			tid;
+	// Start off the getc helper
+	msg.tid = iosTid;
+	Send( getcTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	// Start off the delay helper
+	msg.tid = csTid;
+	msg.ticks = timeout;
+	Send( delayTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	// Wait for one of them to finish
+	Receive( &tid, (char *) &msg, sizeof(helperMsg) );
+	// Destroy them
+	if( msg.tid = delayTid ) return TIMEOUT;
+	else return msg.result;
+}
+*/
