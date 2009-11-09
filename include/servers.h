@@ -15,7 +15,7 @@
 #define ENTRY_LEN		80
 #define NUM_NS_ENTRIES	256
 #define IO_REQUEST_SIZE (sizeof(IORequest) - ENTRY_LEN)
-#define MS_IN_TICK		50
+#define MS_IN_TICK		25
 
 #include "globals.h"
 #include "requests.h"

@@ -205,6 +205,8 @@ int TimeoutGetc( TID iosTid, TID csTid, int timeout ) {
 	// Destroy them
 	Destroy( getcTid );
 	Destroy( delayTid );
+	if( msg.tid = delayTid ) return TIMEOUT;
+	else return msg.result;
 }
 /*
 
