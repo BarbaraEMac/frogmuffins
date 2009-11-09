@@ -1,5 +1,5 @@
 /*
- * CS 452: Train Controller User Task
+ * CS 452: Track Server User Task
  */
 #define DEBUG 		1
 
@@ -19,18 +19,18 @@
 #include "debug.h"
 #include "error.h"
 #include "math.h"
+#include "model.h"
 #include "requests.h"
 #include "servers.h"
 #include "shell.h"
 #include "string.h"
 #include "task.h"
-#include "train.h"
-#include "model.h"
+#include "trackserver.h"
 
 /* FORWARD DECLARATIONS */
 
 /**
- * A Train Controller
+ * A Track Server
  */
 typedef struct {
     char lstSensorCh;
@@ -41,15 +41,15 @@ typedef struct {
 	TID  iosTid;
 	TID  csTid;
 	TrackModel model;
-} TC;
+} TS;
 
-int tc_start		( TC *tc );
-int tc_stop			( TC *tc );
-int tc_init			( TC *tc );
-int tc_trainSet		( TC *tc, int train, int speed );
-int tc_switchSet	( TC *tc, int sw, char dir );
-int tc_switchSetAll	( TC *tc, char dir );
-void tc_pollSensors	( TC *tc );
+int ts_start		( TS *ts );
+int ts_stop			( TS *ts );
+int ts_init			( TS *ts );
+int ts_trainSet		( TS *ts, int train, int speed );
+int ts_switchSet	( TS *ts, int sw, char dir );
+int ts_switchSetAll	( TS *ts, char dir );
+void ts_pollSensors	( TS *ts );
 int checkTrain		( int train );
 int checkDir		( int dir );
 void poll			();
@@ -57,130 +57,130 @@ void pollWatchDog	();
 
 /* ACTUAL CODE */
 
-void tc_run () {
-	debug ("tc_run: The Train Controller is about to start. \r\n");	
-	TC 			tc;
+void ts_run () {
+	debug ("ts_run: The Track Server is about to start. \r\n");	
+	TS 			ts;
 	int			senderTid;
-	TCRequest 	req;
-	TCReply		reply;
+	TSRequest 	req;
+	TSReply		reply;
 	int			speed, len;
 
-	// Initialize the Train Controller
-	if_error( tc_init (&tc), "Initializing Train Controller failed.");
+	// Initialize the Track Server
+	if_error( ts_init (&ts), "Initializing Track Server failed.");
 
 	FOREVER {
 		// Receive a server request
-		debug ("tc: is about to Receive. \r\n");
+		debug ("ts: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(req) );
-		debug ("tc: Received: fromTid=%d type=%d arg1=%d arg2=%d len=%d\r\n", 
+		debug ("ts: Received: fromTid=%d type=%d arg1=%d arg2=%d len=%d\r\n", 
 				senderTid, req.type, req.arg1, req.arg2, len);
 	
-		assert( len == sizeof(TCRequest) );
+		assert( len == sizeof(TSRequest) );
 		
 		switch (req.type) {
 			case RV:
-				debug ("tc: Reversing %d.\r\n", req.train);
+				debug ("ts: Reversing %d.\r\n", req.train);
 				
 				if ( (reply.ret = checkTrain ( req.train )) >= NO_ERROR ) {
-					speed = tc.speeds[req.train];
+					speed = ts.speeds[req.train];
 					
-					reply.ret =  tc_trainSet( &tc, req.train, 0 );
+					reply.ret =  ts_trainSet( &ts, req.train, 0 );
 					// Wait for slow down depending on previous speed 
 					// TODO is the server allowed to block like this?
-					Delay( speed, tc.csTid );
-					reply.ret |= tc_trainSet( &tc, req.train, 15 );
-					reply.ret |= tc_trainSet( &tc, req.train, speed );
+					Delay( speed, ts.csTid );
+					reply.ret |= ts_trainSet( &ts, req.train, 15 );
+					reply.ret |= ts_trainSet( &ts, req.train, speed );
 				}
 				
 				break;
 			case ST:
-				reply.dir = tc.switches[req.sw]; 
-				debug ("tc: Switch %d is set to %c.\r\n", req.sw, reply.dir);
+				reply.dir = ts.switches[req.sw]; 
+				debug ("ts: Switsh %d is set to %c.\r\n", req.sw, reply.dir);
 				break;
 
 			case SW:
-				debug ("tc: Setting switch %d to dir %c.\r\n", req.sw, req.dir);
-				reply.ret = tc_switchSet( &tc, req.sw, req.dir );
+				debug ("ts: Setting switch %d to dir %c.\r\n", req.sw, req.dir);
+				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
 				break;
 			
 			case TR:
-				debug ("tc: Setting train #%d to speed %d.\r\n", req.sw, req.speed );
-				reply.ret = tc_trainSet( &tc, req.train, req.speed );
+				debug ("ts: Setting train #%d to speed %d.\r\n", req.sw, req.speed );
+				reply.ret = ts_trainSet( &ts, req.train, req.speed );
 				break;
 
 			case WH:
-				debug ("tc: WHing\r\n");
-				reply.sensor = tc.lstSensorNum;
-				reply.channel = tc.lstSensorCh;
-				reply.ticks = (Time( tc.csTid ) - tc.lstSensorUpdate);
+				debug ("ts: WHing\r\n");
+				reply.sensor = ts.lstSensorNum;
+				reply.channel = ts.lstSensorCh;
+				reply.ticks = (Time( ts.csTid ) - ts.lstSensorUpdate);
 				break;
 
 			case POLL:
-				debug("tc: Poll results  %c%d \r\n", req.channel, req.sensor);
-				tc.lstSensorCh = req.channel;
-				tc.lstSensorNum = req.sensor;
-				tc.lstSensorUpdate = Time( tc.csTid );
+				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
+				ts.lstSensorCh = req.channel;
+				ts.lstSensorNum = req.sensor;
+				ts.lstSensorUpdate = Time( ts.csTid );
 				break;
 
 			case WATCH_DOG:
-				debug("tc: Watchdog stamp %d ticks\r\n", req.timeStamp );
-				if( tc.lstSensorUpdate < req.timeStamp ) {
-					error( TIMEOUT, "tc: Polling timed out. Retrying." );
-					Putc( POLL_CHAR, tc.iosTid );
+				debug("ts: Watchdog stamp %d ticks\r\n", req.timeStamp );
+				if( ts.lstSensorUpdate < req.timeStamp ) {
+					error( TIMEOUT, "ts: Polling timed out. Retrying." );
+					Putc( POLL_CHAR, ts.iosTid );
 				}
 				break;
 
 			case START:
-				tc_start( &tc );
+				ts_start( &ts );
 				break;
 
 			case STOP:
-				tc_stop( &tc );
+				ts_stop( &ts );
 				break;
 			
 			default:
-				reply.ret = TC_INVALID_REQ_TYPE;
-				error (reply.ret, "Train Controller request type is not valid.");
+				reply.ret = TS_INVALID_REQ_TYPE;
+				error (reply.ret, "Track Server request type is not valid.");
 				break;
 		}
 
-		debug ("tc: about to Reply to %d. \r\n", senderTid);
+		debug ("ts: about to Reply to %d. \r\n", senderTid);
 		Reply ( senderTid, (char *) &reply, sizeof(reply) );
-		debug ("tc: returned from Replying to %d. \r\n", senderTid);
+		debug ("ts: returned from Replying to %d. \r\n", senderTid);
 
 	}
 }
 
-int tc_init( TC *tc ) {
-	debug ("tc_init: train controller=%x \r\n", tc);
+int ts_init( TS *ts ) {
+	debug ("ts_init: track server=%x \r\n", ts);
 	int err = NO_ERROR;
 
-	tc->lstSensorCh  = 0;
-	tc->lstSensorNum = 0;
-	tc->csTid = WhoIs( CLOCK_NAME );
-	tc->iosTid = WhoIs( SERIALIO1_NAME );
+	ts->lstSensorCh  = 0;
+	ts->lstSensorNum = 0;
+	ts->csTid = WhoIs( CLOCK_NAME );
+	ts->iosTid = WhoIs( SERIALIO1_NAME );
 
-	tc_start( tc );
+	ts_start( ts );
 	
-	memoryset ( tc->speeds, 0, NUM_TRNS );
-	tc_switchSetAll( tc, 'C' );
+	memoryset ( ts->speeds, 0, NUM_TRNS );
+	ts_switchSetAll( ts, 'C' );
 	
-	parse_model( TRACK_A, &tc->model ); 
+	parse_model( TRACK_A, &ts->model ); 
 
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
-	err = Create( 3, &pollWatchDog )
+	err = Create( 3, &pollWatchDog );
 	if( err < NO_ERROR ) return err;
-	err = RegisterAs( TRAIN_CONTROLLER_NAME );
+	err = RegisterAs( TRACK_SERVER_NAME );
 	return err;
 }
 
-int tc_start( TC *tc ) {
-	return Putc( 96, tc->iosTid );
+int ts_start( TS *ts ) {
+	return Putc( 96, ts->iosTid );
 }
 
-int tc_stop( TC *tc ) {
-	return Putc( 97, tc->iosTid );
+int ts_stop( TS *ts ) {
+	return Putc( 97, ts->iosTid );
 }
 
 // check if the train index is within range
@@ -189,7 +189,7 @@ int checkTrain( int train ) {
 		return NO_ERROR;
 	}
 
-	debug ("tc: Invalid train value %d.\r\n", train);
+	debug ("ts: Invalid train value %d.\r\n", train);
 	return INVALID_TRAIN; 
 }
 
@@ -198,13 +198,13 @@ int checkDir( int dir ) {
     if( dir == 'c' || dir == 'C' ) { return 34; }
     if( dir == 's' || dir == 'S' ) { return 33; }
     
-	debug("tc: Train direction %c not in range.\r\n", dir );
+	debug("ts: Train direction %c not in range.\r\n", dir );
     return INVALID_DIR;
 }
 
 // send commands to the train, try a few times
-int tc_trainSet( TC *tc, int train, int speed ) {
-    debug ("tc: trainSet: tr=%d sp=%d\r\n", train, speed);
+int ts_trainSet( TS *ts, int train, int speed ) {
+    debug ("ts: trainSet: tr=%d sp=%d\r\n", train, speed);
 
 	// check the train number is valid
 	int err = checkTrain( train );
@@ -212,18 +212,18 @@ int tc_trainSet( TC *tc, int train, int speed ) {
 		char bytes[2] = { (char) speed, (char) train };
 
 		// Send the command
-		err = PutStr( bytes, sizeof(bytes), tc->iosTid);
-		if_error( err, "Sending to train controller failed." );
+		err = PutStr( bytes, sizeof(bytes), ts->iosTid);
+		if_error( err, "Sending to track server failed." );
 
 		// Store the new train speed
-		tc->speeds[train] = (char) speed;
+		ts->speeds[train] = (char) speed;
 	}
     return err;
 }
 
 // set a switch to a desired position checking for bad input
-int tc_switchSet( TC *tc, int sw, char dir ) {
-    debug ("tc: switchSet: sw=%d dir=%c\r\n", sw, dir );
+int ts_switchSet( TS *ts, int sw, char dir ) {
+    debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, dir );
 
 	// check the direction is a valid character
 	int ret = checkDir( dir );
@@ -232,39 +232,39 @@ int tc_switchSet( TC *tc, int sw, char dir ) {
 		char bytes[3] = { (char) ret, (char) sw, 32 };// 32 TURNS OFF SOLENOID
 
 		// Send the command
-		ret = PutStr( bytes, sizeof(bytes), tc->iosTid );
+		ret = PutStr( bytes, sizeof(bytes), ts->iosTid );
 		
 		// Store the new direction
-		tc->switches[sw] = dir;    
+		ts->switches[sw] = dir;    
 	}
 	return ret;
 }
 
 // set all the switches to given direction
-int tc_switchSetAll( TC *tc, char dir ) {
+int ts_switchSetAll( TS *ts, char dir ) {
     int err = 0;
 
 	int i;
     for( i = 1; i <= 18; i ++ ) {
-		err |= tc_switchSet( tc, i, dir );
+		err |= ts_switchSet( ts, i, dir );
 	}
     for( i = 153; i <= 156; i ++ ) {
-		err |= tc_switchSet( tc, i, dir );
+		err |= ts_switchSet( ts, i, dir );
 	}
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
 }
 
 void poll() {
-	debug( "tc: polling task started\r\n" );
+	debug( "ts: polling task started\r\n" );
 
-	TID tcTid = MyParentTid();
+	TID tsTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	TID ioTid = WhoIs( SERIALIO1_NAME );
 	char ch;
 	// We need the braces around the 0s because they're in unions
-	TCRequest 	req = { POLL, {0}, {0} };
-	TCReply		rpl;
+	TSRequest 	req = { POLL, {0}, {0} };
+	TSReply		rpl;
 	int 		i, res;
 
 	FOREVER {
@@ -277,7 +277,7 @@ void poll() {
 		for( i = 0; i < POLL_SIZE; i++ ) {
 			res = Getc( ioTid );
 			if( res < NO_ERROR ) {
-				error( res, "tc: Polling train box failed" );
+				error( res, "ts: Polling train box failed" );
 				break;
 			}
 			ch = (char) res;
@@ -289,29 +289,29 @@ void poll() {
 			}
 		}
 
-		// Let the train controller know
-		Send( tcTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		// Let the track server know
+		Send( tsTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
 	}
 
 }
 
 void pollWatchDog () {
 
-	debug( "tc: poll watchdog task started\r\n" );
+	debug( "ts: poll watshdog task started\r\n" );
 
-	TID tcTid = MyParentTid();
+	TID tsTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	// We need the braces around the 0s because they're in unions
-	TCRequest 	req = { WATCH_DOG, {0}, {0} };
-	TCReply		rpl;
+	TSRequest 	req = { WATCH_DOG, {0}, {0} };
+	TSReply		rpl;
 
 	FOREVER {
 		// Watch dog timeout ever so often
 		req.timeStamp =  Time( csTid );
 		Delay( POLL_WAIT, csTid );
 
-		// Let the train controller know
-		Send( tcTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		// Let the track server know
+		Send( tsTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
 	}
 
 

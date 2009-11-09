@@ -31,7 +31,7 @@ enum ERROR {
 	// -9985
 	CS_INVALID_REQ_TYPE,	// Invalid Clock Server request type
 	IOS_INVALID_REQ_TYPE,	// Invalid Serial IO request type
-	TC_INVALID_REQ_TYPE,	// Invalid Train Controller request type
+	TS_INVALID_REQ_TYPE,	// Invalid Track Server request type
 	INVALID_TRAIN,			// Invalid train number sent to train controller
 	INVALID_DIR,			// Invalid direction for a train
 	// -9980

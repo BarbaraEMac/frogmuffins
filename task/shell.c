@@ -45,7 +45,7 @@ void shell_run ( ) {
 	TID nsTid;
 	TID csTid;
 	TID ios1Tid, ios2Tid;
-	TID tcTid;
+	TID tsTid;
 	TID idle;
 
 	// Create the name server
@@ -63,7 +63,7 @@ void shell_run ( ) {
 
 	
 	// Create the train controller
-	tcTid = Create (2, &tc_run);
+	tsTid = Create (2, &ts_run);
 	output ("Initializing the train controller. \r\n");
 	
 	// Create the idle task
@@ -96,7 +96,7 @@ void shell_run ( ) {
 		switch ( ch ) {
 			case '\r': // Enter was pressed
 				output( "\n\r" );
-				shell_exec(input, tcTid, ios1Tid, ios2Tid);
+				shell_exec(input, tsTid, ios1Tid, ios2Tid);
 				
 				// Clear the input for next line
 				/*input = history[h++];
@@ -141,17 +141,17 @@ void shell_run ( ) {
 
 
 // Execute a train command
-TCReply trainCmd ( TCRequest *req, int tcTid ) {
-	TCReply	rpl;
+TSReply trainCmd ( TSRequest *req, int tsTid ) {
+	TSReply	rpl;
 	
-	Send( tcTid, (char*) req, sizeof(TCRequest), (char*) &rpl, sizeof(rpl) ); 
+	Send( tsTid, (char*) req, sizeof(TSRequest), (char*) &rpl, sizeof(rpl) ); 
 	return rpl;
 }
 
 // Execute the command passed in
-void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
-	TCRequest	tcReq;
-	TCReply		tcRpl;
+void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
+	TSRequest	tsReq;
+	TSReply		tsRpl;
 	char *commands[] = {
 		"h = Help!", 
 		"k1 = Execute kernel 1 user tasks.", 
@@ -161,7 +161,7 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		"++ Train Controller Commands ++",
 		"\t rv train_num  = Reverse specified train.",
 		"\t st switch_num = Display status of switch.",
-		"\t sw switch_num dir = Switch the switch in the sepcified direction.",
+		"\t sw switch_num dir = Switsh the switch in the sepcified direction.",
 		"\t tr train_num speed = Set the speed of the specified train.",
 		"\t wh = Display the last modified sensor.",
 		"\t start = Starts the train set.",
@@ -188,40 +188,40 @@ void shell_exec( char *command, TID tcTid, TID ios1Tid, TID ios2Tid ) {
 		// K3 is asynchronous so we don't know when it will end
 		//output( "K3 is done executing.\r\n" );
 	// rv
-	} else if( sscanf(command, "rv %d", &tcReq.train) >=0) {
-    	tcReq.type = RV;
-		trainCmd( &tcReq, tcTid );
+	} else if( sscanf(command, "rv %d", &tsReq.train) >=0) {
+    	tsReq.type = RV;
+		trainCmd( &tsReq, tsTid );
 	// st
-    } else if( sscanf(command, "st %d", &tcReq.sw) >=0 ) {
-		tcReq.type = ST;
-		tcRpl = trainCmd( &tcReq, tcTid );
-		output( "Switch %d is set to %c. \r\n", tcReq.sw, tcRpl.dir );
+    } else if( sscanf(command, "st %d", &tsReq.sw) >=0 ) {
+		tsReq.type = ST;
+		tsRpl = trainCmd( &tsReq, tsTid );
+		output( "Switsh %d is set to %c. \r\n", tsReq.sw, tsRpl.dir );
 	// sw
-    } else if( sscanf(command, "sw %d %c", &tcReq.sw, &tcReq.dir) >=0 ) {
-		tcReq.type = SW;
-		trainCmd( &tcReq, tcTid );
+    } else if( sscanf(command, "sw %d %c", &tsReq.sw, &tsReq.dir) >=0 ) {
+		tsReq.type = SW;
+		trainCmd( &tsReq, tsTid );
 	// tr
-	} else if( sscanf(command, "tr %d %d", &tcReq.train, &tcReq.speed) >= 0 ) {
-		tcReq.type = TR;
-		trainCmd( &tcReq, tcTid );
+	} else if( sscanf(command, "tr %d %d", &tsReq.train, &tsReq.speed) >= 0 ) {
+		tsReq.type = TR;
+		trainCmd( &tsReq, tsTid );
 	// wh
     } else if( sscanf(command, "wh") >=0 ) {
-		tcReq.type = WH;
-		tcRpl = trainCmd( &tcReq, tcTid );
-		if( tcRpl.sensor == 0 ) {
+		tsReq.type = WH;
+		tsRpl = trainCmd( &tsReq, tsTid );
+		if( tsRpl.sensor == 0 ) {
 			output( "No sensor triggered yet.\r\n" );
 		} else {
 			output( "Last sensor triggered was %c%d (updated %d ms ago).\r\n", 
-					tcRpl.channel, tcRpl.sensor, tcRpl.ticks * MS_IN_TICK );
+					tsRpl.channel, tsRpl.sensor, tsRpl.ticks * MS_IN_TICK );
 		}
 	// start
     } else if( sscanf(command, "start") >=0 ) {
-		tcReq.type = START;
-		trainCmd( &tcReq, tcTid );
+		tsReq.type = START;
+		trainCmd( &tsReq, tsTid );
 	// stop
     } else if( sscanf(command, "stop") >=0 ) {
-		tcReq.type = STOP;
-		trainCmd( &tcReq, tcTid );
+		tsReq.type = STOP;
+		trainCmd( &tsReq, tsTid );
 	// cache ON
 	} else if( sscanf(command, "cache ON") >= 0 ) {
 		cache_on();
