@@ -54,12 +54,12 @@ void routeplaner_init() {
 // Floyd-Warshall algorithm from http://www.joshuarobinson.net/docs/fwarsh.html.
 // 
 //  Solves the all-pairs shortest path problem using Floyd-Warshall algorithm
-//  Input:   n, number of nodes
-//           connectivity matrix cost, where 0 means disconnected
-//             	and distances are all positive. 
-//             	Array of ints of length (n*n).
-//  Output:  retDist - shortest path distances(the answer)
-//           retPred - predicate matrix, useful in reconstructing shortest routes
+//  Input:  n, number of nodes
+//          connectivity matrix cost, where 0 means disconnected
+//             and distances are all positive. 
+//             Array of ints of length (n*n).
+//  Output: retDist - shortest path distances(the answer)
+//          retPred - predicate matrix, useful in reconstructing shortest routes
 void fwarsh ( int n, int *cost, int **retDist, int **retPred ) {
 	
 	int *dist = *retDist;		// Copy over to make pointer stuff easier
@@ -76,7 +76,7 @@ void fwarsh ( int n, int *cost, int **retDist, int **retPred ) {
 			if (cost[i*n+j] != 0)
 				dist[i*n+j] = cost[i*n + j];
 			else
-				dist[i*n+j] = INT_MAX; //disconected
+				dist[i*n+j] = INT_MAX; //disconnected
 
 			if (i==j)  //diagonal case
 				dist[i*n+j] = 0;
@@ -99,11 +99,13 @@ void fwarsh ( int n, int *cost, int **retDist, int **retPred ) {
     	}
   	}
 
-  	/* //Print out the results table of shortest distances
+  	/* 
+	// Print out the results table of shortest distances
   	for (i=0; i < n; i++) {
-    for (j=0; j < n; j++)
-      printf("%g ", dist[i*n+j]);
-    printf("\n");
-    } */
+    	for (j=0; j < n; j++)
+      		printf("%g \n", dist[i*n+j]);
+    }
+	*/
+
 }  //end of fwarsh()
 
