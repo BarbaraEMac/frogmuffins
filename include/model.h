@@ -18,6 +18,11 @@ typedef struct track_edge {
 
 #define NODE_MAX_EDGES 3
 
+enum {
+	SWITCH_STRAIGHT,
+	SWITCH_CURVED
+};
+
 typedef struct track_switch {
   track_edge_t ahead[2]; // (curved, straight)
   track_edge_t behind;

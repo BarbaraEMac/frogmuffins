@@ -21,6 +21,7 @@ typedef char *va_list;
 
 
 #define printf(args...) cprintf(WhoIs(SERIALIO2_NAME), args)
+#define eprintf(args...) printf("\033[35m"); printf(args); printf("\033[37m")
 
 
 // ****************************************************************
