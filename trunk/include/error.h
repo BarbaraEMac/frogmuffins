@@ -42,7 +42,8 @@ enum ERROR {
 	INVALID_UART_SPEED,		// The uart speed specified is not valid
 	// --9975
 	UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
-	INVALID_UART_ADDR		// The addres passed in is not a UART
+	INVALID_UART_ADDR,		// The addres passed in is not a UART
+	TIMEOUT					// A timeout has occured
 		
 } error;
 

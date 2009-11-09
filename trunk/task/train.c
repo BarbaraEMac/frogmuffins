@@ -254,8 +254,11 @@ void poll() {
 		// Poll the train box
 		PutStr( poll_req, 1, ioTid );
 		for( i = 0; i < POLL_SIZE; i++ ) {
-			res = Getc( ioTid );
-			if_error( res, "tc: Polling train box failed" );
+			res = TimeoutGetc( ioTid, csTid, 500 / MS_IN_TICK );
+			if( res < NO_ERROR ) {
+				error( res, "tc: Polling train box failed" );
+				break;
+			}
 			ch = (char) res;
 			// See if a sensor was flipped
 			if( res >= NO_ERROR && ch ) { 
