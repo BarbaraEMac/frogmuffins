@@ -3,7 +3,7 @@
 #include "servers.h"
 #include "requests.h"
 
-int parse_model_str(char* str, track_model_t* model)
+int parse_model_str(char* str, TrackModel* model)
 {
   char init[10];
   memoryset(init, 0, 10);
@@ -29,7 +29,7 @@ int parse_model_str(char* str, track_model_t* model)
     eprintf("num_nodes must be positive\n");
     return -1;
   }
-  //model->nodes = malloc(sizeof(track_node_t)*model->num_nodes);
+  //model->nodes = malloc(sizeof(Node)*model->num_nodes);
 
   if (model->num_nodes > MAX_NUM_NODES) {
     eprintf("Could not allocate space for %d nodes.\n", model->num_nodes);
@@ -49,7 +49,7 @@ int parse_model_str(char* str, track_model_t* model)
       return -1;
     }
 
-    track_node_t* node = &model->nodes[num];
+    Node* node = &model->nodes[num];
     
     char name[5];
     memoryset(name, 0, 5);
@@ -102,7 +102,7 @@ int parse_model_str(char* str, track_model_t* model)
       // Parse the edges
       int j;
       for (j = 0; j < num_edges; j++) {
-        track_edge_t edge;
+        Edge edge;
         if (sscanf(str, " %d", &edge.dest) < 1) {
           eprintf("Could not get edge destination\n");
           return -1;
@@ -157,7 +157,7 @@ int parse_model_str(char* str, track_model_t* model)
       // Parse the edges
       int j;
       for (j = 0; j < num_edges; j++) {
-        track_edge_t edge;
+        Edge edge;
         if (sscanf(str, " %d", &edge.dest) < 1) return -1;
 
         if (edge.dest < 0 || edge.dest > model->num_nodes) {
@@ -194,7 +194,7 @@ int parse_model_str(char* str, track_model_t* model)
       // Parse the edges
       int j;
       for (j = 0; j < num_edges; j++) {
-        track_edge_t edge;
+        Edge edge;
         if (sscanf(str, " %d", &edge.dest) < 1) {
           eprintf("Could not get edge destination\n");
           return -1;
@@ -232,7 +232,7 @@ int parse_model_str(char* str, track_model_t* model)
   return 0;
 }
 
-int parse_model(const char* filename, track_model_t* model)
+int parse_model(const char* filename, TrackModel* model)
 {
 	/*
   FILE* file;
@@ -253,7 +253,7 @@ int parse_model(const char* filename, track_model_t* model)
 
 
 /*
-void free_model(track_model_t* model)
+void free_model(TrackModel* model)
 {
   if (model->nodes == 0) return;
 

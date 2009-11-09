@@ -7,41 +7,40 @@
 #ifndef __MODEL_H__
 #define __MODEL_H__
 
-#define NUM_SENSOR_BANKS 5
-#define MAX_NUM_TRAINS 10
-#define MAX_NUM_NODES 80
+#define NUM_SENSOR_BANKS 	5
+#define MAX_NUM_TRAINS 		10
+#define MAX_NUM_NODES		80
+#define NODE_MAX_EDGES 		3
 
-typedef struct track_edge {
-  int dest;
-  int distance;
-} track_edge_t;
-
-#define NODE_MAX_EDGES 3
-
-enum {
+typedef enum {
 	SWITCH_STRAIGHT,
 	SWITCH_CURVED
-};
+} SwitchDir;
 
-typedef struct track_switch {
-  track_edge_t ahead[2]; // (curved, straight)
-  track_edge_t behind;
-  int set;
-} track_switch_t;
+typedef struct {
+  int dest;
+  int distance;
+} Edge;
 
-typedef struct track_sensor {
-  track_edge_t ahead;
-  track_edge_t behind;
-  track_edge_t filler[1];
+typedef struct {
+  Edge 		ahead[2]; // (curved, straight)
+  Edge 		behind;
+  SwitchDir set;
+} Switch;
+
+typedef struct {
+  Edge ahead;
+  Edge behind;
+  Edge filler[1];
   char trig_forward, trig_back;
-} track_sensor_t;
+} Sensor;
 
-typedef struct track_stop {
-  track_edge_t ahead;
-  track_edge_t filler[2];
-} track_stop_t;
+typedef struct {
+  Edge ahead;
+  Edge filler[2];
+} Stop;
 
-typedef struct track_node {
+typedef struct {
   enum {
     NODE_SWITCH,
     NODE_SENSOR,
@@ -50,24 +49,24 @@ typedef struct track_node {
   char name[5];
   int id, id2;
   union {
-    track_switch_t sw;
-    track_sensor_t se;
-    track_stop_t st;
-    track_edge_t edges[4];
+    Switch sw;
+    Sensor se;
+    Stop st;
+    Edge edges[4];
   };
   int x, y; // location (for GUI)
-} track_node_t;
+} Node;
 
-typedef struct track_model {
-  int num_nodes;
-  track_node_t nodes[MAX_NUM_NODES];
-  int sensor_nodes[NUM_SENSOR_BANKS*16];
-} track_model_t;
+typedef struct {
+  int 	num_nodes;
+  Node 	nodes[MAX_NUM_NODES];
+  int 	sensor_nodes[NUM_SENSOR_BANKS*16];
+} TrackModel;
 
 // Returns 0 on success, < 0 otherwise.
-int parse_model(const char* filename, track_model_t* model);
+int parse_model(const char* filename, TrackModel* model);
 
-void free_model(track_model_t* model);
+void free_model(TrackModel* model);
 
 #endif
 
