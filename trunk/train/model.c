@@ -1,36 +1,38 @@
 #include "model.h"
 #include <string.h>
+#include "servers.h"
+#include "requests.h"
 
 int parse_model_str(char* str, track_model_t* model)
 {
   char init[10];
-  memset(init, 0, 10);
+  memoryset(init, 0, 10);
 
   if (sscanf(str, " %9s", init) < 1) {
-    fprintf(stderr, "Could not read initial string.\n");
+    eprintf("Could not read initial string.\n");
     return -1;
   }
 
   if (strcmp(init, "track") != 0) {
-    fprintf(stderr, "Expected 'track', got '%s'\n", init);
+    eprintf("Expected 'track', got '%s'\n", init);
     return -1;
   }
 
   model->num_nodes = -1;
   
   if (sscanf(str, " %d", &model->num_nodes) < 1) {
-    fprintf(stderr, "Did not get num_nodes\n");
+    eprintf("Did not get num_nodes\n");
     return -1;
   }
 
   if (model->num_nodes < 0) {
-    fprintf(stderr, "num_nodes must be positive\n");
+    eprintf("num_nodes must be positive\n");
     return -1;
   }
   //model->nodes = malloc(sizeof(track_node_t)*model->num_nodes);
 
   if (model->num_nodes > MAX_NUM_NODES) {
-    fprintf(stderr, "Could not allocate space for %d nodes.\n", model->num_nodes);
+    eprintf("Could not allocate space for %d nodes.\n", model->num_nodes);
     return -1;
   }
   
@@ -39,43 +41,43 @@ int parse_model_str(char* str, track_model_t* model)
 
     int num;
     if (sscanf(str, " %d", &num) < 1) {
-      fprintf(stderr, "Could not get index\n");
+      eprintf("Could not get index\n");
       return -1;
     }
     if (num < 0 || num >= model->num_nodes) {
-      fprintf(stderr, "%d is an invalid index\n", num);
+      eprintf("%d is an invalid index\n", num);
       return -1;
     }
 
     track_node_t* node = &model->nodes[num];
     
     char name[5];
-    memset(name, 0, 5);
+    memoryset(name, 0, 5);
     if (sscanf(str, " %4s", name) < 1) {
-      fprintf(stderr, "Could not get name\n");
+      eprintf("Could not get name\n");
       return -1;
     }
 
-    strcpy(node->name, name);
+    strncpy(node->name, name, sizeof(node->name));
 
     char type[10];
-    memset(type, 0, 10);
+    memoryset(type, 0, 10);
     if (sscanf(str, " %9s", type) < 1) {
-      fprintf(stderr, "Could not get node type\n");      
+      eprintf("Could not get node type\n");      
       return -1;
     }
 
     if (sscanf(str, " %i", &node->id) < 1) {
-      fprintf(stderr, "Could not get id\n");
+      eprintf("Could not get id\n");
       return -1;
     }
 
     if (sscanf(str, " %d", &node->x) < 1) {
-      fprintf(stderr, "Could not get x coordinate\n");
+      eprintf("Could not get x coordinate\n");
       return -1;
     }
     if (sscanf(str, " %d", &node->y) < 1) {
-      fprintf(stderr, "Could not get y coordinate\n");
+      eprintf("Could not get y coordinate\n");
       return -1;
     }
 
@@ -90,7 +92,7 @@ int parse_model_str(char* str, track_model_t* model)
       
       int num_edges;
       if (sscanf(str, " %d", &num_edges) < 1) {
-        fprintf(stderr, "Could not get number of edges\n");
+        eprintf("Could not get number of edges\n");
         return -1;
       }
 
@@ -102,24 +104,24 @@ int parse_model_str(char* str, track_model_t* model)
       for (j = 0; j < num_edges; j++) {
         track_edge_t edge;
         if (sscanf(str, " %d", &edge.dest) < 1) {
-          fprintf(stderr, "Could not get edge destination\n");
+          eprintf("Could not get edge destination\n");
           return -1;
         }
 
         if (edge.dest < 0 || edge.dest > model->num_nodes) {
-          fprintf(stderr, "edge destination %d out of bounds\n", edge.dest);
+          eprintf("edge destination %d out of bounds\n", edge.dest);
           return -1;
         }
         
         char edgetype[10];
-        memset(edgetype, 0, 10);
+        memoryset(edgetype, 0, 10);
         if (sscanf(str, " %9s", edgetype) < 1) {
-          fprintf(stderr, "Could not get edge type\n");
+          eprintf("Could not get edge type\n");
           return -1;
         }
 
         if (sscanf(str, " %d", &edge.distance) < 1) {
-          fprintf(stderr, "Could not get edge distance\n");
+          eprintf("Could not get edge distance\n");
           return -1;
         }
         
@@ -128,7 +130,7 @@ int parse_model_str(char* str, track_model_t* model)
         } else if (strcmp(edgetype, "behind") == 0) {
           node->se.behind = edge;
         } else {
-          fprintf(stderr, "Invalid edge direction %s\n", edgetype);
+          eprintf("Invalid edge direction %s\n", edgetype);
           return -1;
         }
       }
@@ -139,7 +141,7 @@ int parse_model_str(char* str, track_model_t* model)
       node->type = NODE_SWITCH;
       
       char defaultdir[10];
-      memset(defaultdir, 0, 10);
+      memoryset(defaultdir, 0, 10);
       if (sscanf(str, " %9s", defaultdir) < 1) return -1;
       if (strcmp(defaultdir, "straight") == 0) {
         node->sw.set = SWITCH_STRAIGHT;
@@ -159,12 +161,12 @@ int parse_model_str(char* str, track_model_t* model)
         if (sscanf(str, " %d", &edge.dest) < 1) return -1;
 
         if (edge.dest < 0 || edge.dest > model->num_nodes) {
-          fprintf(stderr, "edge destination %d out of bounds\n", edge.dest);
+          eprintf("edge destination %d out of bounds\n", edge.dest);
           return -1;
         }
         
         char edgetype[10];
-        memset(edgetype, 0, 10);
+        memoryset(edgetype, 0, 10);
         if (sscanf(str, " %9s", edgetype) < 1) return -1;
 
         if (sscanf(str, " %d", &edge.distance) < 1) return -1;
@@ -185,7 +187,7 @@ int parse_model_str(char* str, track_model_t* model)
       
       int num_edges;
       if (sscanf(str, " %d", &num_edges) < 1) {
-        fprintf(stderr, "Could not get number of edges\n");
+        eprintf("Could not get number of edges\n");
         return -1;
       }
 
@@ -194,31 +196,31 @@ int parse_model_str(char* str, track_model_t* model)
       for (j = 0; j < num_edges; j++) {
         track_edge_t edge;
         if (sscanf(str, " %d", &edge.dest) < 1) {
-          fprintf(stderr, "Could not get edge destination\n");
+          eprintf("Could not get edge destination\n");
           return -1;
         }
 
         if (edge.dest < 0 || edge.dest > model->num_nodes) {
-          fprintf(stderr, "edge destination %d out of bounds\n", edge.dest);
+          eprintf("edge destination %d out of bounds\n", edge.dest);
           return -1;
         }
         
         char edgetype[10];
-        memset(edgetype, 0, 10);
+        memoryset(edgetype, 0, 10);
         if (sscanf(str, " %9s", edgetype) < 1) {
-          fprintf(stderr, "Could not get edge type\n");
+          eprintf("Could not get edge type\n");
           return -1;
         }
 
         if (sscanf(str, " %d", &edge.distance) < 1) {
-          fprintf(stderr, "Could not get edge distance\n");
+          eprintf("Could not get edge distance\n");
           return -1;
         }
         
         if (strcmp(edgetype, "ahead") == 0) {
           node->st.ahead = edge;
         } else {
-          fprintf(stderr, "Invalid edge direction %s\n", edgetype);
+          eprintf("Invalid edge direction %s\n", edgetype);
           return -1;
         }
       }
@@ -232,10 +234,11 @@ int parse_model_str(char* str, track_model_t* model)
 
 int parse_model(const char* filename, track_model_t* model)
 {
+	/*
   FILE* file;
   file = fopen(filename, "r");
   if (file == 0) {
-    fprintf(stderr, "Could not open %s.\n", filename);
+    eprintf("Could not open %s.\n", filename);
     return -1;
   }
 
@@ -246,8 +249,8 @@ int parse_model(const char* filename, track_model_t* model)
   }
   
   fclose(file);
-  return rval;
-}
+  return rval;*/
+
 
 /*
 void free_model(track_model_t* model)
@@ -258,3 +261,461 @@ void free_model(track_model_t* model)
   model->nodes = 0;
 }*/
 
+char * trackA = 
+"track 72\
+0 A1 sensor 0 100 10 2\
+  51 ahead 218\
+  66 behind 500\
+1 A3 sensor 1 135 85 2\
+  53 ahead 62\
+  15 behind 440\
+2 A5 sensor 2 160 285 2\
+  42 ahead 216\
+  12 behind 649\
+3 A7 sensor 3 100 265 2\
+  13 ahead 473\
+  41 behind 211\
+4 A9 sensor 4 70 245 2\
+  11 ahead 289\
+  40 behind 210\
+5 A11 sensor 5 40 225 2\
+  40 ahead 410\
+  69 behind 60\
+6 A13 sensor 6 70 30 2\
+  43 ahead 215\
+  65 behind 320\
+7 A15 sensor 7 40 50 2\
+  67 ahead 145\
+  43 behind 394\
+8 B1 sensor 8 290 235 2\
+  30 ahead 398\
+  55 behind 225\
+9 B3 sensor 9 290 215 2\
+  16 ahead 230\
+  55 behind 220\
+10 B5 sensor 10 290 35 2\
+  25 ahead 405\
+  52 behind 214\
+11 B7 sensor 11 20 245 2\
+  4 ahead 289\
+  68 behind 60\
+12 B9 sensor 12 20 285 2\
+  2 ahead 649\
+  70 behind 70\
+13 B11 sensor 13 20 265 2\
+  3 ahead 473\
+  71 behind 70\
+14 B13 sensor 14 365 180 2\
+  58 ahead 224\
+  31 behind 202\
+15 B15 sensor 15 135 185 2\
+  1 ahead 440\
+  54 behind 70\
+16 C1 sensor 16 325 180 2\
+  9 ahead 230\
+  61 behind 228\
+17 C3 sensor 17 420 285 2\
+  64 ahead 410\
+  44 behind 226\
+18 C5 sensor 18 220 260 2\
+  45 ahead 79\
+  54 behind 411\
+19 C7 sensor 19 265 285 2\
+  57 ahead 215\
+  42 behind 145\
+20 C9 sensor 20 200 235 2\
+  54 ahead 305\
+  55 behind 146\
+21 C11 sensor 21 200 35 2\
+  52 ahead 140\
+  53 behind 314\
+22 C13 sensor 22 245 11 2\
+  35 ahead 877\
+  50 behind 60\
+23 C15 sensor 23 294 260 2\
+  29 ahead 405\
+  45 behind 223\
+24 D1 sensor 24 365 90 2\
+  59 ahead 227\
+  33 behind 200\
+25 D3 sensor 25 400 35 2\
+  49 ahead 223\
+  10 behind 405\
+26 D5 sensor 26 550 70 2\
+  34 ahead 375\
+  48 behind 213\
+27 D7 sensor 27 550 42 2\
+  48 ahead 290\
+  35 behind 375\
+28 D9 sensor 28 550 225 2\
+  37 ahead 361\
+  47 behind 291\
+29 D11 sensor 29 400 260 2\
+  23 ahead 405\
+  46 behind 220\
+30 D13 sensor 30 400 235 2\
+  8 ahead 398\
+  56 behind 225\
+31 D15 sensor 31 400 215 2\
+  14 ahead 202\
+  56 behind 230\
+32 E1 sensor 32 325 90 2\
+  60 ahead 222\
+  39 behind 203\
+33 E3 sensor 33 400 50 2\
+  24 ahead 200\
+  49 behind 220\
+34 E5 sensor 34 470 35 2\
+  26 ahead 375\
+  49 behind 74\
+35 E7 sensor 35 470 11 2\
+  27 ahead 375\
+  22 behind 877\
+36 E9 sensor 36 550 200 2\
+  47 ahead 215\
+  38 behind 375\
+37 E11 sensor 37 470 260 2\
+  28 ahead 361\
+  46 behind 65\
+38 E13 sensor 38 470 235 2\
+  56 ahead 62\
+  36 behind 375\
+39 E15 sensor 39 290 50 2\
+  52 ahead 230\
+  32 behind 203\
+40 SW1 switch 1 140 255 curved 3\
+  5 straight 410\
+  4 curved 210\
+  41 behind 191\
+41 SW2 switch 2 180 275 curved 3\
+  40 straight 191\
+  3 curved 211\
+  42 behind 182\
+42 SW3 switch 3 230 285 curved 3\
+  2 straight 216\
+  41 curved 182\
+  19 behind 145\
+43 SW4 switch 4 140 20 straight 3\
+  7 straight 394\
+  6 curved 215\
+  51 behind 185\
+44 SW5 switch 5 375 285 curved 3\
+  17 straight 226\
+  46 curved 334\
+  57 behind 187\
+45 SW6 switch 6 245 260 straight 3\
+  23 straight 223\
+  57 curved 338\
+  18 behind 79\
+46 SW7 switch 7 447 260 straight 3\
+  29 straight 220\
+  44 curved 334\
+  37 behind 65\
+47 SW8 switch 8 570 166 curved 3\
+  28 straight 291\
+  36 curved 215\
+  48 behind 193\
+48 SW9 switch 9 570 111 curved 3\
+  27 straight 290\
+  26 curved 213\
+  47 behind 193\
+49 SW10 switch 10 445 35 straight 3\
+  25 straight 223\
+  33 curved 220\
+  34 behind 74\
+50 SW11 switch 11 220 11 curved 3\
+  51 straight 190\
+  53 curved 445\
+  22 behind 60\
+51 SW12 switch 12 180 11 curved 3\
+  0 straight 218\
+  43 curved 185\
+  50 behind 190\
+52 SW13 switch 13 245 35 straight 3\
+  10 straight 214\
+  39 curved 230\
+  21 behind 140\
+53 SW14 switch 14 150 70 curved 3\
+  50 straight 445\
+  21 curved 314\
+  1 behind 62\
+54 SW15 switch 15 150 200 curved 3\
+  18 straight 411\
+  20 curved 305\
+  15 behind 70\
+55 SW16 switch 16 245 235 straight 3\
+  8 straight 225\
+  9 curved 220\
+  20 behind 146\
+56 SW17 switch 17 445 235 straight 3\
+  30 straight 225\
+  31 curved 230\
+  38 behind 62\
+57 SW18 switch 18 315 285 curved 3\
+  19 straight 215\
+  45 curved 338\
+  44 behind 187\
+61 SW99 switch 0x99 345 160 curved 3\
+  62 straight 230\
+  16 curved 228\
+  58 behind 24\
+58 SW9A switch 0x9a 345 150 straight 3\
+  61 straight 24\
+  14 curved 224\
+  60 behind 32\
+59 SW9B switch 0x9b 345 110 straight 3\
+  63 straight 247\
+  24 curved 227\
+  60 behind 24\
+60 SW9C switch 0x9c 345 120 curved 3\
+  59 straight 24\
+  32 curved 222\
+  58 behind 32\
+62 DE1 stop 0 345 200 1\
+  61 ahead 230\
+63 DE2 stop 1 345 70 1\
+  59 ahead 247\
+64 DE3 stop 2 500 285 1\
+  17 ahead 410\
+65 DE4 stop 3 10 30 1\
+  6 ahead 320\
+66 DE5 stop 4 10 10 1\
+  0 ahead 500\
+67 DE6 stop 5 20 50 1\
+  7 ahead 145\
+68 DE7 stop 6 10 245 1\
+  11 ahead 60\
+69 DE8 stop 7 20 225 1\
+  5 ahead 60\
+70 DE9 stop 8 10 285 1\
+  12 ahead 70\
+71 DE10 stop 9 10 265 1\
+  13 ahead 70";
+  }
+
+char * trackB = 
+"track 70\
+0 A1 sensor 0 100 10 2\
+  51 ahead 218\
+  66 behind 500\
+1 A3 sensor 1 135 85 2\
+  53 ahead 62\
+  15 behind 440\
+2 A5 sensor 2 160 285 2\
+  42 ahead 216\
+  12 behind 649\
+3 A7 sensor 3 100 265 2\
+  13 ahead 473\
+  41 behind 211\
+4 A9 sensor 4 70 245 2\
+  11 ahead 289\
+  40 behind 210\
+5 A11 sensor 5 60 200 2\
+  40 ahead 265\
+  7 behind 774\
+6 A13 sensor 6 70 30 2\
+  43 ahead 215\
+  65 behind 320\
+7 A15 sensor 7 60 70 2\
+  5 ahead 774\
+  43 behind 260\
+8 B1 sensor 8 290 235 2\
+  30 ahead 398\
+  55 behind 225\
+9 B3 sensor 9 290 215 2\
+  16 ahead 230\
+  55 behind 220\
+10 B5 sensor 10 290 35 2\
+  25 ahead 405\
+  52 behind 214\
+11 B7 sensor 11 20 245 2\
+  4 ahead 289\
+  67 behind 60\
+12 B9 sensor 12 20 285 2\
+  2 ahead 649\
+  68 behind 70\
+13 B11 sensor 13 20 265 2\
+  3 ahead 473\
+  69 behind 70\
+14 B13 sensor 14 365 180 2\
+  58 ahead 224\
+  31 behind 202\
+15 B15 sensor 15 135 185 2\
+  1 ahead 440\
+  54 behind 70\
+16 C1 sensor 16 325 180 2\
+  9 ahead 230\
+  61 behind 228\
+17 C3 sensor 17 420 285 2\
+  64 ahead 410\
+  44 behind 226\
+18 C5 sensor 18 220 260 2\
+  45 ahead 79\
+  54 behind 411\
+19 C7 sensor 19 265 285 2\
+  57 ahead 215\
+  42 behind 145\
+20 C9 sensor 20 200 235 2\
+  54 ahead 305\
+  55 behind 146\
+21 C11 sensor 21 200 35 2\
+  52 ahead 140\
+  53 behind 314\
+22 C13 sensor 22 245 11 2\
+  35 ahead 785\
+  50 behind 60\
+23 C15 sensor 23 294 260 2\
+  29 ahead 405\
+  45 behind 223\
+24 D1 sensor 24 365 90 2\
+  59 ahead 227\
+  33 behind 200\
+25 D3 sensor 25 400 35 2\
+  49 ahead 223\
+  10 behind 405\
+26 D5 sensor 26 550 70 2\
+  34 ahead 275\
+  48 behind 213\
+27 D7 sensor 27 550 42 2\
+  48 ahead 290\
+  35 behind 375\
+28 D9 sensor 28 550 225 2\
+  37 ahead 284\
+  47 behind 291\
+29 D11 sensor 29 400 260 2\
+  23 ahead 405\
+  46 behind 220\
+30 D13 sensor 30 400 235 2\
+  8 ahead 398\
+  56 behind 225\
+31 D15 sensor 31 400 215 2\
+  14 ahead 202\
+  56 behind 230\
+32 E1 sensor 32 325 90 2\
+  60 ahead 222\
+  39 behind 203\
+33 E3 sensor 33 400 50 2\
+  24 ahead 200\
+  49 behind 220\
+34 E5 sensor 34 470 35 2\
+  26 ahead 275\
+  49 behind 74\
+35 E7 sensor 35 470 11 2\
+  27 ahead 375\
+  22 behind 785\
+36 E9 sensor 36 550 200 2\
+  47 ahead 215\
+  38 behind 275\
+37 E11 sensor 37 470 260 2\
+  28 ahead 284\
+  46 behind 65\
+38 E13 sensor 38 470 235 2\
+  56 ahead 62\
+  36 behind 275\
+39 E15 sensor 39 290 50 2\
+  52 ahead 230\
+  32 behind 203\
+40 SW1 switch 1 140 255 curved 3\
+  5 straight 245\
+  4 curved 210\
+  41 behind 191\
+41 SW2 switch 2 180 275 curved 3\
+  40 straight 191\
+  3 curved 211\
+  42 behind 182\
+42 SW3 switch 3 230 285 curved 3\
+  2 straight 216\
+  41 curved 182\
+  19 behind 145\
+43 SW4 switch 4 140 20 straight 3\
+  7 straight 260\
+  6 curved 215\
+  51 behind 185\
+44 SW5 switch 5 375 285 curved 3\
+  17 straight 226\
+  46 curved 334\
+  57 behind 187\
+45 SW6 switch 6 245 260 straight 3\
+  23 straight 223\
+  57 curved 338\
+  18 behind 79\
+46 SW7 switch 7 447 260 straight 3\
+  29 straight 220\
+  44 curved 334\
+  37 behind 65\
+47 SW8 switch 8 570 166 curved 3\
+  28 straight 291\
+  36 curved 215\
+  48 behind 193\
+48 SW9 switch 9 570 111 curved 3\
+  27 straight 290\
+  26 curved 213\
+  47 behind 193\
+49 SW10 switch 10 445 35 straight 3\
+  25 straight 223\
+  33 curved 220\
+  34 behind 74\
+50 SW11 switch 11 220 11 curved 3\
+  51 straight 190\
+  53 curved 445\
+  22 behind 60\
+51 SW12 switch 12 180 11 curved 3\
+  0 straight 218\
+  43 curved 185\
+  50 behind 190\
+52 SW13 switch 13 245 35 straight 3\
+  10 straight 214\
+  39 curved 230\
+  21 behind 140\
+53 SW14 switch 14 150 70 curved 3\
+  50 straight 445\
+  21 curved 314\
+  1 behind 62\
+54 SW15 switch 15 150 200 curved 3\
+  18 straight 411\
+  20 curved 305\
+  15 behind 70\
+55 SW16 switch 16 245 235 straight 3\
+  8 straight 225\
+  9 curved 220\
+  20 behind 146\
+56 SW17 switch 17 445 235 straight 3\
+  30 straight 225\
+  31 curved 230\
+  38 behind 62\
+57 SW18 switch 18 315 285 curved 3\
+  19 straight 215\
+  45 curved 338\
+  44 behind 187\
+61 SW99 switch 0x99 345 155 curved 3\
+  62 straight 230\
+  16 curved 228\
+  58 behind 24\
+58 SW9A switch 0x9a 345 145 straight 3\
+  61 straight 24\
+  14 curved 224\
+  60 behind 32\
+59 SW9B switch 0x9b 345 120 straight 3\
+  63 straight 247\
+  24 curved 227\
+  60 behind 24\
+60 SW9C switch 0x9c 345 130 curved 3\
+  59 straight 24\
+  32 curved 222\
+  58 behind 32\
+62 DE1 stop 0 345 200 1\
+  61 ahead 230\
+63 DE2 stop 1 345 70 1\
+  59 ahead 247\
+64 DE3 stop 2 500 285 1\
+  17 ahead 410\
+65 DE4 stop 3 10 30 1\
+  6 ahead 320\
+66 DE5 stop 4 10 10 1\
+  0 ahead 500\
+67 DE7 stop 6 10 245 1\
+  11 ahead 60\
+68 DE9 stop 8 10 285 1\
+  12 ahead 70\
+69 DE10 stop 9 10 265 1\
+  13 ahead 70";
