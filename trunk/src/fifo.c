@@ -154,3 +154,91 @@ int fifo_removeValue ( Fifo *fifo, int value  ) {
 	toRm->prev = 0;
 	toRm->tid = UNUSED_TID;
 }
+
+
+void entry_init ( Entry *e ) {
+    e->next = 0;
+    e->prev = 0;
+
+    e->value = DUMMY_VAL;
+}
+
+void fifo_push ( Fifo *fifo, int value ) {
+    Entry *head  = fifo->head;
+    Entry *toAdd = fifo_newEntry (fifo, value);
+
+    // If the fifo is empty, add a new head.
+    if ( head == 0 ) {
+	
+	toAdd->next = toAdd;
+	toAdd->prev = toAdd;
+	
+	fifo->head = toAdd;
+    }
+    // Otherwise, append to the end.
+    else {
+	Entry *tail = head->prev;
+
+	toAdd->next = head;
+	toAdd->prev = tail;
+
+	tail->next = toAdd;
+	head->prev = toAdd;
+    }
+}
+
+int fifo_pop ( Fifo *fifo ) {
+    Entry *head = fifo->head;
+    Entry *tail = head->prev;
+
+    // If we have an empty FIFO,
+    if ( head == 0 ) {
+	return POP_OFF_EMPTY_FIFO;
+    }
+    // If our FIFO has 1 element,
+    else if ( head == tail ) { 
+	Entry *toRm = fifo->head;
+	fifo_release (fifo, toRm); // give back the memory
+	
+	fifo->head = 0;
+
+	return toRm->value;
+    }
+    // Otherwise,
+    else {
+	Enry *hewHead = head->next;
+	fifo_release (fifo, toRm);
+
+	fifo->head = newHead;
+	tail->next = newHead;
+	newHead->prev = tail;
+
+	return toRm->value;
+    }
+}
+
+int fifo_release ( Fifo *fifo ) {
+    Entry *e     = fifo->head;
+    int    value = e->value;
+    
+    // Clear the memory
+    entry_init(e);
+	
+    // Advance the pointer
+    if ( e == fifo->orderedEntries[fifo->fullIdx] ) {
+	advance ( &fifo->oFullIdx );
+	assert  ( fifo->oFullIdx <= fifo->oEmpIdx );
+    } else {
+	advance ( &fifo->iFullIdx );
+	assert  ( fifo->iFullIdx < fifo->iEmpIdx );
+    }
+     
+    // Return the data it was holding
+    return value
+}
+
+void advance ( int *i ) {
+    i += 1;
+    i %= NUM_ENTRIES;
+}
+
