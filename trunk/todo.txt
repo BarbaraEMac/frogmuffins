@@ -13,6 +13,7 @@ TODO FOR PROJECT
 	* Error / Fault Detection
 		- Faulty sensor (mis-trigger)
 		- Faulty switch (switch during running)
+		- Faulty sensor (sensor stops triggering)
 		- Train getting stuck on switch during reverse
 		- UART1 becomes unplugged - no commands go through
 		- Faulty state after running for a long time
