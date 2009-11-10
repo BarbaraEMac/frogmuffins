@@ -15,6 +15,6 @@
 int ctz( int x );
 
 
-int rev_log2(unsigned char x);
+int log_2(unsigned int x);
 
 #endif
