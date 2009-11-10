@@ -36,6 +36,7 @@ typedef struct {
     char lstSensorCh;
     char lstSensorNum;
 	int  lstSensorUpdate; // int ticks
+	int  lstSensorPoll;
     char speeds   [NUM_TRNS];
     char switches [NUM_SWTS];
 	TID  iosTid;
@@ -55,6 +56,41 @@ int checkDir		( int dir );
 void poll			();
 void pollWatchDog	();
 
+int ts_distance( TS *ts, char channel, char sensor ) {
+	debug("ts_distance: sensor:%c%d \r\n", channel, sensor );
+	int idx = sensor + ((channel - 'A') * 16) -1 ;
+	
+	idx = ts->model.sensor_nodes[idx];
+
+	Node *n = &ts->model.nodes[idx];
+	int dist = 0, last = idx;
+	SwitchDir dir = SWITCH_CURVED;
+	if( sensor % 2 ) {
+		idx = n->se.ahead.dest;
+	} else {
+		idx = n->se.behind.dest;
+	}
+	while( 1 ) {
+		n = &ts->model.nodes[idx];
+		printf("neighbour %s\r\n", n->name);
+		if( n->type != NODE_SWITCH ) break;
+		dist += n->sw.ahead[0].distance;
+		//dir = ts->switches[n->id] 
+		if( n->sw.behind.dest == last ) {
+			last = idx;
+			idx = n->sw.ahead[dir].dest;
+		} else {
+			last = idx;
+			idx = n->sw.behind.dest;
+		}
+			
+	} 
+
+	printf("distance from %c%d to %s is %d\r\n", channel, sensor, n->name, dist);
+	return dist;
+	
+}
+
 /* ACTUAL CODE */
 
 void ts_run () {
@@ -63,7 +99,7 @@ void ts_run () {
 	int			senderTid;
 	TSRequest 	req;
 	TSReply		reply;
-	int			speed, len;
+	int			speed, len, dist, time;
 
 	// Initialize the Track Server
 	if_error( ts_init (&ts), "Initializing Track Server failed.");
@@ -117,14 +153,22 @@ void ts_run () {
 
 			case POLL:
 				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
+				if( req.sensor != ts.lstSensorNum || 
+						req.channel != ts.lstSensorCh ) {
+					dist = ts_distance( &ts, ts.lstSensorCh, ts.lstSensorNum );
+					time = (req.ticks - ts.lstSensorUpdate) * MS_IN_TICK;
+					speed = (dist * 1000)/ time;
+					printf("speed = %d/%d = %dmm/s\r\n", dist, time, speed);
+					ts.lstSensorUpdate = req.ticks;
+				}
 				ts.lstSensorCh = req.channel;
 				ts.lstSensorNum = req.sensor;
-				ts.lstSensorUpdate = Time( ts.csTid );
+				ts.lstSensorPoll = Time( ts.csTid );
 				break;
 
 			case WATCH_DOG:
-				debug("ts: Watchdog stamp %d ticks\r\n", req.timeStamp );
-				if( ts.lstSensorUpdate < req.timeStamp ) {
+				debug("ts: Watchdog stamp %d ticks\r\n", req.ticks);
+				if( ts.lstSensorPoll < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					Putc( POLL_CHAR, ts.iosTid );
 				}
@@ -165,7 +209,7 @@ int ts_init( TS *ts ) {
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	ts_switchSetAll( ts, 'C' );
 	
-	parse_model( TRACK_A, &ts->model ); 
+	parse_model( TRACK_B, &ts->model ); 
 
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
@@ -288,6 +332,7 @@ void poll() {
 				if( i % 2 ) req.sensor += 8;
 			}
 		}
+		req.ticks = Time( csTid );
 
 		// Let the track server know
 		Send( tsTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
@@ -307,7 +352,7 @@ void pollWatchDog () {
 
 	FOREVER {
 		// Watch dog timeout ever so often
-		req.timeStamp =  Time( csTid );
+		req.ticks = Time( csTid );
 		Delay( POLL_WAIT, csTid );
 
 		// Let the track server know
