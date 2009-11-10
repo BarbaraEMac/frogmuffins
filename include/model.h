@@ -44,9 +44,9 @@ typedef struct {
 
 typedef struct {
   enum {
-    NODE_SWITCH,
-    NODE_SENSOR,
-    NODE_STOP,
+    NODE_SWITCH = 3,
+    NODE_SENSOR = 2,
+    NODE_STOP = 1,
   } type;
   char name[5];
   int id, id2;
