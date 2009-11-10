@@ -28,10 +28,7 @@ typedef struct {
 	union {
 		int train;
 		int sw;
-		struct {
-			char channel;
-			char sensor;
-		};
+		int sensorId;
 		int arg1;
 	};
 	union {
