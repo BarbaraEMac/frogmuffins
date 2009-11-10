@@ -38,7 +38,7 @@ typedef struct {
 		int speed;
 		char dir;
 		//char sensor;
-		int timeStamp;
+		int ticks;
 		int arg2;
 	};
 } TSRequest;
