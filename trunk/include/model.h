@@ -8,6 +8,7 @@
 #define __MODEL_H__
 
 #define NUM_SENSOR_BANKS 	5
+#define SIZE_BANK			16
 #define MAX_NUM_TRAINS 		10
 #define MAX_NUM_NODES		80
 #define NODE_MAX_EDGES 		3
@@ -62,7 +63,7 @@ typedef struct {
 typedef struct {
   int 	num_nodes;
   Node 	nodes[MAX_NUM_NODES];
-  int 	sensor_nodes[NUM_SENSOR_BANKS*16];
+  int 	sensor_nodes[NUM_SENSOR_BANKS*SIZE_BANK];
 } TrackModel;
 
 // Returns 0 on success, < 0 otherwise.
