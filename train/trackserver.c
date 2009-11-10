@@ -33,8 +33,7 @@
  * A Track Server
  */
 typedef struct {
-    char lstSensorCh;
-    char lstSensorNum;
+    char lstSensorId;
 	int  lstSensorUpdate; // int ticks
 	int  lstSensorPoll;
     char speeds   [NUM_TRNS];
@@ -56,37 +55,37 @@ int checkDir		( int dir );
 void poll			();
 void pollWatchDog	();
 
-int ts_distance( TS *ts, char channel, char sensor ) {
-	debug("ts_distance: sensor:%c%d \r\n", channel, sensor );
-	int idx = sensor + ((channel - 'A') * 16) -1 ;
-	
-	idx = ts->model.sensor_nodes[idx];
+int ts_distance( TS *ts, int sensorId ) {
+	debug("ts_distance: sensor:%d \r\n", sensorId );
+	int idx = ts->model.sensor_nodes[sensorId];
 
 	Node *n = &ts->model.nodes[idx];
-	int dist = 0, last = idx;
+	Edge *e;
+	int dist = 0;
 	SwitchDir dir = SWITCH_CURVED;
-	if( sensor % 2 ) {
-		idx = n->se.ahead.dest;
+	if( sensorId % 2 ) {
+		e = &n->se.behind;
 	} else {
-		idx = n->se.behind.dest;
+		e = &n->se.ahead;
 	}
+
 	while( 1 ) {
-		n = &ts->model.nodes[idx];
-		printf("neighbour %s\r\n", n->name);
+		dist += e->distance;
+		n = &ts->model.nodes[e->dest];
+		//printf("neighbour %s\r\n", n->name);
 		if( n->type != NODE_SWITCH ) break;
-		dist += n->sw.ahead[0].distance;
 		//dir = ts->switches[n->id] 
-		if( n->sw.behind.dest == last ) {
-			last = idx;
-			idx = n->sw.ahead[dir].dest;
+		if( n->sw.behind.dest == idx ) {
+			idx = e->dest;
+			e = &n->sw.ahead[dir];
 		} else {
-			last = idx;
-			idx = n->sw.behind.dest;
+			idx = e->dest;
+			e = &n->sw.behind;
 		}
 			
 	} 
 
-	printf("distance from %c%d to %s is %d\r\n", channel, sensor, n->name, dist);
+	printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
 	return dist;
 	
 }
@@ -146,24 +145,25 @@ void ts_run () {
 
 			case WH:
 				debug ("ts: WHing\r\n");
-				reply.sensor = ts.lstSensorNum;
-				reply.channel = ts.lstSensorCh;
-				reply.ticks = (Time( ts.csTid ) - ts.lstSensorUpdate);
+				reply.sensor = 'A' + (ts.lstSensorId / SIZE_BANK);
+				reply.channel = (ts.lstSensorId % SIZE_BANK) + 1;
+				reply.ticks = (Time( ts.csTid ) - ts.lstSensorPoll);
 				break;
 
 			case POLL:
 				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
-				if( req.sensor != ts.lstSensorNum || 
-						req.channel != ts.lstSensorCh ) {
-					dist = ts_distance( &ts, ts.lstSensorCh, ts.lstSensorNum );
+				if( req.sensorId != ts.lstSensorId ) {
+					dist = ts_distance( &ts, ts.lstSensorId );
 					time = (req.ticks - ts.lstSensorUpdate) * MS_IN_TICK;
 					speed = (dist * 1000)/ time;
 					printf("speed = %d/%d = %dmm/s\r\n", dist, time, speed);
 					ts.lstSensorUpdate = req.ticks;
 				}
-				ts.lstSensorCh = req.channel;
-				ts.lstSensorNum = req.sensor;
-				ts.lstSensorPoll = Time( ts.csTid );
+				ts.lstSensorId = req.sensorId;
+				time = (req.ticks - ts.lstSensorPoll) * MS_IN_TICK;
+				if( time > 70 ) // TODO THESE TWO LINES ARE FOR TESTING
+					bwprintf(COM2, "up %dms\r\n", time);
+				ts.lstSensorPoll = req.ticks;
 				break;
 
 			case WATCH_DOG:
@@ -199,8 +199,7 @@ int ts_init( TS *ts ) {
 	debug ("ts_init: track server=%x \r\n", ts);
 	int err = NO_ERROR;
 
-	ts->lstSensorCh  = 0;
-	ts->lstSensorNum = 0;
+	ts->lstSensorId  = 0;
 	ts->csTid = WhoIs( CLOCK_NAME );
 	ts->iosTid = WhoIs( SERIALIO1_NAME );
 
@@ -314,7 +313,7 @@ void poll() {
 	FOREVER {
 
 		// Only updated ever so often
-		Delay( SNSR_WAIT, csTid );
+		//Delay( SNSR_WAIT, csTid );
 
 		// Poll the train box
 		Putc( POLL_CHAR, ioTid );
@@ -327,9 +326,7 @@ void poll() {
 			ch = (char) res;
 			// See if a sensor was flipped
 			if( res >= NO_ERROR && ch ) { 
-				req.channel = 'A' + (i / 2);
-				req.sensor = rev_log2( ch );
-				if( i % 2 ) req.sensor += 8;
+				req.sensorId = (i * 8) + (7 - log_2( ch ));
 			}
 		}
 		req.ticks = Time( csTid );
