@@ -30,6 +30,14 @@ typedef char *va_list;
 
 typedef int size_t;
 
+typedef struct {
+	char *start; //unused
+	const char *curr;
+	char *end;	//unused
+	// function for reading
+	// function for writing
+} FILE;
+
 
 /*
  * Copy characters from string
@@ -90,6 +98,16 @@ size_t strlen ( const char * str );
  */
 int sscanf( const char * src, const char * format, ... );
 
+/**
+ * Write formatted output to stream
+ *
+ * Writes to the specified stream a sequence of data formatted as the 
+ * format argument specifies. After the format parameter,
+ * the function expects at least as many additional arguments 
+ * as specified in format.
+ */
+int fscanf( FILE *stream, const char * format, ... );
+
 
 /**
  * Write formatted data to string
@@ -126,7 +144,7 @@ int atod( char ch );
  * Convert the given string to into an integer stopping at whitespace.
  * Returns the number read, 0 if no match is found
  */
-int atoi( const char **src, int base );
+int atoi( const char **src );
 
 /**
  * Converts a given unsigned integer into a string.

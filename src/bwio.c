@@ -181,7 +181,7 @@ void bwformat ( int channel, const char *fmt, va_list va ) {
 			// See if the width is set
             if( ch >= '1' && ch <= '9' ) {
 				fmt--;		// we already read one of the digits
-				w = atoi( &fmt, 10 );
+				w = atoi( &fmt );
 				ch = *(fmt++);
 			}
 			switch( ch ) {
