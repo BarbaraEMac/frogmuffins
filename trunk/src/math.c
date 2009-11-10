@@ -18,9 +18,11 @@ int ctz( int x ) {
 	return n;
 }
 
-// The following function was copied and modified from wikipedia
-int rev_log2(unsigned char x) {
+// The following function was copied from wikipedia
+int log_2(unsigned int x) {
   int r = 0;
-  while ((x >> r) != 0) { r++; }
-  return 9-r; // returns -1 for x==0, floor(log2(x)) otherwise
+  while ((x >> r) != 0) {
+    r++;
+  }
+  return r-1; // returns -1 for x==0, floor(log2(x)) otherwise
 }
