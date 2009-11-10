@@ -33,14 +33,14 @@
  * A Track Server
  */
 typedef struct {
-    char lstSensorId;
-	int  lstSensorUpdate; // int ticks
-	int  lstSensorPoll;
-    char speeds   [NUM_TRNS];
-    char switches [NUM_SWTS];
-	TID  iosTid;
-	TID  csTid;
-	TrackModel model;
+    char 		lstSensorId;
+	int  		lstSensorUpdate; // int ticks
+	int  		lstSensorPoll;
+    char 		speeds   [NUM_TRNS];
+    SwitchDir 	switches [NUM_SWTS];
+	TID 	 	iosTid;
+	TID  		csTid;
+	TrackModel	model;
 } TS;
 
 int ts_start		( TS *ts );
@@ -51,7 +51,7 @@ int ts_switchSet	( TS *ts, int sw, char dir );
 int ts_switchSetAll	( TS *ts, char dir );
 void ts_pollSensors	( TS *ts );
 int checkTrain		( int train );
-int checkDir		( int dir );
+SwitchDir checkDir	( int dir );
 void poll			();
 void pollWatchDog	();
 
@@ -74,7 +74,7 @@ int ts_distance( TS *ts, int sensorId ) {
 		n = &ts->model.nodes[e->dest];
 		//printf("neighbour %s\r\n", n->name);
 		if( n->type != NODE_SWITCH ) break;
-		//dir = ts->switches[n->id] 
+		dir = ts->switches[n->id];
 		if( n->sw.behind.dest == idx ) {
 			idx = e->dest;
 			e = &n->sw.ahead[dir];
@@ -82,10 +82,10 @@ int ts_distance( TS *ts, int sensorId ) {
 			idx = e->dest;
 			e = &n->sw.behind;
 		}
-			
 	} 
 
-	printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
+	//printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
+	printf("%s: ", n->name);
 	return dist;
 	
 }
@@ -129,8 +129,8 @@ void ts_run () {
 				
 				break;
 			case ST:
-				reply.dir = ts.switches[req.sw]; 
-				debug ("ts: Switsh %d is set to %c.\r\n", req.sw, reply.dir);
+				reply.dir = (ts.switches[req.sw]) ? 'C' : 'S'; 
+				printf ("ts: Switsh %d is set to %c.\r\n", req.sw, reply.dir);
 				break;
 
 			case SW:
@@ -145,8 +145,8 @@ void ts_run () {
 
 			case WH:
 				debug ("ts: WHing\r\n");
-				reply.sensor = 'A' + (ts.lstSensorId / SIZE_BANK);
-				reply.channel = (ts.lstSensorId % SIZE_BANK) + 1;
+				reply.channel = 'A' + (ts.lstSensorId / SIZE_BANK);
+				reply.sensor = (ts.lstSensorId % SIZE_BANK) + 1;
 				reply.ticks = (Time( ts.csTid ) - ts.lstSensorPoll);
 				break;
 
@@ -237,9 +237,9 @@ int checkTrain( int train ) {
 }
 
 // check if the direction index is within range
-int checkDir( int dir ) {
-    if( dir == 'c' || dir == 'C' ) { return 34; }
-    if( dir == 's' || dir == 'S' ) { return 33; }
+SwitchDir checkDir( int dir ) {
+    if( dir == 's' || dir == 'S' ) { return SWITCH_STRAIGHT; }
+    if( dir == 'c' || dir == 'C' ) { return SWITCH_CURVED; }
     
 	debug("ts: Train direction %c not in range.\r\n", dir );
     return INVALID_DIR;
@@ -267,18 +267,17 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 // set a switch to a desired position checking for bad input
 int ts_switchSet( TS *ts, int sw, char dir ) {
     debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, dir );
-
 	// check the direction is a valid character
 	int ret = checkDir( dir );
 	if ( ret >= NO_ERROR ) {
 		// TODO wait?
-		char bytes[3] = { (char) ret, (char) sw, 32 };// 32 TURNS OFF SOLENOID
+		char bytes[3] = { 33 + ret, (char) sw, 32 };// 32 TURNS OFF SOLENOID
 
 		// Send the command
 		ret = PutStr( bytes, sizeof(bytes), ts->iosTid );
 		
 		// Store the new direction
-		ts->switches[sw] = dir;    
+		ts->switches[sw] = ret;    
 	}
 	return ret;
 }
