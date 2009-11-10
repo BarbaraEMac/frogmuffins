@@ -16,8 +16,8 @@
 #define	TRACK_B				1
 
 typedef enum {
-	SWITCH_STRAIGHT,
-	SWITCH_CURVED
+	SWITCH_STRAIGHT = 0,
+	SWITCH_CURVED = 1
 } SwitchDir;
 
 typedef struct {

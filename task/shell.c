@@ -195,7 +195,7 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
     } else if( sscanf(command, "st %d", &tsReq.sw) >=0 ) {
 		tsReq.type = ST;
 		tsRpl = trainCmd( &tsReq, tsTid );
-		output( "Switsh %d is set to %c. \r\n", tsReq.sw, tsRpl.dir );
+		output( "Switch %d is set to %c. \r\n", tsReq.sw, tsRpl.dir );
 	// sw
     } else if( sscanf(command, "sw %d %c", &tsReq.sw, &tsReq.dir) >=0 ) {
 		tsReq.type = SW;

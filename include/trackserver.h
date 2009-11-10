@@ -10,6 +10,7 @@
 #define TRACK_SERVER_NAME	"TrackSvr"
 
 #include "requests.h"
+#include "model.h"
 
 enum TSRequestCode {
 	RV = 1,
@@ -47,8 +48,10 @@ typedef struct {
 		char channel;
 		char dir;
 	};
-	int ret;
-	int ticks;		// hopefully this is never more than 255
+	union {
+		int ret;
+		int ticks;		// hopefully this is never more than 255
+	};
 } TSReply;
 
 /**
