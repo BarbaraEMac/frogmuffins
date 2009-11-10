@@ -55,7 +55,7 @@ typedef struct {
     Switch sw;
     Sensor se;
     Stop st;
-    Edge edges[4];
+    Edge edges[3];
   };
   int x, y; // location (for GUI)
 } Node;
