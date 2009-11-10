@@ -43,15 +43,21 @@ inline size_t strlen ( const char * str ) {
 }
 
 // _sscanf -- sscanf helper
-int _sscanf ( const char *src, const char *fmt, va_list va ) {
+int _fscanf ( FILE *stream, const char *fmt, va_list va ) {
 	char ig, *dest;
-	int w, *val, ret=0;
+	const char *s = stream->curr;
+	int w, *val, ret = 0;
 	unsigned int *uval;
 
-	for ( ; *fmt && *src; fmt++ ) {
+	for ( ; *fmt && *s; fmt++ ) {
 		if ( *fmt != '%' ) {
-			if( *fmt != *src )	return -1;
-			src++;
+			if( ws(*fmt) ) {
+				while( ws(*s) ) { s++; }
+			} else if( *fmt != *s ) {
+				return -1;
+			} else {
+				s++;
+			}
 		} else {
 			ig =0; w = 0; fmt++;
 
@@ -59,45 +65,42 @@ int _sscanf ( const char *src, const char *fmt, va_list va ) {
 				ig = 1; fmt++; // TODO ignore it not implemented
 			}
 			if( *fmt >= '1' && *fmt <= '9' ) {
-				w = atoi( &fmt, 10 );
+				w = atoi( &fmt );
 			}
 			switch( *fmt ) {
 			  case 'c':
-				*(va_arg( va, char* ) ) = *src;
-				src++;
+				*(va_arg( va, char* ) ) = *s;
+				s++;
 				break;
 			  case 's':
 				dest = va_arg( va, char* );
-				if( ws(*src) ) return -5;
-				while( !ws(*src) ) { // stop at whitespace
-					*dest++ = *src++;
+				if( ws(*s) ) return -5;
+				while( !ws(*s) ) { // stop at whitespace
+					*dest++ = *s++;
 				}
 				*dest = '\0'; // terminate the destination string
 				break;
 			  case 'u':
-				if( atod( *src ) < 0 ) return -7;
+				if( atod( *s ) < 0 ) return -7;
 				uval =	va_arg( va, unsigned int *);
-				*uval = atoi( &src, 10 );
+				*uval = atoi( &s );
 				break;
 			  case 'd':
-				//if( atod( *src ) < 0 ) return -8; //does not handle '-'
-				val= va_arg( va, int *);
-				*val = atoi( &src, 10 );
-				break;
 			  case 'x':
-				if( atod( *src ) < 0 ) return -9;
+				if( atod( *s ) < 0 ) return -8; //does not handle '-'
 				val= va_arg( va, int *);
-				*val = atoi( &src, 16 );
+				*val = atoi( &s );
 				break;
 			  case '%':
-				if( *src != *fmt ) return -3;
-				src++;
+				if( *s != *fmt ) return -3;
+				s++;
 				break;
 			}
 			ret++;
 		}
 	}
-	if( !*src && *fmt ) return -2; // we ran out of input
+	if( !*s && *fmt ) return -2; // we ran out of input
+	stream->curr = s; // update the curr pointer
 	return ret;
 }
 
@@ -105,15 +108,29 @@ int _sscanf ( const char *src, const char *fmt, va_list va ) {
 int sscanf( const char *src, const char *fmt, ... ) {
 	int res;
 	va_list va;
+	FILE f;
+	f.curr = src;
 	
 	va_start(va,fmt);
-	res = _sscanf( src, fmt, va );
+	res = _fscanf( &f, fmt, va );
 	va_end(va);
 
-	debug("sscanf: res=%d, src='%s', fmt='%s'\r\n", res, src, fmt);
+	debug("sscanf: res=%d, fmt='%s', src='%s'\r\n", res, fmt, src);
 	return res;
 }
 
+//fscanf
+int fscanf( FILE *stream, const char * fmt, ... ) {
+	int res;
+	va_list va;
+	
+	va_start(va,fmt);
+	res = _fscanf( stream, fmt, va );
+	va_end(va);
+
+	debug("fscanf: res=%d, fmt='%s', src='%s'\r\n", res, fmt, stream->curr);
+	return res;
+}
 // strcpyw -- strncpy with padding
 char *strcpyw ( char *dest, const char * src, char fc, size_t w ) {
 	size_t len = strlen( src ); 
@@ -140,7 +157,7 @@ size_t _sprintf ( char *str, const char *fmt, va_list va ) {
 				lz = '0'; fmt++;
 			}
 			if( *fmt >= '1' && *fmt <= '9' ) {
-				w = atoi( &fmt, 10 );
+				w = atoi( &fmt );
 			}
 			switch( *fmt ) {
 			  case 0: return(s - str);
@@ -219,14 +236,17 @@ int atod( char ch ) {
 	return -1;
 }
 
-int atoi( const char **src, int base ) {
-	debug( "atoi: src='%s', base=%d\r\n", *src, base );
-	int num = 0, digit, sign = 1;
+int atoi( const char **src ) {
+	debug( "atoi: src='%s'\r\n", *src );
+	int num = 0, digit, sign = 1, base = 10;
 	const char *s = *src;
 
-	if( *s == '-' ) {
+	if( *s == '-' ) { 
 		sign = -1;
 		s++;
+	} else if( s[0] == '0' && s[1] == 'x' ) {
+		base = 16;
+		s += 2;
 	}
 	while( ( digit = atod( *s ) ) >= 0 ) {
 		if ( digit > base ) break;
