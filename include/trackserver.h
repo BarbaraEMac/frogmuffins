@@ -21,7 +21,8 @@ enum TSRequestCode {
 	POLL,
 	WATCH_DOG,
 	START,
-	STOP
+	STOP,
+	WATCH_FOR // detective only
 };
 
 typedef struct {
@@ -53,6 +54,29 @@ typedef struct {
 		int ticks;		// hopefully this is never more than 255
 	};
 } TSReply;
+
+typedef struct {
+	int sensor;
+	int start; 	//in ticks
+	int end;	//in ticks
+} SensorWatch;
+
+typedef struct {
+	union {
+		enum TSRequestCode 	type;
+		TID 		tid;
+	};
+	union {
+		char 		rawSensors[NUM_SENSOR_BANKS*2];
+		SensorWatch events[2];
+	};
+	union {
+		int			ticks;
+		int			numEvents;
+	};
+} DetRequest;
+
+
 
 /**
  * The main function for the Track Server task.
