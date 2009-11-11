@@ -9,14 +9,39 @@
 
 #include "model.h"
 
+#define ROUTEPLANNER_NAME	"RoutePlnr"
+
+typedef enum RPType {
+	RESERVE = 1,
+	PLANROUTE,
+	MINDIST,
+	NEIGHBOURDIST
+} RPType;
+
 typedef struct {
-	int   speed;
-	int   time;
-	Node *currLoc;
-	Node *dest;
+	RPType	 type;		// Route Planner request type
+	
+	int		 trainId;	// Unique id for train
+	int   	 avgSpeed;	// Average speed of a train
+						// between the past sensors
+	Node 	*nodeA;		// Current Sensor, Start Location
+	Node 	*nodeB; 	// Previous Sensor, Destination
 } RPRequest;
 
-void routeplanner_run();
+typedef struct {
+	int len;
+	int path[MAX_NUM_NODES];
+} Path;
+
+typedef struct {
+	
+	int dist;			// stopping distance
+	int swDist;			// Distance to next switch
+	
+	Path	path;
+} RPReply;
+
+void rp_run();
 
 #endif
 
