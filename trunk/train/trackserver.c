@@ -3,19 +3,13 @@
  */
 #define DEBUG 		1
 
-#define POLL_SIZE 	10
 #define NUM_TRNS    81
 #define NUM_SWTS    256
 #define SW_CNT      22
 #define SW_WAIT     2	// ticks
 #define SNSR_WAIT   1	// ticks
 #define TRAIN_WAIT	10	// ticks
-#define POLL_WAIT 	(100 / MS_IN_TICK)
-#define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
-#define POLL_CHAR	133
-
 #include <string.h>
-#include <ts7200.h>
 
 #include "debug.h"
 #include "error.h"
@@ -49,11 +43,8 @@ int ts_init			( TS *ts );
 int ts_trainSet		( TS *ts, int train, int speed );
 int ts_switchSet	( TS *ts, int sw, char dir );
 int ts_switchSetAll	( TS *ts, char dir );
-void ts_pollSensors	( TS *ts );
 int checkTrain		( int train );
 SwitchDir checkDir	( int dir );
-void poll			();
-void pollWatchDog	();
 
 /* ACTUAL CODE */
 
@@ -121,16 +112,6 @@ void ts_run () {
 				ts.lstSensorPoll = req.ticks;
 				break;
 
-			case WATCH_DOG:
-				debug("ts: Watchdog stamp %d ticks\r\n", req.ticks);
-				if( ts.lstSensorPoll < req.ticks ) {
-					error( TIMEOUT, "ts: Polling timed out. Retrying." );
-					// Don't tell me for another 5 seconds
-					ts.lstSensorPoll = req.ticks + POLL_GRACE;
-					Putc( POLL_CHAR, ts.iosTid );
-				}
-				break;
-
 			case START:
 				ts_start( &ts );
 				break;
@@ -154,7 +135,6 @@ int ts_init( TS *ts ) {
 	int err = NO_ERROR;
 
 	ts->lstSensorId  = 0;
-	ts->lstSensorPoll = POLL_GRACE; //wait 5 seconds before complaining
 	ts->lstSensorUpdate = 0;
 	ts->csTid = WhoIs( CLOCK_NAME );
 	ts->iosTid = WhoIs( SERIALIO1_NAME );
@@ -165,10 +145,6 @@ int ts_init( TS *ts ) {
 	ts_switchSetAll( ts, 'C' );
 	
 	err = Create( 3, &det_run );
-	if( err < NO_ERROR ) return err;
-	err =  Create( 3, &poll );
-	if( err < NO_ERROR ) return err;
-	err = Create( 3, &pollWatchDog );
 	if( err < NO_ERROR ) return err;
 	err = RegisterAs( TRACK_SERVER_NAME );
 	return err;
@@ -252,70 +228,4 @@ int ts_switchSetAll( TS *ts, char dir ) {
 	}
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
-}
-
-void poll() {
-	debug( "ts: polling task started\r\n" );
-
-	TID tsTid = MyParentTid();
-	TID csTid = WhoIs( CLOCK_NAME );
-	TID ioTid = WhoIs( SERIALIO1_NAME );
-	TID detTid = WhoIs( TRACK_DETECTIVE_NAME );
-	char ch;
-	// We need the braces around the 0s because they're in unions
-	TSRequest 	req = { POLL, {0}, {0} };
-	DetRequest	req2;
-	TSReply		rpl;
-	int 		i, res;
-
-	req2.type = POLL;
-
-	FOREVER {
-
-		// Only updated ever so often
-		//Delay( SNSR_WAIT, csTid );
-
-		// Poll the train box
-		Putc( POLL_CHAR, ioTid );
-		for( i = 0; i < POLL_SIZE; i++ ) {
-			res = Getc( ioTid );
-			if( res < NO_ERROR ) {
-				error( res, "ts: Polling train box failed" );
-				break;
-			}
-			ch = (char) res;
-			req2.rawSensors[i] = ch;
-			// See if a sensor was flipped
-			if( res >= NO_ERROR && ch ) { 
-				req.sensorId = (i * 8) + (7 - log_2( ch ));
-			}
-		}
-		req.ticks = Time( csTid );
-
-		// Let the track server know
-		Send( tsTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
-	}
-
-}
-
-void pollWatchDog () {
-
-	debug( "ts: poll watshdog task started\r\n" );
-
-	TID tsTid = MyParentTid();
-	TID csTid = WhoIs( CLOCK_NAME );
-	// We need the braces around the 0s because they're in unions
-	TSRequest 	req = { WATCH_DOG, {0}, {0} };
-	TSReply		rpl;
-
-	FOREVER {
-		// Watch dog timeout ever so often
-		req.ticks = Time( csTid );
-		Delay( POLL_WAIT, csTid );
-
-		// Let the track server know
-		Send( tsTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
-	}
-
-
 }
