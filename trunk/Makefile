@@ -22,10 +22,20 @@ HEADERS = include/*.h
 
 all: main/main.elf 
 
-.PRECIOUS: %.s
+# do not optimize architecture specific code
+.PRECIOUS: arch/%.s
+arch/%.s: arch/%.c $(HEADERS)
+	$(XCC) -S $(CFLAGS)  -o $@ $<
+
+# do not optimize kernel code
+.PRECIOUS: main/%.s
+main/%.s: main/%.c $(HEADERS)
+	$(XCC) -S $(CFLAGS)  -o $@ $<
+
 # the following line assumes that each .c file depends on all the header files
+.PRECIOUS: %.s
 %.s: %.c $(HEADERS)
-	$(XCC) -S $(CFLAGS) -o $@ $<
+	$(XCC) -S $(CFLAGS) -O2 -o $@ $<
 
 %.o: %.c
 
@@ -36,7 +46,7 @@ libraries:
 	cd src && make && cd ..
 
 main/main.elf: libraries $(OBJECTS) 
-	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lstring -lmath -lgcc 
+	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lstring -lmath -lbuffer -lgcc 
 
 arch/switch.o: arch/switch.S
 	$(AS) $(ASFLAGS) -o arch/switch.o arch/switch.S
