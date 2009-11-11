@@ -10,7 +10,8 @@
 #define SW_WAIT     2	// ticks
 #define SNSR_WAIT   1	// ticks
 #define TRAIN_WAIT	10	// ticks
-#define POLL_WAIT 	(1000/ MS_IN_TICK)
+#define POLL_WAIT 	(100 / MS_IN_TICK)
+#define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
 #define POLL_CHAR	133
 
 #include <string.h>
@@ -40,7 +41,6 @@ typedef struct {
     SwitchDir 	switches [NUM_SWTS];
 	TID 	 	iosTid;
 	TID  		csTid;
-	TrackModel	model;
 } TS;
 
 int ts_start		( TS *ts );
@@ -55,41 +55,6 @@ SwitchDir checkDir	( int dir );
 void poll			();
 void pollWatchDog	();
 
-int ts_distance( TS *ts, int sensorId ) {
-	debug("ts_distance: sensor:%d \r\n", sensorId );
-	int idx = ts->model.sensor_nodes[sensorId];
-
-	Node *n = &ts->model.nodes[idx];
-	Edge *e;
-	int dist = 0;
-	SwitchDir dir = SWITCH_CURVED;
-	if( sensorId % 2 ) {
-		e = &n->se.behind;
-	} else {
-		e = &n->se.ahead;
-	}
-
-	while( 1 ) {
-		dist += e->distance;
-		n = &ts->model.nodes[e->dest];
-		//printf("neighbour %s\r\n", n->name);
-		if( n->type != NODE_SWITCH ) break;
-		dir = ts->switches[n->id];
-		if( n->sw.behind.dest == idx ) {
-			idx = e->dest;
-			e = &n->sw.ahead[dir];
-		} else {
-			idx = e->dest;
-			e = &n->sw.behind;
-		}
-	} 
-
-	//printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
-	printf("%s: ", n->name);
-	return dist;
-	
-}
-
 /* ACTUAL CODE */
 
 void ts_run () {
@@ -98,17 +63,14 @@ void ts_run () {
 	int			senderTid;
 	TSRequest 	req;
 	TSReply		reply;
-	int			speed, len, dist, time;
+	int			speed, len;
 
 	// Initialize the Track Server
 	if_error( ts_init (&ts), "Initializing Track Server failed.");
 
 	FOREVER {
 		// Receive a server request
-		debug ("ts: is about to Receive. \r\n");
 		len = Receive ( &senderTid, (char *) &req, sizeof(req) );
-		debug ("ts: Received: fromTid=%d type=%d arg1=%d arg2=%d len=%d\r\n", 
-				senderTid, req.type, req.arg1, req.arg2, len);
 	
 		assert( len == sizeof(TSRequest) );
 		
@@ -130,7 +92,7 @@ void ts_run () {
 				break;
 			case ST:
 				reply.dir = (ts.switches[req.sw]) ? 'C' : 'S'; 
-				printf ("ts: Switsh %d is set to %c.\r\n", req.sw, reply.dir);
+				debug ("ts: Switch %d is set to %c.\r\n", req.sw, reply.dir);
 				break;
 
 			case SW:
@@ -153,16 +115,9 @@ void ts_run () {
 			case POLL:
 				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
 				if( req.sensorId != ts.lstSensorId ) {
-					dist = ts_distance( &ts, ts.lstSensorId );
-					time = (req.ticks - ts.lstSensorUpdate) * MS_IN_TICK;
-					speed = (dist * 1000)/ time;
-					printf("speed = %d/%d = %dmm/s\r\n", dist, time, speed);
 					ts.lstSensorUpdate = req.ticks;
 				}
 				ts.lstSensorId = req.sensorId;
-				time = (req.ticks - ts.lstSensorPoll) * MS_IN_TICK;
-				if( time > 70 ) // TODO THESE TWO LINES ARE FOR TESTING
-					bwprintf(COM2, "up %dms\r\n", time);
 				ts.lstSensorPoll = req.ticks;
 				break;
 
@@ -170,6 +125,8 @@ void ts_run () {
 				debug("ts: Watchdog stamp %d ticks\r\n", req.ticks);
 				if( ts.lstSensorPoll < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
+					// Don't tell me for another 5 seconds
+					ts.lstSensorPoll = req.ticks + POLL_GRACE;
 					Putc( POLL_CHAR, ts.iosTid );
 				}
 				break;
@@ -188,10 +145,7 @@ void ts_run () {
 				break;
 		}
 
-		debug ("ts: about to Reply to %d. \r\n", senderTid);
 		Reply ( senderTid, (char *) &reply, sizeof(reply) );
-		debug ("ts: returned from Replying to %d. \r\n", senderTid);
-
 	}
 }
 
@@ -200,6 +154,8 @@ int ts_init( TS *ts ) {
 	int err = NO_ERROR;
 
 	ts->lstSensorId  = 0;
+	ts->lstSensorPoll = POLL_GRACE; //wait 5 seconds before complaining
+	ts->lstSensorUpdate = 0;
 	ts->csTid = WhoIs( CLOCK_NAME );
 	ts->iosTid = WhoIs( SERIALIO1_NAME );
 
@@ -208,8 +164,6 @@ int ts_init( TS *ts ) {
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	ts_switchSetAll( ts, 'C' );
 	
-	parse_model( TRACK_B, &ts->model ); 
-
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
 	err = Create( 3, &pollWatchDog );
@@ -270,6 +224,7 @@ int ts_switchSet( TS *ts, int sw, char dir ) {
 	// check the direction is a valid character
 	int ret = checkDir( dir );
 	if ( ret >= NO_ERROR ) {
+		SwitchDir swd = ret;
 		// TODO wait?
 		char bytes[3] = { 33 + ret, (char) sw, 32 };// 32 TURNS OFF SOLENOID
 
@@ -277,7 +232,7 @@ int ts_switchSet( TS *ts, int sw, char dir ) {
 		ret = PutStr( bytes, sizeof(bytes), ts->iosTid );
 		
 		// Store the new direction
-		ts->switches[sw] = ret;    
+		ts->switches[sw] = swd;    
 	}
 	return ret;
 }
@@ -357,50 +312,3 @@ void pollWatchDog () {
 
 
 }
-/*
-void getcHelper() {
-	helperMsg 	msg;
-	TID			parent;
-	TID			iosTid = WhoIs( SERIALIO1_NAME );
-	// Get instructions on what to do
-	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
-	Reply( parent, 0 , 0 );
-	// Get a character from the IO server
-	msg.result = Getc( iosTid );
-	// Return result back to parent
-	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
-}
-
-void delayHelper() {
-	helperMsg 	msg;
-	TID			parent;
-	TID			csTid = WhoIs( CLOCK_NAME );
-	// Get instructions on what to do
-	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
-	Reply( parent, 0 , 0 );
-	// Wait for specified number of ticks
-	msg.result = Delay( msg.ticks, csTid );
-	// Return result back to parent
-	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
-}
-
-	
-timeoutPoll( TID delay, TID getc, int ticks ) {
-	helperMsg 	msg;
-	TID 		getcTid = Create(3, &getcHelper );
-	TID 		delayTid = Create(3, &delayHelper );
-	TID			tid;
-	// Start off the getc helper
-	msg.tid = iosTid;
-	Send( getcTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
-	// Start off the delay helper
-	msg.tid = csTid;
-	msg.ticks = timeout;
-	Send( delayTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
-	// Wait for one of them to finish
-	Receive( &tid, (char *) &msg, sizeof(helperMsg) );
-	// Destroy them
-	if( msg.tid = delayTid ) return TIMEOUT;
-	else return msg.result;
-}
-*/
