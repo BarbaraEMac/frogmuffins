@@ -51,13 +51,14 @@ typedef struct {
     NODE_STOP = 1,
   } type;
   char name[5];
-  int id, id2;
+  int id;
   union {
     Switch sw;
     Sensor se;
     Stop st;
     Edge edges[3];
   };
+  int reserved;
   int x, y; // location (for GUI)
 } Node;
 

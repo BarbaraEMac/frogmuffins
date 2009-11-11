@@ -5,7 +5,7 @@
  * Copied and modified from course webpage
  */
 
-#define DEBUG 2
+#define DEBUG 1
 #include "model.h"
 #include <string.h>
 #include "servers.h"
@@ -90,9 +90,6 @@ int parse_model_str(FILE *file, TrackModel* model)
       eprintf("Could not get y coordinate\r\n");
       return -1;
     }
-
-
-    node->id2 = 0;
 
     int k;
     for (k = 0; k < NODE_MAX_EDGES; k++) node->edges[k].dest = -1;
