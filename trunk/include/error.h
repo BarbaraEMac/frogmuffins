@@ -43,7 +43,8 @@ enum ERROR {
 	// --9975
 	UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
 	INVALID_UART_ADDR,		// The addres passed in is not a UART
-	TIMEOUT					// A timeout has occured
+	TIMEOUT,				// A timeout has occured
+	DET_INVALID_REQ_TYPE	// Invalid Track Detective request type
 		
 } error;
 
