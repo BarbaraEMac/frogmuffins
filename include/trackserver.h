@@ -8,6 +8,7 @@
 #define __TRACK_SERVER_H__
 
 #define TRACK_SERVER_NAME	"TrackSvr"
+#define TRACK_DETECTIVE_NAME "Watson"
 
 #include "requests.h"
 #include "model.h"
@@ -82,5 +83,11 @@ typedef struct {
  * The main function for the Track Server task.
  */
 void ts_run ();
+
+
+/*
+ * The main fucntion for the Track Detective task.
+ */
+void det_run ();
 
 #endif

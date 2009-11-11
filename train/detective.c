@@ -9,7 +9,6 @@
 #include "debug.h"
 #include "error.h"
 #include "math.h"
-#include "model.h"
 #include "requests.h"
 #include "servers.h"
 #include "shell.h"
@@ -34,42 +33,7 @@ typedef struct {
 
 
 int det_init			( Det *det );
-/*
-int det_distance( Det *det, int sensorId ) {
-	debug("det_distance: sensor:%d \r\n", sensorId );
-	int idx = det->model.sensor_nodes[sensorId];
 
-	Node *n = &det->model.nodes[idx];
-	Edge *e;
-	int dist = 0;
-	SwitchDir dir = SWITCH_CURVED;
-	if( sensorId % 2 ) {
-		e = &n->se.behind;
-	} else {
-		e = &n->se.ahead;
-	}
-
-	while( 1 ) {
-		dist += e->distance;
-		printf("%s->", n->name);
-		n = &det->model.nodes[e->dest];
-		//printf("neighbour %s\r\n", n->name);
-		if( n->type != NODE_SWITCH ) break;
-		dir = det->switches[n->id];
-		if( n->sw.behind.dest == idx ) {
-			idx = e->dest;
-			e = &n->sw.ahead[dir];
-		} else {
-			idx = e->dest;
-			e = &n->sw.behind;
-		}
-	} 
-
-	printf("%s:", n->name);
-	//printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
-	return dist;
-	
-}*/
 
 /* ACTUAL CODE */
 
@@ -138,5 +102,42 @@ int det_init( Det *det ) {
 	
 	memoryset ( (char *) det->sensorHist, 0, sizeof(det->sensorHist) );
 	
-	return err;
+	return RegisterAs( TRACK_DETECTIVE_NAME );
 }
+
+/*
+int det_distance( Det *det, int sensorId ) {
+	debug("det_distance: sensor:%d \r\n", sensorId );
+	int idx = det->model.sensor_nodes[sensorId];
+
+	Node *n = &det->model.nodes[idx];
+	Edge *e;
+	int dist = 0;
+	SwitchDir dir = SWITCH_CURVED;
+	if( sensorId % 2 ) {
+		e = &n->se.behind;
+	} else {
+		e = &n->se.ahead;
+	}
+
+	while( 1 ) {
+		dist += e->distance;
+		printf("%s->", n->name);
+		n = &det->model.nodes[e->dest];
+		//printf("neighbour %s\r\n", n->name);
+		if( n->type != NODE_SWITCH ) break;
+		dir = det->switches[n->id];
+		if( n->sw.behind.dest == idx ) {
+			idx = e->dest;
+			e = &n->sw.ahead[dir];
+		} else {
+			idx = e->dest;
+			e = &n->sw.behind;
+		}
+	} 
+
+	printf("%s:", n->name);
+	//printf("distance from %d to %s is %d\r\n", sensorId, n->name, dist);
+	return dist;
+	
+}*/
