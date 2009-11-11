@@ -164,6 +164,8 @@ int ts_init( TS *ts ) {
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	ts_switchSetAll( ts, 'C' );
 	
+	err = Create( 3, &det_run );
+	if( err < NO_ERROR ) return err;
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
 	err = Create( 3, &pollWatchDog );
@@ -258,11 +260,15 @@ void poll() {
 	TID tsTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	TID ioTid = WhoIs( SERIALIO1_NAME );
+	TID detTid = WhoIs( TRACK_DETECTIVE_NAME );
 	char ch;
 	// We need the braces around the 0s because they're in unions
 	TSRequest 	req = { POLL, {0}, {0} };
+	DetRequest	req2;
 	TSReply		rpl;
 	int 		i, res;
+
+	req2.type = POLL;
 
 	FOREVER {
 
@@ -278,6 +284,7 @@ void poll() {
 				break;
 			}
 			ch = (char) res;
+			req2.rawSensors[i] = ch;
 			// See if a sensor was flipped
 			if( res >= NO_ERROR && ch ) { 
 				req.sensorId = (i * 8) + (7 - log_2( ch ));
