@@ -7,12 +7,26 @@
 #ifndef __BUFFER_H__
 #define __BUFFER_H__
 
-typedef int Element;
+#include <string.h>
+
+
+struct ringBuffer {
+	char *buffer;
+	size_t bufSize;
+	size_t eltSize;
+	int end;
+	int start;
+	int size;
+}; // Ring buffer
+
 typedef struct ringBuffer RB;	// Ring buffer
 
-void rb_init ( RB *rb ) ;
-void rb_push( RB *rb, Element el ) ;
-Element rb_pop( RB *rb ) ;
+
+void 	rb_init( RB *, void *, size_t bufSize, size_t eltSize ) ;
+void 	rb_push( RB *, void * ) ;
+int 	rb_full( RB * );
+int 	rb_empty( RB * );
+void   *rb_pop( RB * );
 
 
 #endif
