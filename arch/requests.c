@@ -11,7 +11,7 @@
 #include "servers.h"
 #include "switch.h"
 
-#define SWI(n) asm("swi #" #n)
+#define SWI(n) asm volatile("swi #" #n)
 
 typedef struct {
 	TID tid;

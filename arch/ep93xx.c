@@ -85,36 +85,36 @@ int uart_setSpeed( UART *uart, int speed ) {
 
 void cache_on() {
 	// Invalidate the cache before using it
-	asm("mov r0, #0");
-	asm("mcr p15, 0, r0, c7, c7, 0");
+	asm volatile("mov r0, #0");
+	asm volatile("mcr p15, 0, r0, c7, c7, 0");
 	// Read the current state of the cache
-	asm("mrc p15, 0, r0, c1, c0, 0");
+	asm volatile("mrc p15, 0, r0, c1, c0, 0");
 	// Enable instruction cache
-	asm("orr r0, r0, #(0x1 <<12)");
+	asm volatile("orr r0, r0, #(0x1 <<12)");
 	// Enable data cache and write buffer
-	asm("orr r0, r0, #(0xc)");
+	asm volatile("orr r0, r0, #(0xc)");
 	// Save the changes back to the cache control register
-	asm("mcr p15, 0, r0, c1, c0, 0");
+	asm volatile("mcr p15, 0, r0, c1, c0, 0");
 }
 
 
 void cache_off() {
 	// Clean and invalidate the data cache after having used it
-	asm("mov r0, #0");
-	asm("mcr p15, 0, r0, c7, c14, 0");
+	asm volatile("mov r0, #0");
+	asm volatile("mcr p15, 0, r0, c7, c14, 0");
 	// Read the current state of the cache
-	asm("mrc p15, 0, r0, c1, c0, 0");
+	asm volatile("mrc p15, 0, r0, c1, c0, 0");
 	// Disable instruction cache
-	asm("bic r0, r0, #(0x1 <<12)");
+	asm volatile("bic r0, r0, #(0x1 <<12)");
 	// Disable data cache and write buffer
-	//asm("bic r0, r0, #(0xc)");
+	//asm volatile("bic r0, r0, #(0xc)");
 	// Save the changes back to the cache control register
-	asm("mcr p15, 0, r0, c1, c0, 0");
+	asm volatile("mcr p15, 0, r0, c1, c0, 0");
 }
 
 int cache_type() {
 	// Read the current type of cache into r0
-	asm("mrc p15, 0, r0, c0, c0, 1");
+	asm volatile("mrc p15, 0, r0, c0, c0, 1");
 }
 
 int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) {
