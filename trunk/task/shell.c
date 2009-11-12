@@ -9,6 +9,7 @@
 #include <ts7200.h>
 
 #include "debug.h"
+#include "globals.h"
 #include "requests.h"
 #include "routeplanner.h"
 #include "servers.h"
@@ -16,12 +17,30 @@
 #include "task.h"
 #include "trackserver.h"
 
-#define FOREVER     for( ; ; )
 #define INPUT_LEN   60
 #define INPUT_HIST  1
-#define IO			ios2Tid
+#define IO			tids.ios2
 
 #define output(args...) cprintf(IO, "\033[36m"); cprintf(IO, args); cprintf(IO, "\033[37m")
+
+// Private Stuff
+// ----------------------------------------------------------------------------
+typedef struct {
+	TID ns;
+	TID cs;
+	TID ios1;
+	TID ios2;
+	TID ts;
+	TID rp;
+	TID idle;
+} TIDs;
+
+/**
+ * Given an input command, error check it and execute it.
+ */
+void shell_exec ( char *command, TIDs tids);
+
+// ----------------------------------------------------------------------------
 
 // A fun idle task that counts to high numbers
 void idleTask () {
@@ -43,39 +62,38 @@ void shell_run ( ) {
 	// Initialize variables
     char ch, *input, history[INPUT_HIST][INPUT_LEN];
     int i = 0, h = 0;
-	TID nsTid;
-	TID csTid;
-	TID ios1Tid, ios2Tid;
-	TID tsTid;
-	TID rpTid;
-	TID idle;
+	TIDs tids;
 
 	// Create the name server
-	nsTid = Create (2, &ns_run);
+	tids.ns = Create (2, &ns_run);
 	output ("Initializing the name server. \r\n");
-	output ("Initializing the serial io servers. \r\n");
+	
 	// Create the Serial I/O server
+	tids.ios1 = Create (2, &ios1_run);
+    tids.ios2 = Create (2, &ios2_run);
+	output ("Initializing the serial io servers. \r\n");
+	
 	// Create the clock server
-	csTid = Create (2, &cs_run);
+	tids.cs = Create (2, &cs_run);
 	output ("Initializing the clock server. \r\n");
 
 	// Create the train controller
-	tsTid = Create (2, &ts_run);
+	tids.ts = Create (2, &ts_run);
 	output ("Initializing the train controller. \r\n");
 	
 	// Create the routeplanner
-	rpTid = Create (7, &rp_run);
+	tids.rp = Create (7, &rp_run);
 	output ("Initializing the route planner. \r\n");
 	
 	// Create the idle task
-	idle = Create (9, &idleTask);
+	tids.idle = Create (9, &idleTask);
 
 	output ("Type 'h' for a list of commands.\r\n");
 
     input = history[h++];
 	int	time, tens, secs, mins;
  
-	time = Time(csTid)/2;
+	time = Time(tids.cs)/2;
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
@@ -86,9 +104,9 @@ void shell_run ( ) {
     FOREVER {
 
         input[i] = 0;						// Clear the next character
-		ch = Getc( ios2Tid );
+		ch = Getc( tids.ios2 );
 
-		time = Time( csTid ) / (100 / MS_IN_TICK);
+		time = Time( tids.cs ) / (100 / MS_IN_TICK);
 		tens = time % 10;
 		secs = (time / 10) % 60;
 		mins = time / 600;
@@ -96,7 +114,7 @@ void shell_run ( ) {
 		switch ( ch ) {
 			case '\r': // Enter was pressed
 				output( "\n\r" );
-				shell_exec(input, tsTid, ios1Tid, ios2Tid);
+				shell_exec(input, tids);
 				
 				// Clear the input for next line
 				/*input = history[h++];
@@ -112,9 +130,9 @@ void shell_run ( ) {
 				}
 				break;
 			case '\033': // Escape sequence
-				ch = Getc( ios2Tid );	// read the '['
+				ch = Getc( tids.ios2 );	// read the '['
 				if( ch != '[' ) break;
-				ch = Getc( ios2Tid );
+				ch = Getc( tids.ios2 );
 				output( "\r\n command %c detected.", ch );
 				switch( ch ) {
 					case 'A': // Up was pressed
@@ -141,15 +159,23 @@ void shell_run ( ) {
 
 
 // Execute a train command
-TSReply trainCmd ( TSRequest *req, int tsTid ) {
+TSReply trainCmd ( TSRequest *req, TID tsTid ) {
 	TSReply	rpl;
 	
 	Send( tsTid, (char*) req, sizeof(TSRequest), (char*) &rpl, sizeof(rpl) ); 
 	return rpl;
 }
 
+// Execute a Route Planner Command
+RPReply rpCmd ( RPRequest *req, TID rpTid ) {
+	RPReply	rpl;
+	
+	Send( rpTid, (char*)req, sizeof(RPRequest), (char*) &rpl, sizeof(rpl) ); 
+	return rpl;
+}
+
 // Execute the command passed in
-void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
+void shell_exec( char *command, TIDs tids ) {
 	int i;
 	TSRequest	tsReq;
 	TSReply		tsRpl;
@@ -177,7 +203,6 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 		"\t fstRv start dest = Display first reverse on path."
 		};
 
-
 	// Quit
     if ( sscanf(command, "q") >= 0 ) {
 		output( "Shell exiting.\r\n" );
@@ -200,24 +225,24 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 	// rv
 	} else if( sscanf(command, "rv %d", &tsReq.train) >=0) {
     	tsReq.type = RV;
-		trainCmd( &tsReq, tsTid );
+		trainCmd( &tsReq, tids.ts );
 	// st
     } else if( sscanf(command, "st %d", &tsReq.sw) >=0 ) {
 		tsReq.type = ST;
-		tsRpl = trainCmd( &tsReq, tsTid );
+		tsRpl = trainCmd( &tsReq, tids.ts );
 		output( "Switch %d is set to %c. \r\n", tsReq.sw, tsRpl.dir );
 	// sw
     } else if( sscanf(command, "sw %d %c", &tsReq.sw, &tsReq.dir) >=0 ) {
 		tsReq.type = SW;
-		trainCmd( &tsReq, tsTid );
+		trainCmd( &tsReq, tids.ts );
 	// tr
 	} else if( sscanf(command, "tr %d %d", &tsReq.train, &tsReq.speed) >= 0 ) {
 		tsReq.type = TR;
-		trainCmd( &tsReq, tsTid );
+		trainCmd( &tsReq, tids.ts );
 	// wh
     } else if( sscanf(command, "wh") >=0 ) {
 		tsReq.type = WH;
-		tsRpl = trainCmd( &tsReq, tsTid );
+		tsRpl = trainCmd( &tsReq, tids.ts );
 		if( tsRpl.sensor < 0 ) {
 			output( "No sensor triggered yet." );
 		} else {
@@ -228,11 +253,11 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 	// start
     } else if( sscanf(command, "start") >=0 ) {
 		tsReq.type = START;
-		trainCmd( &tsReq, tsTid );
+		trainCmd( &tsReq, tids.ts );
 	// stop
     } else if( sscanf(command, "stop") >=0 ) {
 		tsReq.type = STOP;
-		trainCmd( &tsReq, tsTid );
+		trainCmd( &tsReq, tids.ts );
 	// cache ON
 	} else if( sscanf(command, "cache ON") >= 0 ) {
 		cache_on();
@@ -243,25 +268,21 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 	// TODO: Remove WhoIs calls to make this more efficient.
 	} else if( sscanf(command, "path %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYROUTE;
-		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
-			  (char*)&rpRpl, sizeof(RPReply));
+		rpCmd ( &rpReq, tids.rp );
 	} else if( sscanf(command, "fstSw %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYFSTSW;
-		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
-			  (char*)&rpRpl, sizeof(RPReply));
+		rpCmd ( &rpReq, tids.rp );
 	} else if( sscanf(command, "fstRv %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYFSTRV;
-		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
-			  (char*)&rpRpl, sizeof(RPReply));
+		rpCmd ( &rpReq, tids.rp );
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
 			output( "\t%s\r\n", commands[i] );
 		}
-		assert( 1 == 0 );
 	// Nothing was entered
 	} else if( command[0] == '\0' ) {
-	// Unkknown command
+	// Unknown command
 	} else {
 		output("Unknown command: '%s'\r\n", command );
 	}
