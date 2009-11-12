@@ -10,16 +10,9 @@
 #ifndef __SHELL_H__
 #define __SHELL_H__
 
-#include "globals.h"
-
 /**
  * Start the command prompt shell running.
  */
 void shell_run ();
-
-/**
- * Given an input command, error check it and execute it.
- */
-void shell_exec ( char *command, TID tcTid, TID ios1, TID ios2 );
 
 #endif

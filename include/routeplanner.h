@@ -39,10 +39,10 @@ typedef struct {
 
 typedef struct {
 	union {
-		int totalDist;		// stopping distance
-		int minDist;		// Minimum distance b/w nodes
+		int totalDist;	// stopping distance
+		int minDist;	// Minimum distance b/w nodes
 	};
-	int checkinDist;		// Distance to next switch
+	int checkinDist;	// Distance to next switch
 	
 	Path	path;
 } RPReply;
