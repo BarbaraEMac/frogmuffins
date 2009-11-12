@@ -41,8 +41,8 @@ typedef struct {
 
 typedef struct {
 	
-	int dist;			// stopping distance
-	int swDist;			// Distance to next switch
+	int totalDist;			// stopping distance
+	int checkinDist;		// Distance to next switch
 	
 	Path	path;
 } RPReply;

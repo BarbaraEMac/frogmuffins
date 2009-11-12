@@ -177,7 +177,7 @@ void rp_run() {
 
 			//TODO: Make this reply with jsut an int?
 			case MINDIST:
-				reply.dist = rp_minDistN (&rp, req.nodeA, req.nodeB);
+				reply.dist = rp_minDistI (&rp, req.idx1, req.idx2);
 
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
@@ -185,7 +185,7 @@ void rp_run() {
 			//TODO: Make this reply with jsut an int?
 			case NEIGHBOURDIST:
 				// Returns -1 if they are not neighbours. Distance otherwise
-				reply.dist = rp_neighbourDist (&rp, req.nodeA, req.nodeB);
+				reply.dist = rp_neighbourDistI (&rp, req.idx1, req.idx2);
 				
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
@@ -207,7 +207,7 @@ void rp_init() {
 void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
 
 	// Distance from current location to destination
-	reply->totalDist = rp_minDistN ( rp, req->nodeA, req->nodeB );
+	reply->totalDist = rp_minDistI ( rp, req->idx1, req->idx2 );
 
 	// Construct the path from i -> j
 	makePath ( rp, &p, req->idx1, req->idx2 );
@@ -407,11 +407,11 @@ void rp_reserve (RoutePlanner *rp, RPRequest *req) {
 	cancelReserve(&rp->model, rsv);
 
 	// Save the new reservation data
-	//rsv->dist  = req->dist;
+/*	//rsv->dist  = req->dist;
 	rsv->start = req->nodeA;
 	model_findNextNodes( &rp->model, req->nodeA, req->nodeB, 
 						 rsv->next1, rsv->next2 ); 
-
+*/
 	// Make this new reservation
 	int retDist = makeReserve(&rp->model, rsv);
 
@@ -538,7 +538,7 @@ int cost (TrackModel *model, int idx1, int idx2) {
 
 	// Check each edge in O(3) time
 	while ( itr < (int) model->nodes[i].type ) {
-		// If the edge reaches the nodeBination,
+		// If the edge reaches the destination,
 		if ( model->nodes[i].edges[itr].dest == j ) {
 			// Return the distance between them
 			return model->nodes[i].edges[itr].distance; 
