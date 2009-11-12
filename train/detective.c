@@ -35,8 +35,8 @@ typedef struct {
 	int			sensorHist[NUM_SENSORS];
 	char		strayBuf[NUM_STRAY];
 	RB			stray;
-	int			lstPoll;
 	DetRequest	requests[MAX_NUM_TRAINS];
+	int			lstPoll;
 	TID 	 	iosTid;
 	TID  		csTid;
 	TID			tsTid;
@@ -44,7 +44,7 @@ typedef struct {
 
 
 int  det_init	( Det *det );
-int  det_wake	( Det *det, int sensorId );	
+int  det_wake	( Det *det, int sensor, int ticks );	
 void poll		();
 void watchDog	();
 
@@ -56,7 +56,7 @@ void det_run () {
 	int			senderTid;
 	DetRequest 	req;
 	TSReply		reply;
-	int			i, k, len, sensorId;
+	int			i, k, len, sensor;
 	char		ch;
 
 
@@ -76,24 +76,24 @@ void det_run () {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							printf("sensor i:%d k:%d %c%d\r\n", i, k, 'A'+(i/2), 1+k+8*(i%2));
-							sensorId = i*8 + k;
+							sensor = i*8 + k;
 							// Update the history
-							det.sensorHist[sensorId] = req.ticks;
+							det.sensorHist[sensor] = req.ticks;
 							// Wake up any tasks waiting for this event
-							if( !det_wake( &det, sensorId ) ) {
+							if( !det_wake( &det, sensor, req.ticks ) ) {
 								printf( "rb size %d\r\n", det.stray.size );
 								if( rb_full( &det.stray ) ) {
 									ch = *(char*)(rb_pop( &det.stray ));
 									printf( "poping sensor #%d\r\n", ch );
 								}
-								ch = (char) sensorId;
+								ch = (char) sensor;
 								rb_push( &det.stray, &ch );
 								// put in stray sensor queue
 							}
 						}
 					}
 				}/*
-				if( req.sensorId != det.lsdet.nsorId ) {
+				if( req.sensor != det.lsdet.nsorId ) {
 					dist = det_distance( &ts, det.lstSensorId );
 					time = (req.ticks - det.lstSensorUpdate) * MS_IN_TICK;
 					speed = (dist * 1000)/ time;
@@ -119,7 +119,9 @@ void det_run () {
 						req.events[0].sensor, req.events[1].sensor);
 				req.tid = senderTid;
 				// Enqueue
-				// TODO
+				i = senderTid % MAX_NUM_TRAINS; // simple hash function
+				assert( det.requests[i].tid == UNUSED_TID );
+				det.requests[i] = req;
 				break;
 
 		
@@ -143,8 +145,13 @@ int det_init( Det *det ) {
 	det->tsTid = WhoIs( TRACK_SERVER_NAME );
 	det->lstPoll = POLL_GRACE; //wait 5 seconds before complaining
 
-	rb_init(&(det->stray), det->strayBuf, NUM_STRAY, sizeof(char)) ;
-	
+	rb_init(&(det->stray), det->strayBuf, sizeof(char), NUM_STRAY) ;
+//	rb_init(&(det->request), det->reqBuf, sizeof(DetRequest), MAX_NUM_TRAINS ) ;
+
+	int i;
+	for( i = 0; i < MAX_NUM_TRAINS; i++ ) {
+		det->requests[i].tid = UNUSED_TID;
+	}
 	memoryset ( (char *) det->sensorHist, 0, sizeof(det->sensorHist) );
 	
 	err =  Create( 3, &poll );
@@ -154,10 +161,24 @@ int det_init( Det *det ) {
 	return RegisterAs( TRACK_DETECTIVE_NAME );
 }
 
-int det_wake ( Det *det, int sensorId ) {
+int det_wake ( Det *det, int sensor, int ticks ) {
+	DetRequest *req;
+	TSReply		rpl;
+	int i, woken = 0;
 
-
-	return 0;
+	for( i = 0; i < MAX_NUM_TRAINS; i++ ) {
+		if( det->requests[i].tid != UNUSED_TID ) {
+			if(req->events[0].sensor == sensor ||
+			req->events[1].sensor == sensor ) {
+				rpl.sensor = sensor;
+				rpl.ticks = ticks;
+				// wake up the train
+				Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
+				woken++;
+			}
+		}
+	}
+	return woken;
 }
 
 void poll() {
