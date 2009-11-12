@@ -755,6 +755,23 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 	}
 }
 
+int model_nameToIdx ( TrackModel *model, char *name ) {
+	int n = model->num_nodes;
+	int i;
+
+	for ( i = 0; i < n; i ++ ) {
+		if ( strcmp(model->nodes[i].name, name) == 0 ) {
+			return i;
+		}
+	}
+	return NOT_FOUND;
+}
+
+/*
+char * model_idxToName ( TrackModel *model, int idx ) {
+	return model->nodes[idx].name;
+}
+
 /*
 void free_model(track_model_t* model)
 {
