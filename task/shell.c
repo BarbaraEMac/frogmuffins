@@ -47,11 +47,12 @@ void shell_run ( ) {
 	TID csTid;
 	TID ios1Tid, ios2Tid;
 	TID tsTid;
+	TID rpTid;
 	TID idle;
 
 	// Create the name server
-//	output ("Creating the name server. \r\n");
 	nsTid = Create (2, &ns_run);
+	output ("Initializing the name server. \r\n");
 	
 	// Create the Serial I/O server
 	ios1Tid = Create (2, &ios1_run);
@@ -62,7 +63,6 @@ void shell_run ( ) {
 	csTid = Create (2, &cs_run);
 	output ("Initializing the clock server. \r\n");
 
-	
 	// Create the train controller
 	tsTid = Create (2, &ts_run);
 	output ("Initializing the train controller. \r\n");
@@ -71,10 +71,10 @@ void shell_run ( ) {
 	idle = Create (9, &idleTask);
 
 	// Create the routeplanner
-	int rpTid = Create ( 6, &rp_run );
+	rpTid = Create (7, &rp_run);
+	output ("Initializing the route planner. \r\n");
 
 	output ("Type 'h' for a list of commands.\r\n");
-
 
     input = history[h++];
 	int	time, tens, secs, mins;
