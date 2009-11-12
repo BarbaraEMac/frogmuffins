@@ -19,8 +19,8 @@
 // ----------------------------------------------------------------------------
 
 typedef struct {
-	int id;				// Identifying number
-	int speed;			// The current speed
+	int  id;				// Identifying number
+	int  speed;			// The current speed
 	Node currLoc;		// Current Location
 	Node dest;			// Desired End Location
 	
@@ -32,17 +32,25 @@ typedef struct {
 
 void train_run () {
 	
+
+
 	// get the train number from shell
 	// determine starting location from shell. Set as current location 
 	// determine destination from shell
 	
+
 	// Until you've reached your destination:
+	while ( currLoc != dest ) {
+
+
 	// talk to route planner
 	// set speed to start on route
 	// make prediction
 	// verify prediction
 	// calibrate speed profile
 
+
+	}
 	Exit(); // When you've reached your destination
 }
 

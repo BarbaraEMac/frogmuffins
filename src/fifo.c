@@ -27,6 +27,9 @@ struct entry {
 
 struct fifo {
 	Entry unused[NUM_ENTRIES];
+	
+
+
 	int ptr;
 
 	Entry *head;
@@ -226,11 +229,11 @@ int fifo_release ( Fifo *fifo ) {
 	
     // Advance the pointer
     if ( e == fifo->orderedEntries[fifo->fullIdx] ) {
-	advance ( &fifo->oFullIdx );
-	assert  ( fifo->oFullIdx <= fifo->oEmpIdx );
+		advance ( &fifo->oFullIdx );
+		assert  ( fifo->oFullIdx <= fifo->oEmpIdx );
     } else {
-	advance ( &fifo->iFullIdx );
-	assert  ( fifo->iFullIdx < fifo->iEmpIdx );
+		advance ( &fifo->iFullIdx );
+		assert  ( fifo->iFullIdx < fifo->iEmpIdx );
     }
      
     // Return the data it was holding
