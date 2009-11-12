@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "requests.h"
+#include "routeplanner.h"
 #include "servers.h"
 #include "shell.h"
 #include "task.h"
@@ -68,6 +69,9 @@ void shell_run ( ) {
 	
 	// Create the idle task
 	idle = Create (9, &idleTask);
+
+	// Create the routeplanner
+	int rpTid = Create ( 6, &rp_run );
 
 	output ("Type 'h' for a list of commands.\r\n");
 
