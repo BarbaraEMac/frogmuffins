@@ -177,7 +177,7 @@ void rp_run() {
 
 			//TODO: Make this reply with jsut an int?
 			case MINDIST:
-				reply.dist = rp_minDistI (&rp, req.idx1, req.idx2);
+				reply.minDist = rp_minDistI (&rp, req.idx1, req.idx2);
 
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
@@ -185,7 +185,7 @@ void rp_run() {
 			//TODO: Make this reply with jsut an int?
 			case NEIGHBOURDIST:
 				// Returns -1 if they are not neighbours. Distance otherwise
-				reply.dist = rp_neighbourDistI (&rp, req.idx1, req.idx2);
+				reply.minDist = rp_neighbourDistI (&rp, req.idx1, req.idx2);
 				
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
@@ -205,13 +205,14 @@ void rp_init() {
 }
 
 void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
+	Path p;
 
 	// Distance from current location to destination
 	reply->totalDist = rp_minDistI ( rp, req->idx1, req->idx2 );
 
 	// Construct the path from i -> j
 	makePath ( rp, &p, req->idx1, req->idx2 );
-	reply->checkinDist = rp_getNextCheckinP (rp, p)
+	reply->checkinDist = rp_getNextCheckinP (rp, &p);
 	 
 	/*
 	int q = 0;
@@ -220,7 +221,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
 		debug("%d> ", reply->path[q]);
 	}
 	*/
-
 }
 
 inline int rp_minDistN (RoutePlanner *rp, Node *a, Node *b) {
@@ -228,7 +228,7 @@ inline int rp_minDistN (RoutePlanner *rp, Node *a, Node *b) {
 }
 
 inline int rp_minDistI (RoutePlanner *rp, int idx1, int idx2 ) {
-	return rp->dists[idx][idx];
+	return rp->dists[idx1][idx2];
 }
 
 inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b) {
@@ -242,27 +242,40 @@ inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2 ) {
 }
 
 int rp_getNextCheckinN (RoutePlanner *rp, Node *a, Node *b) {
+	debug ("Making a path from %s(%d) to %s(%d)\r\n", 
+			a->name, a->idx, b->name, b->idx);
+	
 	Path path;
-	debug ("Making a path from %s(%d) to %s(%d)\r\n", a->name, a->idx, b->name, b->idx);
 	makePath ( rp, &path, a->idx, b->idx );
 	
-	return rp_getNextCheckInAlong(rp, &p);
+	return rp_getNextCheckinP(rp, &path);
 
 }
 
-int rp_getNextCheckinP ( RoutePlanner *rp, Path *path ) {
-	int nextSw = rp_distToNextSw(rp, &path);
-	int nextRv = rp_distToNextRv(rp, &path);
+int rp_getNextCheckinP ( RoutePlanner *rp, Path *p ) {
+	int nextSw = rp_distToNextSw(rp, p);
+	int nextRv = rp_distToNextRv(rp, p);
 
 	if ( nextSw == nextRv && nextSw == INT_MAX ) {
-		debug ("%s to %s: Neither.\r\n", a->name, b->name);
+		debug ("%s to %s: Neither.\r\n", 
+				rp->model.nodes[p->path[0]].name, 
+				rp->model.nodes[p->path[p->len-1]].name);
 	}
 	else if ( nextSw < nextRv ) {
-		debug ("%s to %s: First Checkin=SWITCH dist=%d\r\n", a->name, b->name, nextSw);
+		debug ("%s to %s: First Checkin=SWITCH dist=%d\r\n", 
+				rp->model.nodes[p->path[0]].name, 
+				rp->model.nodes[p->path[p->len-1]].name, nextSw);
 	} else {
-		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", a->name, b->name, nextRv);
+		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", 
+				rp->model.nodes[p->path[0]].name, 
+				rp->model.nodes[p->path[p->len]].name, nextRv);
 	}
 
+	// TODO: fix this error(?) return.
+	// There is nothing to do on the path but DRIVE.
+	if ( nextSw == nextRv && nextSw == INT_MAX ) {
+		return INT_MAX;
+	}
 	return (nextSw < nextRv) ? nextSw : nextRv;
 }
 

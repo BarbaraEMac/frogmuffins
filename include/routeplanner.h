@@ -27,11 +27,9 @@ typedef struct {
 	int		 trainId;	// Unique id for train
 	int   	 avgSpeed;	// Average speed of a train
 						// between the past sensors
-	Node 	*nodeA;		// Current Sensor, Start Location
-	Node 	*nodeB; 	// Previous Sensor, Destination
 
-	int		idx1;
-	int 	idx2;
+	int		idx1; 		// Current Sensor, Start Location
+	int 	idx2; 		// Previous Sensor, Destination
 } RPRequest;
 
 typedef struct {
@@ -40,8 +38,10 @@ typedef struct {
 } Path;
 
 typedef struct {
-	
-	int totalDist;			// stopping distance
+	union {
+		int totalDist;		// stopping distance
+		int minDist;		// Minimum distance b/w nodes
+	};
 	int checkinDist;		// Distance to next switch
 	
 	Path	path;
