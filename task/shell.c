@@ -53,12 +53,8 @@ void shell_run ( ) {
 	// Create the name server
 	nsTid = Create (2, &ns_run);
 	output ("Initializing the name server. \r\n");
-	
-	// Create the Serial I/O server
-	ios1Tid = Create (2, &ios1_run);
-	ios2Tid = Create (2, &ios2_run);
 	output ("Initializing the serial io servers. \r\n");
-	
+	// Create the Serial I/O server
 	// Create the clock server
 	csTid = Create (2, &cs_run);
 	output ("Initializing the clock server. \r\n");
@@ -67,12 +63,12 @@ void shell_run ( ) {
 	tsTid = Create (2, &ts_run);
 	output ("Initializing the train controller. \r\n");
 	
-	// Create the idle task
-	idle = Create (9, &idleTask);
-
 	// Create the routeplanner
 	rpTid = Create (7, &rp_run);
 	output ("Initializing the route planner. \r\n");
+	
+	// Create the idle task
+	idle = Create (9, &idleTask);
 
 	output ("Type 'h' for a list of commands.\r\n");
 
@@ -222,12 +218,13 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
     } else if( sscanf(command, "wh") >=0 ) {
 		tsReq.type = WH;
 		tsRpl = trainCmd( &tsReq, tsTid );
-		if( tsRpl.sensor == 0 ) {
-			output( "No sensor triggered yet.\r\n" );
+		if( tsRpl.sensor < 0 ) {
+			output( "No sensor triggered yet." );
 		} else {
-			output( "Last sensor triggered was %c%d (updated %d ms ago).\r\n", 
-					tsRpl.channel, tsRpl.sensor, tsRpl.ticks * MS_IN_TICK );
+			output( "Last sensor triggered was %c%d", 
+				sensor_bank( tsRpl.sensor ), sensor_num( tsRpl.sensor ));
 		}
+		output (" (updated %d ms ago).\r\n", tsRpl.ticks * MS_IN_TICK );
 	// start
     } else if( sscanf(command, "start") >=0 ) {
 		tsReq.type = START;
