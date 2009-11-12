@@ -2,6 +2,17 @@
  * CS 452: User Task
  * becmacdo
  * dgoc
+ *
+ * FUNCTION NAME SPECIFICATION
+ * Please use the following name convention.
+ *
+ * If a function can take in a Node OR index number, create 2 functions for ease:
+ *  fooN (..., Node *node, ...) 
+ *  fooI (..., int idx, ...)
+ *
+ * If a function can take in 2 Nodes OR a Path, create 2 functions for ease:
+ * 	barN (..., Node *a, Node *b, ...)
+ * 	barP (..., Path *p, ...)
  */
 #define DEBUG 2
 
@@ -43,145 +54,37 @@ typedef struct {
 } RoutePlanner;
 
 void rp_init();
+void rp_planRoute (RoutePlanner *rp, RPReply *reply, RPRequest *req);
+
+inline int rp_minDistN 		 (RoutePlanner *rp, Node *a, Node *b);
+inline int rp_minDistI 		 (RoutePlanner *rp, int idx1, int idx2 );
+inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b);
+inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2);
+
+int rp_getNextCheckinN  (RoutePlanner *rp, Node *a, Node *b);
+int rp_getNextCheckinP 	(RoutePlanner *rp, Path *path); 
+int rp_distToNextSw   	(RoutePlanner *rp, Path *p);
+int rp_distToNextRv   	(RoutePlanner *rp, Path *p);
+
 inline void clearReply (RPReply *reply);
-inline int rp_minDistance (RoutePlanner *rp, Node *a, Node *b);
-inline int rp_neighbourDist (RoutePlanner *rp, Node *a, Node *b);
 
-int rp_getNextCheckin (RoutePlanner *rp, Node *a, Node *b);
-int rp_distToNextSw (RoutePlanner *rp, Path *p);
-int rp_distToNextRv (RoutePlanner *rp, Path *p);
+// Reservation Functions
+void rp_reserve   (RoutePlanner *rp, RPRequest *req);
+void cancelReserve(TrackModel *model, Reservation *rsv);
+int  makeReserve  (TrackModel *model, Reservation *rsv);
+int  mapTrainId   (int trainId);
 
-void model_cancelReserve(TrackModel *model, Reservation *rsv);
-int model_makeReserve(TrackModel *model, Reservation *rsv);
-void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
-						  Node *next1, Node *next2 );
-int mapTrainId (int trainId);
-
+// Display to Monitor Functions
+void outputPath 	   (RoutePlanner *rp, int i, int j);
+void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req);
+void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req);
 
 // Shortest Path Algorithms
 void floyd_warshall (RoutePlanner *rp, int n);
 int  cost			(TrackModel *model, int idx1, int idx2);
-void outputPath 	(RoutePlanner *rp, int i, int j);
 void makePath 		(RoutePlanner *rp, Path *p, int i, int j);
 void makePathHelper (RoutePlanner *rp, Path *p, int i, int j);
 // ----------------------------------------------------------------------------
-
-void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
-
-	// Distance from current location to destination
-	reply->dist = rp_minDistance ( rp, req->nodeA, req->nodeB );
-
-	// Construct the path from i -> j
-	// TODO: Observe blockages / reservations
-	
-	 
-	 /*
-	int q = 0;
-	debug("pathlen = %d\r\n", reply->pathLen);
-	for ( q = 0; q < reply->pathLen; q ++ ) {
-		debug("%d> ", reply->path[q]);
-	}
-	*/
-
-}
-
-void rp_reserve (RoutePlanner *rp, RPRequest *req) {
-	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
-
-	// Cancel the old reservations
-	model_cancelReserve(&rp->model, rsv);
-
-	// Save the new reservation data
-	//rsv->dist  = req->dist;
-	rsv->start = req->nodeA;
-	model_findNextNodes( &rp->model, req->nodeA, req->nodeB, 
-						 rsv->next1, rsv->next2 ); 
-
-	// Make this new reservation
-	int retDist = model_makeReserve(&rp->model, rsv);
-
-}
-
-void model_cancelReserve(TrackModel *model, Reservation *rsv) {
-	// Have: start node & distance & 2 next nodes
-	rsv->start->reserved = 0;
-	rsv->next1->reserved = 0;
-	rsv->next2->reserved = 0;
-}
-
-int model_makeReserve(TrackModel *model, Reservation *rsv) {
-
-	// Reserve these nodes so that no other train can use them.
-	rsv->start->reserved = 1;
-	rsv->next1->reserved = 1;
-	rsv->next2->reserved = 1;
-
-	// TODO: fix this
-	return 0;
-}
-
-void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
-						  Node *next1, Node *next2 ) {
-	Node *n1 = 0;	// Tmp neighbour nodes
-	Node *n2 = 0;
-	Node *n3 = 0;
-	
-	switch ( curr->type ) {
-		case NODE_SWITCH:
-			n1 = &model->nodes[curr->sw.ahead[0].dest];
-			n2 = &model->nodes[curr->sw.ahead[1].dest];
-			n3 = &model->nodes[curr->sw.behind.dest];
-			
-			//TODO: DEPENDS ON THE ROUTE
-			if ( (n1 == prev) || (n2 == prev) ) {
-				next1 = n3;
-				next2 = 0;
-			} else { 
-				next1 = n1;
-				next2 = n2;
-			}
-			
-			break;
-		
-		case NODE_SENSOR:
-			n1 = &model->nodes[curr->se.ahead.dest];
-			n2 = &model->nodes[curr->se.behind.dest];
-			
-			next1 = ( n1 == prev ) ? n2 : n1;
-			next2 = 0;
-
-			break;
-		
-		case NODE_STOP:
-			n1 = &model->nodes[curr->st.ahead.dest];
-
-			// You are heading to a stop
-			next1 = (n1 == prev) ? 0 : n1;
-			next2 = 0;
-			
-			break;
-	}
-}
-
-// And the hardcoding begins!
-int mapTrainId (int trainId) {
-	switch (trainId) {
-		case 12:
-			return 0;
-		case 22:
-			return 1;
-		case 24:
-			return 2;
-		case 46:
-			return 3;
-		case 52:
-			return 4;
-	}
-	// ERROR
-	return 5;
-}
-
-// tell the train to switch a flip
 
 void rp_run() {
 	debug ("rp_run\r\n");
@@ -189,10 +92,6 @@ void rp_run() {
 	int 			senderTid;
 	RPRequest		req;
 	RPReply			reply;
-	Path 			path;
-	int				i = 0;
-	int				dist;
-
 
 	rp_init ();
 
@@ -220,6 +119,7 @@ void rp_run() {
 */
 	// Initialize track reservation system (nothing is reserved)
 	
+
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
@@ -237,67 +137,34 @@ void rp_run() {
 					// Display the total distance
 					printf ("%s\r\nDistance travelled = %d\r\n", 
 							rp.model.nodes[req.idx2].name,
-							rp_minDistance( &rp, 
-											&rp.model.nodes[req.idx1], 
-											&rp.model.nodes[req.idx2]) );
+							rp_minDistN( &rp, 
+										 &rp.model.nodes[req.idx1], 
+										 &rp.model.nodes[req.idx2]) );
 				}
 				break;
 
 			case DISPLAYFSTSW:
 				// Reply to the shell
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
-
-				makePath ( &rp, &path, req.idx1, req.idx2 );
-				dist = rp_distToNextSw(&rp, &path);
 				
-				if ( dist == INT_MAX ) {
-					printf ("No switch to change along path from %s to %s.\r\n", 
-						rp.model.nodes[req.idx2].name, 
-						rp.model.nodes[path.path[i]].name);
-					break;
-				}
+				rp_displayFirstSw (&rp, &req);
 
-				i = 0;
-				while ( (rp.dists[req.idx1][path.path[i]] != (dist - EPSILON)) && 
-						(i < path.len) ) {
-					i++;
-				}
-				printf("First switch to change from %s to %s is %s. Distance to it is %d.\r\n",
-						rp.model.nodes[req.idx1].name, 
-						rp.model.nodes[req.idx2].name, 
-						rp.model.nodes[path.path[i]].name,
-						dist);
 				break;
 
 			case DISPLAYFSTRV:
 				// Reply to the shell
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
-
-				makePath ( &rp, &path, req.idx1, req.idx2 );
-				dist = rp_distToNextRv(&rp, &path);
 				
-				if ( dist == INT_MAX ) {
-					printf ("Never reverse along path from %s to %s.\r\n", 
-						rp.model.nodes[req.idx2].name, 
-						rp.model.nodes[path.path[i]].name);
-					break;
-				}
-
-				i = 0;
-				while ( (rp.dists[req.idx1][path.path[i]] != (dist - EPSILON)) && 
-						(i < path.len) ) {
-					i++;
-				}
-				
-				printf("First reverse from %s to %s is %s. Distance to it is %d.\r\n",
-						rp.model.nodes[req.idx1].name, 
-						rp.model.nodes[req.idx2].name, 
-						rp.model.nodes[path.path[i]].name,
-						dist);
+				rp_displayFirstRv (&rp, &req);
 				break;
 			
 			case RESERVE:
-
+				// TODO: Reply with success?
+				rp_reserve (&rp, &req);
+				
+				// Reply to the client train
+				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				
 				break;
 			
 			case PLANROUTE:
@@ -308,16 +175,16 @@ void rp_run() {
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
 
-			// Make this reply with jsut an int?
+			//TODO: Make this reply with jsut an int?
 			case MINDIST:
-				reply.dist = rp_minDistance (&rp, req.nodeA, req.nodeB);
+				reply.dist = rp_minDistN (&rp, req.nodeA, req.nodeB);
 
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
 
-			// Make this reply with jsut an int?
+			//TODO: Make this reply with jsut an int?
 			case NEIGHBOURDIST:
-				// Returns -1 if they are not neighbours.Distance otherwise
+				// Returns -1 if they are not neighbours. Distance otherwise
 				reply.dist = rp_neighbourDist (&rp, req.nodeA, req.nodeB);
 				
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
@@ -333,32 +200,58 @@ void rp_run() {
 
 }
 
-inline void clearReply (RPReply *reply) {
-	//TODO
-
-}
-
-inline int rp_minDistance (RoutePlanner *rp, Node *a, Node *b) {
-	return rp->dists[a->idx][b->idx];
-}
-
-inline int rp_neighbourDist (RoutePlanner *rp, Node *a, Node *b) {
-	int c = cost (&rp->model, a->id, b->id);
-
-	return ( c == INT_MAX ) ? -1 : c;
-}
-
 void rp_init() {
 	RegisterAs ( ROUTEPLANNER_NAME );
 }
 
-int rp_getNextCheckin (RoutePlanner *rp, Node *a, Node *b) {
+void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
+
+	// Distance from current location to destination
+	reply->totalDist = rp_minDistN ( rp, req->nodeA, req->nodeB );
+
+	// Construct the path from i -> j
+	makePath ( rp, &p, req->idx1, req->idx2 );
+	reply->checkinDist = rp_getNextCheckinP (rp, p)
+	 
+	/*
+	int q = 0;
+	debug("pathlen = %d\r\n", reply->pathLen);
+	for ( q = 0; q < reply->pathLen; q ++ ) {
+		debug("%d> ", reply->path[q]);
+	}
+	*/
+
+}
+
+inline int rp_minDistN (RoutePlanner *rp, Node *a, Node *b) {
+	return rp_minDistI(rp, a->idx, b->idx);
+}
+
+inline int rp_minDistI (RoutePlanner *rp, int idx1, int idx2 ) {
+	return rp->dists[idx][idx];
+}
+
+inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b) {
+	return rp_neighbourDistI(rp, a->idx, b->idx);	
+}
+
+inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2 ) {
+	int c = cost (&rp->model, idx1, idx2);
+
+	return ( c == INT_MAX ) ? -1 : c;
+}
+
+int rp_getNextCheckinN (RoutePlanner *rp, Node *a, Node *b) {
 	Path path;
 	debug ("Making a path from %s(%d) to %s(%d)\r\n", a->name, a->idx, b->name, b->idx);
 	makePath ( rp, &path, a->idx, b->idx );
 	
+	return rp_getNextCheckInAlong(rp, &p);
+
+}
+
+int rp_getNextCheckinP ( RoutePlanner *rp, Path *path ) {
 	int nextSw = rp_distToNextSw(rp, &path);
-//	debug ("Path from %d to next sw is %d\r\n", path.path[0], nextSw);
 	int nextRv = rp_distToNextRv(rp, &path);
 
 	if ( nextSw == nextRv && nextSw == INT_MAX ) {
@@ -377,11 +270,12 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 	int *path = p->path;
 	Node *itr;
 
-	//TODO: Skip last node
 	// Start at i=1 to skip first node
+	// Stop at len - 1 since we don't have to switch the last node if we
+	// want to stop on it
 	int i;
-	for ( i = 1; i < p->len; i ++ ) {
-		itr  = &rp->model.nodes[path[i]];
+	for ( i = 1; i < p->len - 1; i ++ ) {
+		itr = &rp->model.nodes[path[i]];
 		
 		if ( itr->type == NODE_SWITCH ) {
 		//	Node *prev = &rp->model.nodes[path[i-1]];
@@ -428,6 +322,140 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 	return INT_MAX;
 }
 
+inline void clearReply (RPReply *reply) {
+	//TODO
+
+}
+
+//-----------------------------------------------------------------------------
+//--------------------- Displaying To Monitor ---------------------------------
+//-----------------------------------------------------------------------------
+
+void outputPath (RoutePlanner *rp, int i, int j) {
+	if ( rp->paths[i][j] == -1 ) {
+		printf ("%s> ", rp->model.nodes[i].name);
+	}
+	else {
+		outputPath (rp, i, rp->paths[i][j]);
+		outputPath (rp, rp->paths[i][j], j);
+	}
+}
+
+void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req) {
+	Path p;
+	int dist;
+	int i = 0;
+	
+	makePath ( rp, &p, req->idx1, req->idx2 );
+	dist = rp_distToNextSw(rp, &p);
+	
+	if ( dist == INT_MAX ) {
+		printf ("No switch to change along path from %s to %s.\r\n", 
+				rp->model.nodes[req->idx2].name, 
+				rp->model.nodes[p.path[i]].name);
+		return;
+	}
+
+	while ( (rp->dists[req->idx1][p.path[i]] != (dist - EPSILON)) && 
+			(i < p.len) ) {
+		i++;
+	}
+	printf("%s %s to %s is %s. Distance to it is %d.\r\n",
+			"First switch to change from",
+			rp->model.nodes[req->idx1].name, 
+			rp->model.nodes[req->idx2].name, 
+			rp->model.nodes[p.path[i]].name,
+			dist);
+}
+
+void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
+	int i = 0;
+	int dist;
+	Path p;
+
+	makePath ( rp, &p, req->idx1, req->idx2 );
+	dist = rp_distToNextRv(rp, &p);
+	
+	if ( dist == INT_MAX ) {
+		printf ("Never reverse along path from %s to %s.\r\n", 
+				rp->model.nodes[req->idx2].name, 
+				rp->model.nodes[p.path[i]].name);
+		return;
+	}
+
+	while ( (rp->dists[req->idx1][p.path[i]] != (dist - EPSILON)) && 
+			(i < p.len) ) {
+		i++;
+	}
+	
+	printf("%s %s to %s is %s. Distance to it is %d.\r\n",
+			"First reverse from",
+			rp->model.nodes[req->idx1].name, 
+			rp->model.nodes[req->idx2].name, 
+			rp->model.nodes[p.path[i]].name,
+			dist);
+}
+
+//-----------------------------------------------------------------------------
+//--------------------------- Reservation Stuff -------------------------------
+//-----------------------------------------------------------------------------
+
+void rp_reserve (RoutePlanner *rp, RPRequest *req) {
+	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
+
+	// Cancel the old reservations
+	cancelReserve(&rp->model, rsv);
+
+	// Save the new reservation data
+	//rsv->dist  = req->dist;
+	rsv->start = req->nodeA;
+	model_findNextNodes( &rp->model, req->nodeA, req->nodeB, 
+						 rsv->next1, rsv->next2 ); 
+
+	// Make this new reservation
+	int retDist = makeReserve(&rp->model, rsv);
+
+}
+
+void cancelReserve(TrackModel *model, Reservation *rsv) {
+	// Have: start node & distance & 2 next nodes
+	rsv->start->reserved = 0;
+	rsv->next1->reserved = 0;
+	rsv->next2->reserved = 0;
+}
+
+int makeReserve(TrackModel *model, Reservation *rsv) {
+
+	// Reserve these nodes so that no other train can use them.
+	rsv->start->reserved = 1;
+	rsv->next1->reserved = 1;
+	rsv->next2->reserved = 1;
+
+	// TODO: fix this
+	return 0;
+}
+
+// And the hardcoding begins!
+int mapTrainId (int trainId) {
+	switch (trainId) {
+		case 12:
+			return 0;
+		case 22:
+			return 1;
+		case 24:
+			return 2;
+		case 46:
+			return 3;
+		case 52:
+			return 4;
+	}
+	// ERROR
+	return 5;
+}
+
+//-----------------------------------------------------------------------------
+//------------------------------ Floyd Warshall -------------------------------
+//-----------------------------------------------------------------------------
 // O(n^3) + cost lookup time
 //
 // Floyd-Warshall algorithm from http://www.joshuarobinson.net/docs/floyd_warshall.html.
@@ -520,16 +548,6 @@ int cost (TrackModel *model, int idx1, int idx2) {
 		itr += 1;
 	}
 	return INT_MAX;
-}
-
-void outputPath (RoutePlanner *rp, int i, int j) {
-	if ( rp->paths[i][j] == -1 ) {
-		printf ("%s> ", rp->model.nodes[i].name);
-	}
-	else {
-		outputPath (rp, i, rp->paths[i][j]);
-		outputPath (rp, rp->paths[i][j], j);
-	}
 }
 
 void makePath (RoutePlanner *rp, Path *p, int i, int j) {
