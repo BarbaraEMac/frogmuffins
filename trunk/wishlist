@@ -1,9 +1,9 @@
 
-	*	optimization
+dg	*	optimization
 dg	*	implement cprintf
 	*	fix cache_off to turn off the data cache as well
 	*	fix clock in shell
-	*	return to redboot from asserts (Matt knows how to do this)
+dg	*	return to redboot from asserts (Matt knows how to do this)
 	*	spawn a task for reversing a train
 dg	*	rewrite serialio requests so as not to send 80 chars every time
 	*	create a generic fifo structure

@@ -16,9 +16,11 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
+		  #arch/drivers.o \
 # NOTE: the first file must not be oprimized or we lose the loader data
-OBJECTS = arch/requests.o \
+OBJECTS = arch/blank.o \
 		  arch/drivers.o \
+		  arch/requests.o \
 		  arch/switch.o \
 		  arch/ep93xx.o \
 		  main/syscalls.o \
@@ -40,11 +42,13 @@ HEADERS = include/*.h
 
 all: main/main.elf 
 
-# do not optimize requests code -this is the first file so it can't be optimized
-# because of Daniel's swi hacks
-.PRECIOUS: arch/requests.s
-arch/requests.s: arch/requests.c $(HEADERS)
+.PRECIOUS: arch/blank.s
+arch/blank.s: arch/blank.c $(HEADERS)
 	$(XCC) -S $(CFLAGS)  -o $@ $<
+# do not optimize requests code-this is the first file so it can't be optimized
+#.PRECIOUS: arch/drivers.s
+#arch/drivers.s: arch/drivers.c $(HEADERS)
+#	$(XCC) -S $(CFLAGS)  -o $@ $<
 
 # the following line assumes that each .c file depends on all the header files
 .PRECIOUS: %.s
