@@ -60,7 +60,9 @@ int parse_model_str(FILE *file, TrackModel* model)
     }
 
     Node* node = &model->nodes[num];
-    
+    // Store the index
+	node->idx = num;
+
     char name[5];
     memoryset(name, 0, 5);
     if (fscanf(file, " %4s", name) < 1) {

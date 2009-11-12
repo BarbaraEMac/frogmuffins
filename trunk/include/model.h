@@ -51,7 +51,7 @@ typedef struct {
     NODE_STOP = 1,
   } type;
   char name[5];
-  int id;
+  int id, idx;
   union {
     Switch sw;
     Sensor se;
