@@ -189,6 +189,10 @@ void rp_run() {
 	int 			senderTid;
 	RPRequest		req;
 	RPReply			reply;
+	Path 			path;
+	int				i = 0;
+	int				dist;
+
 
 	rp_init ();
 
@@ -200,7 +204,7 @@ void rp_run() {
 
 	// Initialize shortest paths using model
 	floyd_warshall (&rp, rp.model.num_nodes); 
-	
+/*	
 	int j, k;
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
 	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
@@ -213,7 +217,7 @@ void rp_run() {
 		}
 	}
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
-
+*/
 	// Initialize track reservation system (nothing is reserved)
 	
 	FOREVER {
@@ -221,6 +225,77 @@ void rp_run() {
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
 		
 		switch ( req.type ) {
+			case DISPLAYROUTE:
+				// Reply to the shell
+				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+
+				// If we are within the bounds of nodes:
+				if ( (req.idx1 < rp.model.num_nodes) && 
+					 (req.idx2 < rp.model.num_nodes) ) {
+					// Display the path
+					outputPath ( &rp, req.idx1, req.idx2 );
+					// Display the total distance
+					printf ("%s\r\nDistance travelled = %d\r\n", 
+							rp.model.nodes[req.idx2].name,
+							rp_minDistance( &rp, 
+											&rp.model.nodes[req.idx1], 
+											&rp.model.nodes[req.idx2]) );
+				}
+				break;
+
+			case DISPLAYFSTSW:
+				// Reply to the shell
+				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+
+				makePath ( &rp, &path, req.idx1, req.idx2 );
+				dist = rp_distToNextSw(&rp, &path);
+				
+				if ( dist == INT_MAX ) {
+					printf ("No switch to change along path from %s to %s.\r\n", 
+						rp.model.nodes[req.idx2].name, 
+						rp.model.nodes[path.path[i]].name);
+					break;
+				}
+
+				i = 0;
+				while ( (rp.dists[req.idx1][path.path[i]] != (dist - EPSILON)) && 
+						(i < path.len) ) {
+					i++;
+				}
+				printf("First switch to change from %s to %s is %s. Distance to it is %d.\r\n",
+						rp.model.nodes[req.idx1].name, 
+						rp.model.nodes[req.idx2].name, 
+						rp.model.nodes[path.path[i]].name,
+						dist);
+				break;
+
+			case DISPLAYFSTRV:
+				// Reply to the shell
+				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+
+				makePath ( &rp, &path, req.idx1, req.idx2 );
+				dist = rp_distToNextRv(&rp, &path);
+				
+				if ( dist == INT_MAX ) {
+					printf ("Never reverse along path from %s to %s.\r\n", 
+						rp.model.nodes[req.idx2].name, 
+						rp.model.nodes[path.path[i]].name);
+					break;
+				}
+
+				i = 0;
+				while ( (rp.dists[req.idx1][path.path[i]] != (dist - EPSILON)) && 
+						(i < path.len) ) {
+					i++;
+				}
+				
+				printf("First reverse from %s to %s is %s. Distance to it is %d.\r\n",
+						rp.model.nodes[req.idx1].name, 
+						rp.model.nodes[req.idx2].name, 
+						rp.model.nodes[path.path[i]].name,
+						dist);
+				break;
+			
 			case RESERVE:
 
 				break;
@@ -290,7 +365,7 @@ int rp_getNextCheckin (RoutePlanner *rp, Node *a, Node *b) {
 		debug ("%s to %s: Neither.\r\n", a->name, b->name);
 	}
 	else if ( nextSw < nextRv ) {
-		debug ("%s to %s: First Checkin=SWITch dist=%d\r\n", a->name, b->name, nextSw);
+		debug ("%s to %s: First Checkin=SWITCH dist=%d\r\n", a->name, b->name, nextSw);
 	} else {
 		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", a->name, b->name, nextRv);
 	}
@@ -302,6 +377,7 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 	int *path = p->path;
 	Node *itr;
 
+	//TODO: Skip last node
 	// Start at i=1 to skip first node
 	int i;
 	for ( i = 1; i < p->len; i ++ ) {
@@ -314,7 +390,7 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 			// change a switch direction.
 			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
 				 (itr->sw.ahead[1].dest == path[i-1])) ) {
-				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
+//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]] - EPSILON;
 			}
 		}
@@ -324,9 +400,9 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 }
 
 int rp_distToNextRv (RoutePlanner *rp, Path *p) {
-	int *path = p->path;
+	int  i;
+	int  *path = p->path;
 	Node *itr;
-	int i;
 	
 	for ( i = 1; i < p->len - 1; i ++ ) {
 		itr = &rp->model.nodes[path[i]];
@@ -343,7 +419,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 				 ((itr->sw.ahead[0].dest == path[i-1]) ||
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
 				
-				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
+//				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -461,9 +537,6 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 	// Initialize the length of this path
 	p->len = 0;
 	
-	outputPath(rp, i, j);
-	debug("\r\n");
-
 	// Make the path from i -> (j-1)
 	makePathHelper (rp, p, i, j);
 	

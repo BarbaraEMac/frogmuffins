@@ -12,7 +12,10 @@
 #define ROUTEPLANNER_NAME	"RoutePlnr"
 
 typedef enum RPType {
-	RESERVE = 1,
+	DISPLAYROUTE = 1,
+	DISPLAYFSTSW,
+	DISPLAYFSTRV,
+	RESERVE,
 	PLANROUTE,
 	MINDIST,
 	NEIGHBOURDIST
@@ -26,6 +29,9 @@ typedef struct {
 						// between the past sensors
 	Node 	*nodeA;		// Current Sensor, Start Location
 	Node 	*nodeB; 	// Previous Sensor, Destination
+
+	int		idx1;
+	int 	idx2;
 } RPRequest;
 
 typedef struct {

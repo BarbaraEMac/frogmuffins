@@ -154,8 +154,13 @@ TSReply trainCmd ( TSRequest *req, int tsTid ) {
 
 // Execute the command passed in
 void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
+	int i;
 	TSRequest	tsReq;
 	TSReply		tsRpl;
+
+	RPRequest	rpReq;
+	RPReply 	rpRpl;
+
 	char *commands[] = {
 		"h = Help!", 
 		"k1 = Execute kernel 1 user tasks.", 
@@ -169,8 +174,13 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 		"\t tr train_num speed = Set the speed of the specified train.",
 		"\t wh = Display the last modified sensor.",
 		"\t start = Starts the train set.",
-		"\t stop = Stops the train set."};
-	int i;
+		"\t stop = Stops the train set.",
+		"++ Route Finding Commands ++
+		"\t path start dest = Display the path from start to dest."
+		"\t fstSw start dest = Display the first switch to change on path."
+		"\t fstRv start dest = Display first reverse on path."
+		};
+
 
 	// Quit
     if ( sscanf(command, "q") >= 0 ) {
@@ -232,6 +242,20 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 	// cache OFF
 	} else if( sscanf(command, "cache OFF") >= 0 ) {
 		cache_off();
+
+	// TODO: Remove WhoIs calls to make this more efficient.
+	} else if( sscanf(command, "path %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
+		rpReq.type = DISPLAYROUTE;
+		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
+			  (char*)&rpRpl, sizeof(RPReply));
+	} else if( sscanf(command, "fstSw %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
+		rpReq.type = DISPLAYFSTSW;
+		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
+			  (char*)&rpRpl, sizeof(RPReply));
+	} else if( sscanf(command, "fstRv %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
+		rpReq.type = DISPLAYFSTRV;
+		Send (WhoIs(ROUTEPLANNER_NAME), (char*)&rpReq, sizeof(RPRequest), 
+			  (char*)&rpRpl, sizeof(RPReply));
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
