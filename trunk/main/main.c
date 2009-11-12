@@ -7,7 +7,6 @@
 #define DEBUG 1 
 #include <bwio.h>
 #include <ts7200.h>
-#include <math.h>
 
 #include "debug.h"
 #include "error.h"
@@ -15,10 +14,8 @@
 #include "shell.h"
 #include "switch.h"
 #include "syscalls.h"
-#include "task.h"
 #include "td.h"
 
-#define WAIT	 for( i=0; i<200000; i++) {}
 
 /**
  * Perform a context switch.

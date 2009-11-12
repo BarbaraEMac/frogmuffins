@@ -17,7 +17,24 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
 # NOTE: the first file must not be oprimized or we lose the loader data
-OBJECTS = arch/requests.o main/main.o arch/drivers.o arch/switch.o arch/ep93xx.o main/syscalls.o main/td.o server/clockserver.o server/nameserver.o server/serialio.o task/gameplayer.o task/gameserver.o task/shell.o task/task.o train/model.o train/routeplanner.o train/trackserver.o train/detective.o
+OBJECTS = arch/requests.o \
+		  arch/drivers.o \
+		  arch/switch.o \
+		  arch/ep93xx.o \
+		  main/syscalls.o \
+		  main/main.o \
+		  main/td.o \
+		  server/clockserver.o \
+		  server/nameserver.o \
+		  server/serialio.o \
+		  task/gameplayer.o \
+		  task/gameserver.o \
+		  task/shell.o \
+		  task/task.o \
+		  train/model.o \
+		  train/routeplanner.o \
+		  train/trackserver.o \
+		  train/detective.o
 
 HEADERS = include/*.h
 
