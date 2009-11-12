@@ -16,7 +16,7 @@
 #include "train.h"
 
 #define INT_MAX		0xFFFF
-#define EPSILON		100
+#define EPSILON		0
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -68,8 +68,8 @@ void makePathHelper (RoutePlanner *rp, Path *p, int i, int j);
 
 void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
 
-	// Distance from current location to nodeBination
-	 reply->dist = rp->dists[req->nodeA->id][req->nodeB->id];
+	// Distance from current location to destination
+	reply->dist = rp_minDistance ( rp, req->nodeA, req->nodeB );
 
 	// Construct the path from i -> j
 	// TODO: Observe blockages / reservations
@@ -181,7 +181,7 @@ int mapTrainId (int trainId) {
 	return 5;
 }
 
-// tell the train to swtich a flip
+// tell the train to switch a flip
 
 void rp_run() {
 	debug ("rp_run\r\n");
@@ -193,11 +193,10 @@ void rp_run() {
 	rp_init ();
 
 	// HACK
-	parse_model( TRACK_B, &rp.model );
+	parse_model( TRACK_A, &rp.model );
 
 	// TODO: Get the model from the first task
 	// Send ();
-
 
 	// Initialize shortest paths using model
 	floyd_warshall (&rp, rp.model.num_nodes); 
@@ -206,10 +205,11 @@ void rp_run() {
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
 	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
 		for ( k = 0; k < rp.model.num_nodes; k ++ ) {
+			//debug ("IDX CHECK: (%d, %d) & (%d, %d)\r\n", j, rp.model.nodes[j].idx, k, rp.model.nodes[k].idx);
 			rp_getNextCheckin ( &rp,
 								&rp.model.nodes[j],
 								&rp.model.nodes[k] );
-			debug("done for %d to %d\r\n", j, k);
+			Getc(WhoIs(SERIALIO2_NAME));
 		}
 	}
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
@@ -264,7 +264,7 @@ inline void clearReply (RPReply *reply) {
 }
 
 inline int rp_minDistance (RoutePlanner *rp, Node *a, Node *b) {
-	return rp->dists[a->id][b->id];
+	return rp->dists[a->idx][b->idx];
 }
 
 inline int rp_neighbourDist (RoutePlanner *rp, Node *a, Node *b) {
@@ -279,26 +279,44 @@ void rp_init() {
 
 int rp_getNextCheckin (RoutePlanner *rp, Node *a, Node *b) {
 	Path path;
-	makePath ( rp, &path, a->id, b->id );
+	debug ("Making a path from %s(%d) to %s(%d)\r\n", a->name, a->idx, b->name, b->idx);
+	makePath ( rp, &path, a->idx, b->idx );
 	
-	debug ("done making the path\r\n");
 	int nextSw = rp_distToNextSw(rp, &path);
-	debug ("Path from %d to next sw is %d\r\n", path.path[0], nextSw);
-	int nextRv = 0;// = rp_distToNextRv(rp, &path);
-//	debug("done 2\r\n");
+//	debug ("Path from %d to next sw is %d\r\n", path.path[0], nextSw);
+	int nextRv = rp_distToNextRv(rp, &path);
+
+	if ( nextSw == nextRv && nextSw == INT_MAX ) {
+		debug ("%s to %s: Neither.\r\n", a->name, b->name);
+	}
+	else if ( nextSw < nextRv ) {
+		debug ("%s to %s: First Checkin=SWITch dist=%d\r\n", a->name, b->name, nextSw);
+	} else {
+		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", a->name, b->name, nextRv);
+	}
 
 	return (nextSw < nextRv) ? nextSw : nextRv;
 }
 
-// TODO: ALWAYS RETURNS INT_MAX
 int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 	int *path = p->path;
-	
+	Node *itr;
+
+	// Start at i=1 to skip first node
 	int i;
 	for ( i = 1; i < p->len; i ++ ) {
+		itr  = &rp->model.nodes[path[i]];
 		
-		if ( rp->model.nodes[path[i]].type == NODE_SWITCH ) {
-			return rp->dists[path[0]][path[i]] - EPSILON;
+		if ( itr->type == NODE_SWITCH ) {
+		//	Node *prev = &rp->model.nodes[path[i-1]];
+			
+			// If coming from either "ahead" edges, you don't need to 
+			// change a switch direction.
+			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
+				 (itr->sw.ahead[1].dest == path[i-1])) ) {
+				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
+				return rp->dists[path[0]][path[i]] - EPSILON;
+			}
 		}
 	}
 
@@ -310,20 +328,22 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 	Node *itr;
 	int i;
 	
-	for ( i = 2; i < p->len - 1; i ++ ) {
+	for ( i = 1; i < p->len - 1; i ++ ) {
 		itr = &rp->model.nodes[path[i]];
 
 		// If you pass a switch, you might need to reverse.
 		if ( itr->type == NODE_SWITCH ) {
-			Node *prev = &rp->model.nodes[path[i-1]];
-			Node *next = &rp->model.nodes[path[i+1]];
+			//Node *prev = &rp->model.nodes[path[i-1]];
+			//Node *next = &rp->model.nodes[path[i+1]];
 
-			// If you need to follow BOTH ahead edges of a switch,
+			// If you need to follow BOTH "ahead" edges of a switch,
 			// REVERSE.
-			if ( ((itr->sw.ahead[0].dest == next->id) ||
-				  (itr->sw.ahead[1].dest == next->id)) &&
-				 ((itr->sw.ahead[0].dest == prev->id) ||
-				  (itr->sw.ahead[1].dest == prev->id)) ) {
+			if ( ((itr->sw.ahead[0].dest == path[i+1]) ||
+				  (itr->sw.ahead[1].dest == path[i+1])) &&
+				 ((itr->sw.ahead[0].dest == path[i-1]) ||
+				  (itr->sw.ahead[1].dest == path[i-1])) ) {
+				
+				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -438,30 +458,46 @@ void outputPath (RoutePlanner *rp, int i, int j) {
 
 void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 	
-	// Add the first node
-	p->path[0] = i;
-	p->len = 1;
+	// Initialize the length of this path
+	p->len = 0;
 	
+	outputPath(rp, i, j);
+	debug("\r\n");
+
 	// Make the path from i -> (j-1)
 	makePathHelper (rp, p, i, j);
 	
 	// Stick on the last node.
-	p->path[p->len] = j;
-	p->len += 1;
+	if ( i != j ) {
+		p->path[p->len] = j;
+		p->len += 1;
+	}
+
+/*
+	int  k;
+	int *path = p->path;
+//	debug ( "path len %d\r\n", p->len );
+	// path[0] == current node. Start checking after it.
+	for ( k = 0; k < p->len; k ++ ) {
+		//debug ("k=%d name=%s type=%d path=%d\r\n", k, rp->model.nodes[path[k]].name,
+		//										rp->model.nodes[path[k]].type, path[k]);
+		debug("%s> ", rp->model.nodes[path[k]].name);
+	}
+	debug ("\r\n");
+	*/
+
 }
 
 // UGLY & FULL 'O HACKS
+// but it works ...
 void makePathHelper (RoutePlanner *rp, Path *p, int i, int j) {
 
 	if ( rp->paths[i][j] == -1 ) {
-//		debug("adding %d\r\n",rp->model.nodes[i].id);
-		
-		int n = p->len;
-		p->path[n] = rp->model.nodes[i].id;
+		p->path[p->len] = i;
 		p->len += 1;
-	
+
 	} else {
-		makePath (rp, p, i, rp->paths[i][j]);
-		makePath (rp, p, rp->paths[i][j], j);
+		makePathHelper (rp, p, i, rp->paths[i][j]);
+		makePathHelper (rp, p, rp->paths[i][j], j);
 	}
 }
