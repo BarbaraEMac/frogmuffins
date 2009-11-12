@@ -175,9 +175,9 @@ void shell_exec( char *command, TID tsTid, TID ios1Tid, TID ios2Tid ) {
 		"\t wh = Display the last modified sensor.",
 		"\t start = Starts the train set.",
 		"\t stop = Stops the train set.",
-		"++ Route Finding Commands ++
-		"\t path start dest = Display the path from start to dest."
-		"\t fstSw start dest = Display the first switch to change on path."
+		"++ Route Finding Commands ++",
+		"\t path start dest = Display the path from start to dest.",
+		"\t fstSw start dest = Display the first switch to change on path.",
 		"\t fstRv start dest = Display first reverse on path."
 		};
 
