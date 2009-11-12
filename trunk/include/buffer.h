@@ -22,7 +22,7 @@ struct ringBuffer {
 typedef struct ringBuffer RB;	// Ring buffer
 
 
-void 	rb_init( RB *, void *, size_t bufSize, size_t eltSize ) ;
+void 	rb_init( RB *, void *, size_t eltSize, int num ) ;
 void 	rb_push( RB *, void * ) ;
 int 	rb_full( RB * );
 int 	rb_empty( RB * );

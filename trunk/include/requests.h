@@ -18,6 +18,7 @@
 // KERNEL SPECIFIC CONSTANTS
 #define NS_TID 		1
 #define NAME_LEN	12
+#define UNUSED_TID	-1
 
 typedef char TaskName[NAME_LEN];
 

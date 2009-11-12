@@ -28,7 +28,7 @@
  * A Track Server
  */
 typedef struct {
-    char 		lstSensorId;
+    char 		lstSensor;
 	int  		lstSensorUpdate; // int ticks
 	int  		lstSensorPoll;
     char 		speeds   [NUM_TRNS];
@@ -98,17 +98,16 @@ void ts_run () {
 
 			case WH:
 				debug ("ts: WHing\r\n");
-				reply.channel = 'A' + (ts.lstSensorId / SIZE_BANK);
-				reply.sensor = (ts.lstSensorId % SIZE_BANK) + 1;
+				reply.sensor = ts.lstSensor;
 				reply.ticks = (Time( ts.csTid ) - ts.lstSensorPoll);
 				break;
 
 			case POLL:
 				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
-				if( req.sensorId != ts.lstSensorId ) {
+				if( req.sensor != ts.lstSensor ) {
 					ts.lstSensorUpdate = req.ticks;
 				}
-				ts.lstSensorId = req.sensorId;
+				ts.lstSensor = req.sensor;
 				ts.lstSensorPoll = req.ticks;
 				break;
 
@@ -134,7 +133,7 @@ int ts_init( TS *ts ) {
 	debug ("ts_init: track server=%x \r\n", ts);
 	int err = NO_ERROR;
 
-	ts->lstSensorId  = 0;
+	ts->lstSensor  = -1;
 	ts->lstSensorUpdate = 0;
 	ts->csTid = WhoIs( CLOCK_NAME );
 	ts->iosTid = WhoIs( SERIALIO1_NAME );
@@ -229,3 +228,12 @@ int ts_switchSetAll( TS *ts, char dir ) {
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
 }
+
+// format sensor id into human readable output
+char sensor_bank( int sensor ) {
+	return 'A' + (sensor / SIZE_BANK);
+}
+char sensor_num( int sensor ) {
+	return (sensor % SIZE_BANK) + 1;
+}
+

@@ -14,7 +14,6 @@
 #include "servers.h"
 
 #define NUM_SLEEPERS	64
-#define	UNUSED_TID		-1
 #define HARDWARE_TICKS	(MS_IN_TICK * 2)
 
 //-----------------------------------------------------------------------------

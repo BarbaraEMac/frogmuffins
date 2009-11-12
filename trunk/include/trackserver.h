@@ -31,7 +31,7 @@ typedef struct {
 	union {
 		int train;
 		int sw;
-		int sensorId;
+		int sensor;
 		int arg1;
 	};
 	union {
@@ -45,9 +45,8 @@ typedef struct {
 
 
 typedef struct { 
-	struct {
-		char sensor;
-		char channel;
+	union {
+		int sensor;
 		char dir;
 	};
 	union {
@@ -83,6 +82,9 @@ typedef struct {
  * The main function for the Track Server task.
  */
 void ts_run ();
+
+char sensor_bank( int sensor );
+char sensor_num( int sensor );
 
 
 /*

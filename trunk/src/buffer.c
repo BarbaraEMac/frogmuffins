@@ -9,39 +9,19 @@
 #include "error.h"
 #include "buffer.h"
 
-
-//-----------------------------------------------------------------------------
-
-// Initialize the Fifo
-// // // I might delete this ..
-// void fifo_init ( Fifo *head );
-//
-// // Pop off front
-// int fifo_pop ( Fifo *head, int elem );
-//
-// // Append to tail
-// void fifo_push ( Fifo *head );
-//
-// // Ascending ordered Insert
-// void fifo_insertA ( Fifo *head, int elem );
-//
-// // Descending ordered insert
-// void fifo_insertD ( Fifo *head, int elem );
-//
-
 // rb_init
 void 
-rb_init ( RB *rb, void * buffer, size_t bufSize, size_t eltSize ) {
+rb_init ( RB *rb, void * buffer, size_t eltSize, int num ) {
 
 	// The fifo starts empty
 	rb->size = 0;
 	rb->end = 0;
 	rb->start = 0;
 	rb->buffer = buffer;
-	rb->bufSize = bufSize;
+	rb->bufSize = num * eltSize;
 	rb->eltSize = eltSize;
 
-	assert( (bufSize % eltSize) == 0 );
+	assert( (rb->bufSize % rb->eltSize) == 0 );
 }
 
 // rb_push
