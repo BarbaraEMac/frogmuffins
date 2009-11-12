@@ -33,10 +33,10 @@ OBJECTS = arch/blank.o \
 		  task/gameserver.o \
 		  task/shell.o \
 		  task/task.o \
-		  train/detective.o
+		  train/detective.o \
 		  train/model.o \
 		  train/routeplanner.o \
-		  train/trackserver.o \
+		  train/trackserver.o
 
 HEADERS = include/*.h
 
