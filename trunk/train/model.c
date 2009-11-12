@@ -712,6 +712,48 @@ char * track[] = {
   
 }
 
+void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
+						  Node *next1, Node *next2 ) {
+	Node *n1 = 0;	// Tmp neighbour nodes
+	Node *n2 = 0;
+	Node *n3 = 0;
+	
+	switch ( curr->type ) {
+		case NODE_SWITCH:
+			n1 = &model->nodes[curr->sw.ahead[0].dest];
+			n2 = &model->nodes[curr->sw.ahead[1].dest];
+			n3 = &model->nodes[curr->sw.behind.dest];
+			
+			//TODO: DEPENDS ON THE ROUTE
+			if ( (n1 == prev) || (n2 == prev) ) {
+				next1 = n3;
+				next2 = 0;
+			} else { 
+				next1 = n1;
+				next2 = n2;
+			}
+			
+			break;
+		
+		case NODE_SENSOR:
+			n1 = &model->nodes[curr->se.ahead.dest];
+			n2 = &model->nodes[curr->se.behind.dest];
+			
+			next1 = ( n1 == prev ) ? n2 : n1;
+			next2 = 0;
+
+			break;
+		
+		case NODE_STOP:
+			n1 = &model->nodes[curr->st.ahead.dest];
+
+			// You are heading to a stop
+			next1 = (n1 == prev) ? 0 : n1;
+			next2 = 0;
+			
+			break;
+	}
+}
 
 /*
 void free_model(track_model_t* model)

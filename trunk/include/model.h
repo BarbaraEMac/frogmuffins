@@ -73,5 +73,16 @@ int parse_model(int trackId, TrackModel* model);
 
 void free_model(TrackModel* model);
 
-#endif
 
+/**
+ * Given a current location and the previous node passed,
+ * will return the next node you will pass.
+ * If the current node is a switch and you are heading along the 
+ * behind edge, the next 2 possible nodes are returned.
+ * Otherwise, next2 will be 0.
+ */
+void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
+						  Node *next1, Node *next2 ) {
+	
+
+#endif
