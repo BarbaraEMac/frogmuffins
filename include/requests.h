@@ -13,7 +13,7 @@
 #include "globals.h"
 
 // ARCHITECTURE SPECIFIC CONSTANTS
-#define FRAME_SIZE 	23
+#define FRAME_SIZE 	15
 
 // KERNEL SPECIFIC CONSTANTS
 #define NS_TID 		1
