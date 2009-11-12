@@ -82,7 +82,16 @@ void free_model(TrackModel* model);
  * Otherwise, next2 will be 0.
  */
 void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
-						  Node *next1, Node *next2 ) {
+						  Node *next1, Node *next2 );
 	
+/**
+ * Converts a node name into the index in O(n) time.
+ * Returns NOT_FOUND if the name is not a valid node name.
+ */
+int   model_nameToIdx (TrackModel *model, char *name);
 
+/**
+ * Converts a given index into the node name.
+ */
+//char *model_idxToName (TrackModel *model, int idx);
 #endif
