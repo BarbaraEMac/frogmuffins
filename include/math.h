@@ -17,4 +17,12 @@ int ctz( int x );
 
 int log_2(unsigned int x);
 
+
+/**
+ * Absolute value
+ * 
+ * Returns the absolute value of parameter n ( /n/ ).
+ */
+int abs ( int n );
+
 #endif

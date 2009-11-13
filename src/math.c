@@ -26,3 +26,8 @@ int log_2(unsigned int x) {
   }
   return r-1; // returns -1 for x==0, floor(log2(x)) otherwise
 }
+
+
+int abs ( int n ) {
+	return (n > 0) ? n : -n ;
+}
