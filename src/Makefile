@@ -22,6 +22,7 @@ all:  bwio.a debug.a string.a math.a buffer.a
 bwio.s: bwio.c
 	$(XCC) -S $(CFLAGS) -o $@ $<
 
+.PRECIOUS: %.s
 %.s: %.c 
 	$(XCC) -S $(CFLAGS) -O2 -o $@ $<
 
