@@ -228,7 +228,7 @@ void shell_exec( char *command, TIDs tids ) {
     } else if( sscanf(command, "st %d", &tsReq.sw) >=0 ) {
 		tsReq.type = ST;
 		tsRpl = trainCmd( &tsReq, tids.ts );
-		output( "Switch %d is set to %c. \r\n", tsReq.sw, tsRpl.dir );
+		output( "Switch %d is set to %c. \r\n", tsReq.sw, switch_dir( tsRpl.dir ) );
 	// sw
     } else if( sscanf(command, "sw %d %c", &tsReq.sw, &tsReq.dir) >=0 ) {
 		tsReq.type = SW;

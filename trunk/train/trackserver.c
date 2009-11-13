@@ -82,7 +82,7 @@ void ts_run () {
 				
 				break;
 			case ST:
-				reply.dir = (ts.switches[req.sw]) ? 'C' : 'S'; 
+				reply.dir = ts.switches[req.sw]; 
 				debug ("ts: Switch %d is set to %c.\r\n", req.sw, reply.dir);
 				break;
 
@@ -235,5 +235,9 @@ char sensor_bank( int sensor ) {
 }
 char sensor_num( int sensor ) {
 	return (sensor % SIZE_BANK) + 1;
+}
+
+char switch_dir( SwitchDir dir ) {
+	return (dir == SWITCH_CURVED) ? 'C' : 'S'; 
 }
 
