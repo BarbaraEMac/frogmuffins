@@ -83,11 +83,6 @@ typedef struct {
  */
 void ts_run ();
 
-char sensor_bank( int sensor );
-char sensor_num( int sensor );
-char switch_dir( SwitchDir dir );
-
-
 /*
  * The main fucntion for the Track Detective task.
  */
