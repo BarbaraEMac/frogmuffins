@@ -24,7 +24,7 @@
 #define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
 #define POLL_CHAR	133
 
-#define	SPEED_HIST	5
+#define	SPEED_HIST	20
 
 /* FORWARD DECLARATIONS */
 
@@ -174,6 +174,7 @@ int det_init( Det *det ) {
 	det->numSw = 0;
 	parse_model( TRACK_B, &det->model );
 	rb_init( &(det->hist), det->histBuf );
+	memoryset( (char *) det->histBuf, 0, sizeof(det->histBuf) );
 
 
 	err =  Create( 3, &poll );
@@ -209,18 +210,18 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 				last = speed( &sp );
 				avg = det_avgSpeed( det );
 				rb_force( &det->hist, &sp );
-				diff = abs(last - avg);
+				diff = ((avg * sp.ms)/1000) - sp.mm;
 
-				if( diff > (avg / 5 ) )
+				if( abs(diff) > 100 )
 					printf("\033[31m");
-				else if( diff > (avg / 10 ) )
-					printf("\033[33m\033[0m");
-				else if( diff > (avg / 20 ) )
-					printf("\033[33m\033[1m");
+				else if( abs(diff) > 50 )
+					printf("\033[33m");
+				else if( abs(diff) > 20 )
+					printf("\033[36m");
 				else 
-					printf("\033[37m");
-				printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s\033[37m\r\n",
-						sp.mm, sp.ms, last, avg);
+					printf("\033[32m");
+				printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s \tdiff:%dmm\033[37m\r\n",
+						sp.mm, sp.ms, last, avg, diff);
 
 				det->dist = det_distance( det, sensor );
 				det->ticks = ticks;
