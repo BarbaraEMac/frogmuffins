@@ -9,6 +9,8 @@
 #define SW_WAIT     2	// ticks
 #define SNSR_WAIT   1	// ticks
 #define TRAIN_WAIT	10	// ticks
+#define	START_STR	(char [2]){96, 192}
+#define STOP_STR	(char [1]){97}
 #include <string.h>
 
 #include "debug.h"
@@ -150,11 +152,11 @@ int ts_init( TS *ts ) {
 }
 
 int ts_start( TS *ts ) {
-	return Putc( 96, ts->iosTid );
+	return PutStr( START_STR, sizeof(START_STR), ts->iosTid );
 }
 
 int ts_stop( TS *ts ) {
-	return Putc( 97, ts->iosTid );
+	return PutStr( STOP_STR, sizeof(STOP_STR), ts->iosTid );
 }
 
 // check if the train index is within range
