@@ -50,6 +50,8 @@ typedef struct {
 	Path path;			// Path of indices from s -> t
 	Path prediction;	// Prediction for the next sensors
 
+	int reverse;		// Set to 1 if need to reverse. Garbage otherwise.
+
 	int switchId;		// Id of the next switch
 	SwitchDir switchDir;// 'S' OR 'C' if the switch needs to be thrown
 						// 0 		  Otherwise
