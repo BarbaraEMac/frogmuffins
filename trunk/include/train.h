@@ -10,6 +10,12 @@
 
 #include "requests.h"
 
+typedef struct {
+	int  id;			// Identifying number
+	int  currLoc;		// Current Location
+	int	 prevLoc;		// Previous Location
+	int  dest;			// Desired End Location
+} TrainInit;
 
 void train_run();
 
