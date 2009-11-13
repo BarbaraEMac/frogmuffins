@@ -1,9 +1,9 @@
-	/**
-	* CS 452: User Task
-	* becmacdo
-	* dgoc
-	*/
-#define DEBUG 1
+/**
+* CS 452: User Task
+* becmacdo
+* dgoc
+*/
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -21,21 +21,18 @@
 
 typedef struct {
 	int  id;			// Identifying number
-	int  speed;			// The current speed
 	int  currLoc;		// Current Location
 	int	 prevLoc;		// Previous Location
 	int  dest;			// Desired End Location
+	
+	int  speed;			// The current speed
 	
 	int rpTid;			// Id of the Route Planner
 	int tsTid;			// Id of the Track Server
 	int	deTid;			// Id of the Detective
 } Train;
 
-typedef struct {
-	int id;
-	int behindIdx;
-	int aheadIdx;
-} TrainInit;
+
 
 void 	train_init    			(Train *t, RPRequest *rpReq);
 
@@ -65,14 +62,36 @@ void train_run () {
 	while ( tr.currLoc != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
+		debug ("train: has a route\r\n");
+		debug ("Next node=%d checkinDist=%d reverse?=%d sw?=%d dir=%d\r\n", rpReply.path.path[0], rpReply.checkinDist, rpReply.reverse, rpReply.switchId, rpReply.switchDir);
+
+		// This makes the assumption that yo uare NOWHERE
+		// near a switch. Neither forward nor backwards can be a sw.
+		// If you are backwards, turn around.
+		if ( rpReply.path.path[0] == tr.prevLoc ) {
+			train_reverse(&tr);
+		}
 
 		// TODO: Will this call block until we've reached our sensor?
 		// It probably shouldn't so that we can calibrate ..
 		// Tell the detective about your predicted sensors
-		tsReply = train_makePrediction(&tr, &rpReply);
+//		tsReply = train_makePrediction(&tr, &rpReply);
 
+		// TODO: This is just to start ....
+		// Drive until you need to check in
+		// Start driving slowly ... 
+		debug ("train is driving\r\n");
+		train_drive (&tr, 6);
+		while ( someDistanceTravelled < rpReply.checkinDist ) {
+			someDistanceTravelled ++;
+			; // BUSY WAIT
+		}
+		// Stop for now ...
+		train_drive (&tr, 0);
+		debug ("train is stopping\r\n");
+		
 		// If you should reverse, do it.
-		if ( rpReply.totalDist < 0 ) {
+		if ( rpReply.reverse == 1 ) {
 			train_reverse(&tr);
 		}
 		// If you should flip a switch, do it.
@@ -80,15 +99,6 @@ void train_run () {
 			train_flipSwitch (&tr, &rpReply);
 		}
 
-		// TODO: This is just to start ....
-		// Drive until you need to check in
-		// Start driving slowly ... 
-		train_drive (&tr, 5);
-		while ( someDistanceTravelled < rpReply.checkinDist ) {
-			; // BUSY WAIT
-		}
-
-		train_drive (&tr, 0);
 	}
 
 	Exit(); // When you've reached your destination
@@ -96,12 +106,19 @@ void train_run () {
 
 void train_init ( Train *tr, RPRequest *rpReq ) {
 	int shellTid;
-	TrainInit initStuff;	// TODO
+	TrainInit init;
 	
 	// Get the train number from shell
-	// determine starting location from shell. Set as current location 
-	Receive ( &shellTid, (char*)&initStuff, sizeof(TrainInit) );
-	Reply   ( shellTid, (char*)&initStuff.id, sizeof(int) );
+	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
+
+	// Copy the data to the train
+	tr->id      = init.id;
+	tr->currLoc = init.currLoc;
+	tr->prevLoc = init.prevLoc;
+	tr->dest    = init.dest;
+
+	// Reply to the shell
+	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
 
 	// determine destination from shell
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
@@ -113,7 +130,7 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	rpReq->dest    = tr->dest;
 
 	// TODO: Does this work?
-	RegisterAs ("Train" + tr->id);
+	RegisterAs ("Train");// + tr->id);
 }
 
 RPReply train_planRoute (Train *tr, RPRequest *req) {
@@ -122,8 +139,9 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	req->type = PLANROUTE;
 	req->idx1 = tr->currLoc;
 	req->idx2 = tr->prevLoc;
+	req->dest = tr->dest;
 
-	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
+	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
 	
 	return reply;
