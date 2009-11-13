@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1 
+#define DEBUG  2
 
 #include <string.h>
 #include <ts7200.h>
@@ -17,6 +17,7 @@
 #include "shell.h"
 #include "task.h"
 #include "trackserver.h"
+#include "train.h"
 
 #define INPUT_LEN   60
 #define INPUT_HIST  1
@@ -33,8 +34,12 @@ typedef struct {
 	TID ios2;
 	TID ts;
 	TID rp;
+	TID tr1Tid;	// TODO: Make this numbering dynamic?
 	TID idle;
 } TIDs;
+
+// Use this function to grab a line of data before the shell starts.
+void shell_inputData (TIDs tids, char *input);
 
 /**
  * Given an input command, error check it and execute it.
@@ -63,7 +68,9 @@ void shell_run ( ) {
 	// Initialize variables
     char ch, *input, history[INPUT_HIST][INPUT_LEN];
     int i = 0, h = 0;
+	int	time, tens, secs, mins;
 	TIDs tids;
+	TrainInit trInit;
 
 	// Create the name server
 	// Create the Serial I/O server
@@ -87,11 +94,40 @@ void shell_run ( ) {
 	// Create the idle task
 	tids.idle = Create (9, &idleTask);
 
-	output ("Type 'h' for a list of commands.\r\n");
+	input = history[h++];
+/*
+	output ("Track: ");
+	shell_inputData(tids, input);
+*/	
+	output ("Train Id: ");
+	shell_inputData(tids, input);
+	trInit.id = atoi((const char**)&input);
 
-    input = history[h++];
-	int	time, tens, secs, mins;
- 
+	output ("Ahead Landmark Idx: " );
+	shell_inputData(tids, input);
+	trInit.currLoc = atoi((const char**)&input);
+
+	output ("Behind Landmark Idx: " );
+	shell_inputData(tids, input);
+	trInit.prevLoc = atoi((const char**)&input);
+
+	output ("Destination Landmark Idx: ");
+	shell_inputData(tids, input);
+	trInit.dest = atoi((const char**)&input);
+
+	// Create the first train!
+	tids.tr1Tid = Create ( 5, &train_run );
+	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
+
+	// Tell the train its init info.
+	Send ( tids.tr1Tid, (char*)&trInit, sizeof(TrainInit),
+						(char*)&trInit.id, sizeof(int) );
+
+
+	output ("Type 'h' for a list of commands.\r\n");
+    
+	
+	
 	time = Time(tids.cs)/2;
 	tens = time % 10;
 	secs = (time / 10) % 60;
@@ -156,6 +192,39 @@ void shell_run ( ) {
     }
 }
 
+void shell_inputData (TIDs tids, char *input) {
+	char ch;
+    int i = 0;
+
+	FOREVER {
+        input[i] = 0;	// Clear the next character
+		ch = Getc( tids.ios2 );
+
+		switch ( ch ) {
+			case '\r': // Enter was pressed
+				
+				output( "\n\r" );
+				return;
+				break;
+			case '\b': // Backspace was pressed
+			case 127:
+				if( i > 0 ) {
+					output( "\b \b" );
+					i --;
+				}
+				break;
+
+			default:	// Update the position in the command string
+				output( "%c", ch );
+				if( ch < 32 || ch > 126 ) {
+					output("%d", input[i]);
+				}
+				input[i++] = ch;
+				break;
+		}
+        if( i == INPUT_LEN - 1 ) {	i-- ; output("\b");}
+    }
+}
 
 // Execute a train command
 TSReply trainCmd ( TSRequest *req, TID tsTid ) {
