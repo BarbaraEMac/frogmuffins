@@ -20,10 +20,11 @@ enum TSRequestCode {
 	TR,
 	WH,
 	POLL,
-	WATCH_DOG,
+	WATCH_DOG,	// detective only
 	START,
 	STOP,
-	WATCH_FOR // detective only
+	WATCH_FOR,	// detective only
+	GET_STRAY	// detective only
 };
 
 typedef struct {
