@@ -8,6 +8,7 @@
 #define __BUFFER_H__
 
 #include <string.h>
+#include <globals.h>
 
 
 struct ringBuffer {
@@ -21,11 +22,13 @@ struct ringBuffer {
 
 typedef struct ringBuffer RB;	// Ring buffer
 
-
-void 	rb_init( RB *, void *, size_t eltSize, int num ) ;
+#define rb_init( rb, buffer ) \
+__rb_init( rb, buffer, sizeof ( buffer[0] ), array_size( buffer ) )
+void	__rb_init ( RB *, void *, size_t eltSize, int num ) ;
 void 	rb_push( RB *, void * ) ;
-int 	rb_full( RB * );
+void 	rb_force( RB *, void * ); 
 int 	rb_empty( RB * );
+int 	rb_full( RB * );
 void   *rb_pop( RB * );
 
 

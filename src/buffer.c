@@ -11,8 +11,10 @@
 
 // rb_init
 void 
-rb_init ( RB *rb, void * buffer, size_t eltSize, int num ) {
+__rb_init ( RB *rb, void * buffer, size_t eltSize, int num ) {
 
+	debug("rb_init: rb=%x, bf=%x, eltSize=%d, num=%d\r\n",
+			rb, buffer, eltSize, num );
 	// The fifo starts empty
 	rb->size = 0;
 	rb->end = 0;
@@ -27,10 +29,12 @@ rb_init ( RB *rb, void * buffer, size_t eltSize, int num ) {
 // rb_push
 void 
 rb_push( RB *rb, void *el ) {
+	debug( "rb_push: rb=%x, el=%x, start=%d, end=%d\r\n", 
+			rb, el, rb->start, rb->end );
 	assert( !rb_full( rb ) );
 
 	// Insert the elements
-	memcpy( rb->buffer+rb->start, el, rb->eltSize );
+	memcpy( (rb->buffer + rb->end), el, rb->eltSize );
 	rb->end += rb->eltSize;
 	rb->end %= rb->bufSize;
 
@@ -41,10 +45,11 @@ rb_push( RB *rb, void *el ) {
 // rb_pop
 void * 
 rb_pop( RB *rb ) {
+	debug( "rb_pop: rb=%x, start=%d, end=%d\r\n", rb, rb->start, rb->end );
 	assert( !rb_empty( rb ) );
 
 	// Remove the element
-	void *el = &rb->buffer[rb->start];
+	void *el = (rb->buffer + rb->start);
 	rb->start += rb->eltSize;
 	rb->start %= rb->bufSize;
 
@@ -53,6 +58,18 @@ rb_pop( RB *rb ) {
 
 	return el;
 }
+
+
+// rb_force
+void 
+rb_force( RB *rb, void *el ) {
+	// remove the last element if full
+	if( rb_full( rb ) ) 
+		rb_pop( rb );
+	// do the push
+	rb_push( rb, el );
+}
+
 
 // rb_full
 int	
