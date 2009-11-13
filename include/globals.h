@@ -9,6 +9,10 @@
 
 #define FOREVER	 for( ; ; )
 
+#define foreach( item, array ) \
+      for(item = array; item < (array + sizeof(array)/sizeof*(item)); item++)
+
+
 // TIDs are really ints.
 typedef int TID;
 

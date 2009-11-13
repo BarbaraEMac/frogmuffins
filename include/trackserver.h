@@ -36,7 +36,7 @@ typedef struct {
 	};
 	union {
 		int speed;
-		char dir;
+		SwitchDir dir;
 		//char sensor;
 		int ticks;
 		int arg2;
@@ -85,6 +85,7 @@ void ts_run ();
 
 char sensor_bank( int sensor );
 char sensor_num( int sensor );
+char switch_dir( SwitchDir dir );
 
 
 /*
