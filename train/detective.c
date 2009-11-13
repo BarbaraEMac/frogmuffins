@@ -31,6 +31,18 @@
 /**
  * A Track Detective
  */
+
+typedef struct {
+	int mm;
+	int ms;
+} Speed;
+
+int speed( Speed *sp ) {
+	if( sp->ms == 0 ) sp->ms = -1;
+	return (sp->mm * 1000) / sp->ms;
+}
+
+
 typedef struct {
 	int			sensorHist[NUM_SENSORS];
 	char		strayBuf[NUM_STRAY];
@@ -45,10 +57,8 @@ typedef struct {
 	int			dist;
 	int			ticks;
 	int 		numSw;
-	int			distBuf[SPEED_HIST];
-	RB			dists;	
-	int			timeBuf[SPEED_HIST];
-	RB			times;
+	Speed		histBuf[SPEED_HIST];
+	RB			hist;	
 	TrackModel	model;
 } Det;
 
@@ -163,8 +173,7 @@ int det_init( Det *det ) {
 	memoryset ( (char *) det->sensorHist, 0, sizeof(det->sensorHist) );
 	det->numSw = 0;
 	parse_model( TRACK_B, &det->model );
-	rb_init( &(det->dists), det->distBuf );
-	rb_init( &(det->times), det->timeBuf );
+	rb_init( &(det->hist), det->histBuf );
 
 
 	err =  Create( 3, &poll );
@@ -179,7 +188,8 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 	DetRequest *req;
 	TSReply		rpl;
 	int			woken = 0;
-	int 		time, speed, avg;
+	int 		last, avg, diff;
+	Speed		sp;
 
 	foreach( req, det->requests ) {
 		if( req->tid != UNUSED_TID ) {
@@ -194,23 +204,27 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 				woken++;
 
 				//TODO remove these testing lines
-				time = (ticks - det->ticks) * MS_IN_TICK;
-				speed = (det->dist * 1000)/ time;
+				sp.ms = (ticks - det->ticks) * MS_IN_TICK;
+				sp.mm = det->dist;
+				last = speed( &sp );
 				avg = det_avgSpeed( det );
-				if( abs(speed - avg) > (avg / 5 ) )
+				rb_force( &det->hist, &sp );
+				diff = abs(last - avg);
+
+				if( diff > (avg / 5 ) )
 					printf("\033[31m");
-				else if( abs(speed - avg) > (avg / 10 ) )
-					printf("\033[33m");
+				else if( diff > (avg / 10 ) )
+					printf("\033[33m\033[0m");
+				else if( diff > (avg / 20 ) )
+					printf("\033[33m\033[1m");
 				else 
 					printf("\033[37m");
-				printf("speed = %d/%d = \t%dmm/s \tavg:%d\033[37m\r\n",
-						det->dist, time, speed, avg);
+				printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s\033[37m\r\n",
+						sp.mm, sp.ms, last, avg);
+
 				det->dist = det_distance( det, sensor );
-				printf("got here\r\n");
 				det->ticks = ticks;
 
-				rb_force( &det->times, &time );
-				rb_force( &det->dists, &det->dist );
 			}
 		}
 	}
@@ -278,16 +292,15 @@ void watchDog () {
 }
 
 int det_avgSpeed( Det *det ) {
-	int totalTime = 0;
-	int totalDist = 0;
-	int i;
+	Speed total = {0, 0}, *rec;
 
-	for( i = 0; i < SPEED_HIST; i++ ) {
-		totalTime += det->timeBuf[i];
-		totalDist += det->distBuf[i];
+	foreach( rec, det->histBuf ) {
+		total.mm += rec->mm;
+		total.ms += rec->ms;
+		debug("buffer %d/%d = \tspeed%dmm/s\r\n",
+			rec->mm, rec->ms, speed( rec ));
 	}
-	assert( totalTime != 0 );
-	return (totalDist * 1000) / totalTime;
+	return speed( &total ); 
 }
 
 
