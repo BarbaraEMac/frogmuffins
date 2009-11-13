@@ -13,6 +13,8 @@
       for(item = array; item < (array + sizeof(array)/sizeof*(item)); item++)
 
 
+#define array_size( array ) (sizeof(array)/sizeof(*array))
+
 // TIDs are really ints.
 typedef int TID;
 
