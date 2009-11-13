@@ -65,13 +65,11 @@ void shell_run ( ) {
 	TIDs tids;
 
 	// Create the name server
-	tids.ns = Create (2, &ns_run);
-	output ("Initializing the name server. \r\n");
-	
 	// Create the Serial I/O server
+	tids.ns   = Create (2, &ns_run);
 	tids.ios1 = Create (2, &ios1_run);
     tids.ios2 = Create (2, &ios2_run);
-	output ("Initializing the serial io servers. \r\n");
+	output ("Initializing the name and serial io servers. \r\n");
 	
 	// Create the clock server
 	tids.cs = Create (2, &cs_run);
@@ -264,14 +262,15 @@ void shell_exec( char *command, TIDs tids ) {
 	// cache OFF
 	} else if( sscanf(command, "cache OFF") >= 0 ) {
 		cache_off();
-
-	// TODO: Remove WhoIs calls to make this more efficient.
+	// path
 	} else if( sscanf(command, "path %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYROUTE;
 		rpCmd ( &rpReq, tids.rp );
+	// first switch
 	} else if( sscanf(command, "fstSw %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYFSTSW;
 		rpCmd ( &rpReq, tids.rp );
+	// first reverse
 	} else if( sscanf(command, "fstRv %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYFSTRV;
 		rpCmd ( &rpReq, tids.rp );
