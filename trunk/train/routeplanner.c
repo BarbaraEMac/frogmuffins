@@ -27,7 +27,7 @@
 #include "train.h"
 
 #define INT_MAX		0xFFFF
-#define EPSILON		0
+#define EPSILON		20
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -61,10 +61,11 @@ inline int rp_minDistI 		 (RoutePlanner *rp, int idx1, int idx2 );
 inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b);
 inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2);
 
-int rp_getNextCheckinN  (RoutePlanner *rp, Node *a, Node *b);
-int rp_getNextCheckinP 	(RoutePlanner *rp, Path *path); 
-int rp_distToNextSw   	(RoutePlanner *rp, Path *p);
-int rp_distToNextRv   	(RoutePlanner *rp, Path *p);
+//int rp_getNextCheckinN  (RoutePlanner *rp, Node *a, Node *b);
+int rp_getNextCheckinP 	(RoutePlanner *rp, Path *path, RPReply *rpl); 
+int rp_distToNextSw   	(RoutePlanner *rp, Path *p, RPReply *rpl);
+SwitchDir rp_getSwitchDir(RoutePlanner *rp, Node *sw, Node *next);
+int rp_distToNextRv   	(RoutePlanner *rp, Path *p, RPReply *rpl);
 void rp_predictSensors  (RoutePlanner *rp, Path *p, int sensorId );
 void rp_predictSensorHelper (RoutePlanner *rp, Path *p, Node *n, int prevIdx);
 
@@ -128,7 +129,9 @@ void rp_run() {
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
-		
+//		debug ("routeplanner: received a message sender=%d from=%d type=%d idx1=%d idx2=%d PLAN=%d\r\n", 
+//				senderTid, req.trainId, req.type, req.idx1, req.idx2, PLANROUTE);
+
 		switch ( req.type ) {
 			case DISPLAYROUTE:
 				// Reply to the shell
@@ -189,6 +192,7 @@ void rp_run() {
 				break;
 			
 			case PLANROUTE:
+				debug ("routeplanner: planning a route for tr %d\r\n", req.trainId);
 				// Determine the shortest path 
 				rp_planRoute (&rp, &reply, &req);
 					
@@ -229,11 +233,13 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
 	Path p;
 
 	// Distance from current location to destination
-	reply->totalDist = rp_minDistI ( rp, req->idx1, req->idx2 );
+	reply->totalDist = rp_minDistI ( rp, req->idx1, req->dest );
 
 	// Construct the path from i -> j
-	makePath ( rp, &p, req->idx1, req->idx2 );
-	reply->checkinDist = rp_getNextCheckinP (rp, &p);
+	makePath ( rp, &p, req->idx1, req->dest );
+
+	rp_getNextCheckinP (rp, &p, reply);
+	
 	 
 	/*
 	int q = 0;
@@ -261,7 +267,7 @@ inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2 ) {
 
 	return ( c == INT_MAX ) ? -1 : c;
 }
-
+/*
 int rp_getNextCheckinN (RoutePlanner *rp, Node *a, Node *b) {
 	debug ("Making a path from %s(%d) to %s(%d)\r\n", 
 			a->name, a->idx, b->name, b->idx);
@@ -272,24 +278,39 @@ int rp_getNextCheckinN (RoutePlanner *rp, Node *a, Node *b) {
 	return rp_getNextCheckinP(rp, &path);
 
 }
-
-int rp_getNextCheckinP ( RoutePlanner *rp, Path *p ) {
-	int nextSw = rp_distToNextSw(rp, p);
-	int nextRv = rp_distToNextRv(rp, p);
+*/
+int rp_getNextCheckinP ( RoutePlanner *rp, Path *p, RPReply *reply ) {
+	int nextSw = rp_distToNextSw(rp, p, reply);
+	int nextRv = rp_distToNextRv(rp, p, reply);
 
 	if ( nextSw == nextRv && nextSw == INT_MAX ) {
 		debug ("%s to %s: Neither.\r\n", 
 				rp->model.nodes[p->path[0]].name, 
 				rp->model.nodes[p->path[p->len-1]].name);
+		
+		reply->reverse   = 0;
+		reply->switchId  = -1;
+		reply->switchDir = 0;
+
+		reply->checkinDist = reply->totalDist;
 	}
 	else if ( nextSw < nextRv ) {
 		debug ("%s to %s: First Checkin=SWITCH dist=%d\r\n", 
 				rp->model.nodes[p->path[0]].name, 
 				rp->model.nodes[p->path[p->len-1]].name, nextSw);
+		
+		reply->checkinDist = nextSw;
+		
 	} else {
 		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", 
 				rp->model.nodes[p->path[0]].name, 
 				rp->model.nodes[p->path[p->len]].name, nextRv);
+		
+		// Tell the train to reverse at next checkin
+		reply->reverse   = 1;
+		reply->switchId  = -1;
+		reply->switchDir = 0;
+		reply->checkinDist = nextRv;
 	}
 
 	// TODO: fix this error(?) return.
@@ -300,7 +321,7 @@ int rp_getNextCheckinP ( RoutePlanner *rp, Path *p ) {
 	return (nextSw < nextRv) ? nextSw : nextRv;
 }
 
-int rp_distToNextSw (RoutePlanner *rp, Path *p) {
+int rp_distToNextSw (RoutePlanner *rp, Path *p, RPReply *reply) {
 	int *path = p->path;
 	Node *itr;
 
@@ -319,6 +340,12 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
 				 (itr->sw.ahead[1].dest == path[i-1])) ) {
 //				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
+				
+				// Give the train the switch info
+				reply->switchId = itr->id;
+				reply->switchDir = rp_getSwitchDir (rp, itr, 
+												&rp->model.nodes[path[i+1]]);
+
 				return rp->dists[path[0]][path[i]] - EPSILON;
 			}
 		}
@@ -327,7 +354,15 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 	return INT_MAX;
 }
 
-int rp_distToNextRv (RoutePlanner *rp, Path *p) {
+// ahead[0] = straight
+// ahead[1] = curved
+SwitchDir rp_getSwitchDir (RoutePlanner *rp, Node *sw, Node *next) {
+	Edge *e = &sw->sw.ahead[0];
+
+	return ( e->dest == next->idx ) ? SWITCH_STRAIGHT : SWITCH_CURVED;
+}
+
+int rp_distToNextRv (RoutePlanner *rp, Path *p, RPReply *reply) {
 	int  i;
 	int  *path = p->path;
 	Node *itr;
@@ -348,6 +383,8 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
 				
 //				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
+				
+
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -363,7 +400,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 void rp_predictSensors (RoutePlanner *rp, Path *p, int sensorId ) {
 	int   idx =  rp->model.sensor_nodes[sensorId];
 	Node *n   = &rp->model.nodes[idx];
-	Edge *e   = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind;// : &n->se.ahead;
+	Edge *e   = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
 	
 	// Get next node along the path
 	n = &rp->model.nodes[e->dest]; 
@@ -371,7 +408,7 @@ void rp_predictSensors (RoutePlanner *rp, Path *p, int sensorId ) {
 	// Clear the path
 	p->len = 0;
 
-	// Fill the path with sensor ids
+	// Fill the "path" with sensor ids
 	rp_predictSensorHelper ( rp, p, n, idx );
 }
 
@@ -443,9 +480,10 @@ void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req) {
 	Path p;
 	int dist;
 	int i = 0;
+	RPReply reply;
 	
 	makePath ( rp, &p, req->idx1, req->idx2 );
-	dist = rp_distToNextSw(rp, &p);
+	dist = rp_distToNextSw(rp, &p, &reply);
 	
 	if ( dist == INT_MAX ) {
 		printf ("No switch to change along path from %s to %s.\r\n", 
@@ -470,9 +508,10 @@ void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
 	int i = 0;
 	int dist;
 	Path p;
+	RPReply reply;
 
 	makePath ( rp, &p, req->idx1, req->idx2 );
-	dist = rp_distToNextRv(rp, &p);
+	dist = rp_distToNextRv(rp, &p, &reply);
 	
 	if ( dist == INT_MAX ) {
 		printf ("Never reverse along path from %s to %s.\r\n", 
