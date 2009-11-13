@@ -52,6 +52,7 @@ int _fscanf ( FILE *stream, const char *fmt, va_list va ) {
 	for ( ; *fmt && *s; fmt++ ) {
 		if ( *fmt != '%' ) {
 			if( ws(*fmt) ) {
+				if( !ws(*s) ) return -2;
 				while( ws(*s) ) { s++; }
 			} else if( *fmt != *s ) {
 				return -1;
