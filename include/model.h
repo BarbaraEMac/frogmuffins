@@ -94,4 +94,10 @@ int   model_nameToIdx (TrackModel *model, char *name);
  * Converts a given index into the node name.
  */
 //char *model_idxToName (TrackModel *model, int idx);
+
+
+char sensor_bank( int sensor );
+char sensor_num( int sensor );
+char switch_dir( SwitchDir dir );
+
 #endif

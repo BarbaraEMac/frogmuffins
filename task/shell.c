@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "globals.h"
+#include "model.h"
 #include "requests.h"
 #include "routeplanner.h"
 #include "servers.h"
@@ -273,6 +274,11 @@ void shell_exec( char *command, TIDs tids ) {
 	// first reverse
 	} else if( sscanf(command, "fstRv %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
 		rpReq.type = DISPLAYFSTRV;
+		rpCmd ( &rpReq, tids.rp );
+
+	} else if( sscanf(command, "predict %d", &rpReq.idx1) >= 0 ) {
+		rpReq.type = DISPLAYPREDICT;
+
 		rpCmd ( &rpReq, tids.rp );
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
