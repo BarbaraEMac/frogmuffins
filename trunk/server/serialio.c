@@ -6,6 +6,7 @@
 #define DEBUG 1
 
 #include <ts7200.h>
+#include <buffer.h>
 
 #include "debug.h"
 #include "drivers.h"
@@ -13,8 +14,6 @@
 #include "requests.h"
 #include "servers.h"
 
-#define DUMMY_TID		-1
-#define DUMMY_CH		0xFF
 #define AWAITBUF_LEN	1
 
 //-----------------------------------------------------------------------------
@@ -23,15 +22,11 @@
 typedef struct {
 	char sendBuffer[NUM_ENTRIES];
 	char recvBuffer[NUM_ENTRIES];
-	int waiting    [NUM_ENTRIES];	// Array of waiting tids (for a char)
+	int waitBuffer[NUM_ENTRIES];	// Array of waiting tids (for a char)
 
-	int sEmpIdx;
-	int sFulIdx;
-	int rEmpIdx;
-	int rFulIdx;
-	
-	int wEmpIdx;					// Points to next EMPTY slot
-	int wFulIdx;					// Points to the first FULL slot
+	RB	send;
+	RB	recv;
+	RB	wait;
 } SerialIOServer;
 
 /**
@@ -78,32 +73,15 @@ void ios2_run () {
 	ios_run( UART2 );
 }
 
-// Advance the buffer pointer
-void advance (int *ptr) {
-	*ptr += 1;
-	*ptr %= NUM_ENTRIES;
-}
-
-// Store the given value in the buffer and increment the pointer
-void storeCh (char *buf, int *ptr, char ch) {
-	buf[*ptr] = ch;
-	advance(ptr);
-	assert (*ptr <= NUM_ENTRIES);
-}
-
-void storeInt (int *buf, int *ptr, int item) {
-	buf[*ptr] = item;
-	advance (ptr);
-}
-
 void ios_run (UART *uart) {
 	debug ("ios_run: The Serial IO Server is about to start. \r\n");	
 	
-	int			 senderTid;		// The task id of the message sender
-	IORequest	 req;			// A serial io server request message
-	int			 len;
-	int			 i;
-	SerialIOServer ios;
+	int				senderTid;		// The task id of the message sender
+	IORequest		req;			// A serial io server request message
+	int				len;
+	int				i;
+	SerialIOServer 	ios;
+	char 			ch;
 
 	// Initialize the Serial IO Server
 	ios_init (&ios, uart);
@@ -118,28 +96,24 @@ void ios_run (UART *uart) {
 		// Handle the request
 		switch (req.type) {
 			case NOTIFY_GET:
-				debug ("ios: notified GET data=%c emp=%d ful=%d\r\n",
-						req.data[0], ios.rEmpIdx, ios.rFulIdx);
+				debug ("ios: notified GET data=%c \r\n", req.data[0] );
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
 				// store the character on the buffer
 				debug("ios: notified is storing ch=%c\r\n", req.data[0]);
-				assert (ios.recvBuffer[ios.rEmpIdx] == DUMMY_CH);
-				storeCh(ios.recvBuffer, &ios.rEmpIdx, req.data[0]);
+				assert( rb_empty( &ios.wait ) || rb_empty( &ios.recv ) );
+				rb_push( &ios.recv, &req.data[0] );
 
+				ch = req.data[0];
 				// If we have a character and someone is blocked, wake them up
-				// Keep replying until it works
-				while ( ios.wEmpIdx != ios.wFulIdx ) {
-					senderTid = ios.waiting[ios.wFulIdx];
-					debug ("ios: waking up task %d to give ch=%c\r\n",
-							senderTid, req.data[0]);
-					storeInt(ios.waiting, &ios.wFulIdx, DUMMY_TID);
-					if(Reply( senderTid, req.data, sizeof(char)) >= NO_ERROR) {
-					
-						// Empty the slot and advance the pointer
-						storeCh(ios.recvBuffer, &ios.rFulIdx, DUMMY_CH);
+				while ( !rb_empty( &ios.wait ) ) {
+					senderTid = *((int *) rb_pop( &ios.wait ));
+					debug ("ios: waking %d to give ch=%c\r\n", senderTid, ch);
+					// Keep replying until it works
+					if(Reply( senderTid, &ch, sizeof(char)) >= NO_ERROR) {
+						rb_pop( &ios.recv );
 						break;
 					}
 				}
@@ -147,45 +121,38 @@ void ios_run (UART *uart) {
 				break;
 
 			case NOTIFY_PUT:
-				debug ("ios: notified PUT emp=%d ful=%d\r\n", 
-						ios.sEmpIdx, ios.sFulIdx);
+				debug ("ios: notified PUT \r\n");
 				
 				// Reply to the Notifier immediately
 				Reply (senderTid, (char*) &req.data, sizeof(char));
 				
 				// Try to send the data across the UART!
-				if ( ios.sFulIdx != ios.sEmpIdx ) {
-					ios_attemptTransmit(&ios, uart);
-				}
+				ios_attemptTransmit( &ios, uart );
 				break;
 			
 			case GETC:
 				// If we have a character, send it back!
-				//if (ios.recvBuffer[ios.rFulIdx] != DUMMY_CH) {
-				if (ios.rFulIdx != ios.rEmpIdx ) {
-					debug ("ios: getc has a char=%c ful=%d emp=%d wait:ful=%d emp=%d\r\n",
-							ios.recvBuffer[ios.rFulIdx], ios.rFulIdx, ios.rEmpIdx,
-							ios.wFulIdx, ios.wEmpIdx);
-					assert (ios.recvBuffer[ios.rFulIdx] != DUMMY_CH);
+				if ( !rb_empty( &ios.recv ) ) {
+					ch = *( (char *) rb_pop( &ios.recv ) );
+					debug ("ios: getc has a char=%c\r\n", ch);
 					// Make sure no one else was waiting first ...
-					assert (ios.wFulIdx == ios.wEmpIdx);	
-					assert (ios.waiting[ios.wFulIdx] == DUMMY_TID);
+					assert ( rb_empty( &ios.wait) );	
 
-					Reply (senderTid, (char *)&ios.recvBuffer[ios.rFulIdx], 
-						   sizeof(char));
+					Reply (senderTid, (char *)&ch,  sizeof(char));
 					
-					// Empty the slot and advance the pointer
-					storeCh(ios.recvBuffer, &ios.rFulIdx, DUMMY_CH);
-				}
 				// Otherwise, store the tid until we get a character
-				else {
-					debug ("ios: getc, but NO char ful=%d emp=%d wait:ful=%d emp=%d\r\n",
-							ios.rFulIdx, ios.rEmpIdx, ios.wFulIdx, ios.wEmpIdx);
-					assert (ios.waiting[ios.wEmpIdx] == DUMMY_TID);
+				} else {
+					debug ("ios: getc, but NO char \r\n" );
 
-					storeInt(ios.waiting, &ios.wEmpIdx, (char)senderTid);
+					rb_push( &ios.wait, &senderTid );
 				}
 
+				break;
+
+			case PURGE:
+				// We need to purge the receive in buffer
+				rb_init( &ios.recv, ios.recvBuffer );	
+				Reply (senderTid, 0, 0);
 				break;
 			
 			case PUTC:
@@ -196,17 +163,11 @@ void ios_run (UART *uart) {
 
 				// Copy the data to our send buffer
 				for ( i = 0; i < req.len; i ++ ) {
-				/*	if( ios.sendBuffer[ios.sEmpIdx] != DUMMY_CH ) {
-						int k;
-						for( k = 0; k < NUM_ENTRIES; k++ ) 
-							bwprintf( COM2, "%d=[%d]\r\n", k, ios.sendBuffer[k]);
-					}*/
-					assert (ios.sendBuffer[ios.sEmpIdx] == DUMMY_CH);
-					storeCh (ios.sendBuffer, &ios.sEmpIdx, req.data[i]); 
+					rb_push( &ios.send, &req.data[i] );
 				}
 
 				// Try to send some data across the UART
-				ios_attemptTransmit (&ios, uart);
+				ios_attemptTransmit ( &ios, uart );
 
 				break;
 			
@@ -221,7 +182,7 @@ void ios_run (UART *uart) {
 }
 
 void ios_init (SerialIOServer *s, UART *uart) {
-	int i, tid;
+	int tid;
 	char c;
 	int notifierEvt = (uart == UART1) ? INT_UART1 : INT_UART2;
 
@@ -232,23 +193,13 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	
 	// Send/Receive to synchronize with the notifier
 	// This tells the notifier the server's tid & event to await
-	Send ( tid, (char*) &notifierEvt, sizeof(int), 
-			(char*) &notifierEvt, sizeof(int) );
-
-	// Empty out the character buffers
-	for (i = 0; i < NUM_ENTRIES; i++) {
-		s->sendBuffer[i] = DUMMY_CH;
-		s->recvBuffer[i] = DUMMY_CH;
-		s->waiting[i]    = DUMMY_TID;
-	}
-	// Init array pointers
-	s->sEmpIdx = 0;
-	s->sFulIdx = 0;
-	s->rEmpIdx = 0;
-	s->rFulIdx = 0;
-	s->wEmpIdx = 0;					
-	s->wFulIdx = 0;				
+	Send ( tid, (char*) &notifierEvt, sizeof(int), 0, 0);
 	
+	// Initialize the buffers
+	rb_init( &s->send, s->sendBuffer );
+	rb_init( &s->recv, s->recvBuffer );
+	rb_init( &s->wait, s->waitBuffer );
+
 	// Clear out the uart buffer
 	while ( uart->flag & RXFF_MASK ) { c = (uart->data); }
 	
@@ -268,26 +219,28 @@ void ios_init (SerialIOServer *s, UART *uart) {
 }
 
 void ios_attemptTransmit (SerialIOServer *ios, UART *uart) {
-	debug("ios: attempting to transmit ful=%d emp=%d ch=%c\r\n", 
-		   ios->sFulIdx, ios->sEmpIdx, ios->sendBuffer[ios->sFulIdx]);
-	
-	// If the transmitter is busy, wait for interrupt
-	if ( uart->flag & TXBUSY_MASK ) {
-		debug ( "ios: transmit busy. Turning on transmit interrupt.\r\n");
-		uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
-	
-	// Otherwise, write a single byte
-	} else if( (uart->flag & CTS_MASK) || (uart != UART1) ) {	
-		debug ("ios: writing '%c' to uart\r\n", ios->sendBuffer[ios->sFulIdx]);
+	char ch;
+	debug( "ios: attempting to transmit\r\n" );
 
-		uart_write ( uart, ios->sendBuffer[ios->sFulIdx] );
-	
-		// Clear buf & advance pointer
-		storeCh (ios->sendBuffer, &ios->sFulIdx, DUMMY_CH);
-
-		// If we want to send more, enable the interrupt
-		if ( ios->sFulIdx != ios->sEmpIdx ) {
+	if ( !rb_empty( &ios->send ) ) {
+		
+		// If the transmitter is busy, wait for interrupt
+		if ( uart->flag & TXBUSY_MASK ) {
+			debug ( "ios: transmit busy. Turning on transmit interrupt.\r\n");
 			uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
+		
+		// Otherwise, write a single byte
+		} else if( (uart->flag & CTS_MASK) || (uart != UART1) ) {	
+			// Get the character to send
+			ch = *( (char *) rb_pop( &ios->send ) );
+			debug ("ios: writing '%c' to uart\r\n", ch);
+
+			uart_write ( uart, ch );
+
+			// If we want to send more, enable the interrupt
+			if ( !rb_empty( &ios->send ) ) {
+				uart->ctlr |= TIEN_MASK;	// Turn on the transmit interrupt
+			}
 		}
 	}
 }
@@ -340,7 +293,7 @@ int ionotifier_init (int *serverTid) {
 
 	// Synchronize with the server
 	Receive ( serverTid,  (char*) &event, sizeof(int) );
-	Reply   ( *serverTid, (char*) &event, sizeof(int) );
+	Reply   ( *serverTid, 0, 0 );
 
 	return event;
 }	
