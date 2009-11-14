@@ -65,13 +65,13 @@ Speed 		train_speed			(Train *tr);
 RPReply		train_planRoute 	(Train *tr, RPRequest *req);
 
 // Detective Commands
-TSReply 	train_predict		(Train *tr, RPReply *rep);
-void 		train_wait			(Train *tr );
+void	 	train_wait			(Train *tr, RPReply *rep);
+void 		train_update		(Train *tr, DeReply *rpl);
 
 // Track Server Commands
 void 		train_reverse		(Train *tr);
 void 		train_drive  		(Train *tr, int speed);
-void		train_flipSwitch	(Train *tr, RPReply *rpReply);
+void		train_flipSwitches	(Train *tr, RPReply *rpReply);
 SwitchDir	train_dir			(Train *tr, int sw );
 // ----------------------------------------------------------------------------
 
@@ -93,20 +93,18 @@ void train_run () {
 		// This makes the assumption that yo uare NOWHERE
 		// near a switch. Neither forward nor backwards can be a sw.
 		// If you are backwards, turn around.
-		// TODO:
-
-
-		// TODO: Will this call block until we've reached our sensor?
-		// It probably shouldn't so that we can calibrate ..
-		// Tell the detective about your predicted sensors
-//		tsReply = train_predict(&tr, &rpReply);
-		train_wait( &tr );
+		// TODO
 
 		// TODO: This is just to start ....
 		// Drive until you need to check in
 		// Start driving slowly ... 
 		debug ("train is driving\r\n");
 		train_drive (&tr, 6);
+
+		// It probably shouldn't so that we can calibrate ..
+		// Tell the detective about your predicted sensors
+		train_wait(&tr, &rpReply);
+
 		while ( someDistanceTravelled < rpReply.stopDist ) {
 			someDistanceTravelled ++;
 			; // BUSY WAIT
@@ -116,9 +114,11 @@ void train_run () {
 		//debug ("train is stopping\r\n");
 		
 		// If you should reverse, do it.
+		if( rpReply.stopDist < 0 ) {
 			train_reverse(&tr);
+		}
 		// If you should flip a switch, do it.
-			train_flipSwitch (&tr, &rpReply);
+		train_flipSwitches (&tr, &rpReply);
 
 	}
 
@@ -156,10 +156,6 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	parse_model( TRACK_B, &tr->model );
 	rb_init( &(tr->hist), tr->histBuf );
 	memoryset( (char *) tr->histBuf, 0, sizeof(tr->histBuf) );
-
-	// TODO replace this with train location routine
-	tr->sensor = 0;
-
 
 //	RegisterAs ("Train");;
 }
@@ -218,39 +214,21 @@ int tr_distance( Train *tr, int sensor ) {
 	if( n->se.ahead.dest == idx ) 
 		sensor ++;
 
-	// TODO figure out which sensor to ask the detective for next
-	tr->sensor = sensor;
-	
-
-	printf("(%d)%s: waiting for %c%d\r\n", idx, n->name, 
-			sensor_bank( sensor ), sensor_num( sensor ));
+	printf("(%d)%s\r\n", idx, n->name );
 	return dist;
 }
 
-void train_wait( Train *tr ) {
+void train_update( Train *tr, DeReply *rpl ) {
 	int 		last, avg, diff;
 	Speed		sp, pr;
-	TSReply	  	rpl;		// Reply from the Detective
-	DeRequest	req;
-
-
-	// TODO this part should use the routplanner
-	req.type = WATCH_FOR;
-	req.events[0].start = 0;
-	req.events[0].end = 9999999; // TODO replace with useful values
-	req.events[0].sensor = tr->sensor;
-	req.numEvents = 1;
-
-	Send( tr->deTid, (char *) &req, sizeof(DeRequest),
-					 (char *) &rpl, sizeof(TSReply) );
 	
-	sp.ms = (rpl.ticks - tr->ticks) * MS_IN_TICK;
+	sp.ms = (rpl->ticks - tr->ticks) * MS_IN_TICK;
 	sp.mm = tr->dist;
 	last = speed( &sp );
 	pr = train_speed( tr );
 	avg = speed(&pr);
 	rb_force( &tr->hist, &sp );
-	diff = ((avg * sp.ms)/1000) - sp.mm;
+	diff = ((avg * sp.ms) - (sp.mm * 1000)) / 1000;
 
 	if( abs(diff) > 100 )
 		printf("\033[31m");
@@ -263,8 +241,12 @@ void train_wait( Train *tr ) {
 	printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, last, avg, diff);
 
-	tr->dist = tr_distance( tr, rpl.sensor );
-	tr->ticks = rpl.ticks;
+	// Update train location
+	tr->prevLoc = tr->currLoc;
+	tr->currLoc = rpl->sensor / 2; // TODO fix this
+	
+	tr->dist = tr_distance( tr, rpl->sensor );
+	tr->ticks = rpl->ticks;
 
 }
 
@@ -281,21 +263,26 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	return reply;
 }
 
-TSReply train_predict (Train *tr, RPReply *rep) {
-	TSReply reply;
-	SensorWatch preds[4];
-	int i;
-/*
-	for ( i = 0; i < 4; i ++ ) {
-		preds[i].sensor = rep->nextSensors[i];
-		preds[i].start  = train_time (tr, ???) - (PREDICTION_WINDOW/2);
-		preds[i].end    = preds.start + PREDICTION_WINDOW;
+void train_wait (Train *tr, RPReply *rep) {
+	TSReply 	rpl;
+	DeRequest	req;
+	int 		i;
+
+	req.type = WATCH_FOR;
+	req.numEvents = rep->nextSensors.len;
+
+	for( i = 0; i < req.numEvents ; i ++ ) {
+		req.events[i].sensor = rep->nextSensors.idxs[i];
+		req.events[i].start  = 0;//train_time ( tr ) - (PREDICTION_WINDOW/2);
+		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
+printf("predicting %c%d, after %dms, before %dms\r\n",
+	sensor_bank( req.events[i].sensor ), sensor_num( req.events[i].sensor ),
+	req.events[i].start, req.events[i].end );
 	}
 
 	// Tell the detective about the Route Planner's prediction.
-	Send ( tr->deTid, (char*)&preds, sizeof(SensorWatch)*4, 
-					  (char*)&Reply, sizeof(TSReply) );
-*/	return reply;
+	Send( tr->deTid, (char *) &req, sizeof(DeRequest),
+					 (char *) &rpl, sizeof(TSReply) );
 }
 
 //-----------------------------------------------------------------------------
@@ -308,8 +295,8 @@ void train_reverse (Train *tr) {
 	req.type = RV;
 	req.train = tr->id;
 
-	Send (tr->tsTid, (char*)&req,   sizeof(TSRequest),
-					(char*)&reply, sizeof(TSReply));
+	Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
+					 (char *)&reply, sizeof(TSReply));
 }
 
 void train_drive (Train *tr, int speed) {
@@ -320,29 +307,33 @@ void train_drive (Train *tr, int speed) {
 	req.train = tr->id;
 	req.speed = speed;
 
-	Send (tr->tsTid, (char*)&req,   sizeof(TSRequest),
-					(char*)&reply, sizeof(TSReply));
+	Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
+					 (char *)&reply, sizeof(TSReply));
 }
 
-void train_flipSwitch (Train *tr, RPReply *rpReply) {
-	TSRequest req;
-	TSReply	  reply;
+void train_flipSwitches (Train *tr, RPReply *rpReply) {
+	TSRequest		req;
+	TSReply			reply;
+	SwitchSetting  *ss;
 
-	// TODO
-	req.type = SW;
-	//req.sw   = rpReply->switchId;
-	//req.dir  = rpReply->switchDir;
+	foreach( ss, rpReply->switches ) {
+		if( ss->id >= 0 ) {
+			req.type = SW;
+			req.sw   = ss->id;
+			req.dir  = ss->dir;
 
-	Send (tr->tsTid, (char*)&req,   sizeof(TSRequest),
-			  		 (char*)&reply, sizeof(TSReply));
+			Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
+							 (char *)&reply, sizeof(TSReply));
+		}
+	}
 }
 
 SwitchDir train_dir( Train *tr, int sw ) {
 	TSRequest 	req = { ST, {sw}, {0} };
 	TSReply		reply;
 
-	Send ( tr->tsTid, (char *)&req, sizeof(TSRequest), 
-					 (char*)&reply, sizeof(TSReply));
+	Send ( tr->tsTid, (char *)&req,	  sizeof(TSRequest), 
+					  (char *)&reply, sizeof(TSReply));
 	return reply.dir;
 }
 

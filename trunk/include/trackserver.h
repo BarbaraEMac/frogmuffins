@@ -62,6 +62,8 @@ typedef struct {
 	int end;	//in ticks
 } SensorWatch;
 
+typedef TSReply DeReply;
+
 typedef struct {
 	union {
 		enum TSRequestCode 	type;
@@ -73,8 +75,9 @@ typedef struct {
 	};
 	union {
 		int			ticks;
-		int			numEvents;
+		int 		expire;
 	};
+	int			numEvents;
 } DeRequest;
 
 

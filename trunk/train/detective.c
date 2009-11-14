@@ -22,7 +22,7 @@
 #define POLL_SIZE 	10
 #define POLL_WAIT 	(100 / MS_IN_TICK)
 #define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
-#define POLL_CHAR	133
+#define POLL_STR	(char [2]){133, 192}
 
 /* FORWARD DECLARATIONS */
 
@@ -56,7 +56,7 @@ void det_run () {
 	Det 		det;
 	int			senderTid;
 	DeRequest 	req;
-	TSReply		reply;
+	DeReply		reply;
 	int			i, k, len, sensor;
 	char		ch;
 
@@ -69,6 +69,7 @@ void det_run () {
 		len = Receive ( &senderTid, (char *) &req, sizeof(req) );
 	
 		assert( len == sizeof(DeRequest) );
+		sensor = -1;
 		
 		switch (req.type) {
 			case POLL:
@@ -100,13 +101,18 @@ void det_run () {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					// Don't tell me for another 5 seconds
 					det.lstPoll = req.ticks + POLL_GRACE;
-					Putc( POLL_CHAR, det.iosTid );
+					PutStr( POLL_STR, sizeof(POLL_STR), det.iosTid );
 				}
 				break;
 
 			case WATCH_FOR:
-				debug("det: WatchFor request for sensor %d & %d\r\n",
-						req.events[0].sensor, req.events[1].sensor);
+				debug("det: WatchFor request for sensor(s):");
+				req.ticks = 0;
+				for( i = 0; i < req.numEvents; i ++ ) {
+					debug("%d", req.events[i].sensor);
+					req.expire = max( req.expire, req.events[i].end );
+				}
+				debug(" expires at %d\r\n", req.expire);
 				req.tid = senderTid;
 				// Enqueue
 				i = senderTid % MAX_NUM_TRAINS; // simple hash function
@@ -158,23 +164,32 @@ int det_init( Det *det ) {
 	return RegisterAs( TRACK_DETECTIVE_NAME );
 }
 
+void det_reply( DeRequest *req, int sensor, int ticks ) {
+	debug("waking up (%d) with sensor %d at time %dms\r\n", req->tid, sensor, ticks * MS_IN_TICK);
+	DeReply		rpl = { {sensor}, {ticks} };
+	
+	// Wake up the train
+	 Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
+
+	// Remove the request
+	req->tid = UNUSED_TID;
+}
+
 int det_wake ( Det *det, int sensor, int ticks ) {
-	debug ("det_wake: sensor: %d, time: %d,s\r\n", sensor, ticks * MS_IN_TICK );
-	DeRequest *req;
-	TSReply		rpl;
+	debug ("det_wake: sensor: %d, time: %dms\r\n", sensor, ticks * MS_IN_TICK );
+	DeRequest  *req;
 	int			woken = 0, i;
 	
 	foreach( req, det->requests ) {
+		if( (req->tid != UNUSED_TID) && (req->expire < ticks) ) {
+			// TODO fix this for multiple trains
+			det_reply( req, sensor, ticks );
+			woken++;
+		}
 		for( i = 0; (req->tid != UNUSED_TID) && (i < req->numEvents); i ++ ) {
 			if(req->events[i].sensor == sensor ) {
-				// Wake up the train
-				rpl.sensor = sensor;
-				rpl.ticks = ticks;
-				Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
-				// Remove the request
-				req->tid = UNUSED_TID;
+				det_reply( req, sensor, ticks );
 				woken++;
-
 			}
 		}
 	}
@@ -190,7 +205,6 @@ void poll() {
 	char ch, raw[POLL_SIZE];
 	// We need the braces around the 0s because they're in unions
 	DeRequest	req;
-	TSReply		rpl;
 	int 		i, res;
 
 	req.type = POLL;
@@ -202,7 +216,8 @@ void poll() {
 		//Delay( SNSR_WAIT, csTid ); 
 
 		// Poll the train box
-		Putc( POLL_CHAR, ioTid );
+		Purge( ioTid );
+		PutStr( POLL_STR, sizeof(POLL_STR), ioTid );
 		for( i = 0; i < POLL_SIZE; i++ ) {
 			res = Getc( ioTid );
 			if( res < NO_ERROR ) {
@@ -216,7 +231,7 @@ void poll() {
 		req.ticks = Time( csTid );
 
 		// Let the track server know
-		Send( deTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		Send( deTid, (char *) &req, sizeof(req), 0, 0);
 	}
 }
 
@@ -228,7 +243,6 @@ void watchDog () {
 	TID csTid = WhoIs( CLOCK_NAME );
 	// We need the braces around the 0s because they're in unions
 	DeRequest 	req;
-	TSReply		rpl;
 	req.type = WATCH_DOG;
 
 	FOREVER {
@@ -237,6 +251,6 @@ void watchDog () {
 		Delay( POLL_WAIT, csTid );
 
 		// Let the track server know
-		Send( deTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		Send( deTid, (char *) &req, sizeof(req), 0, 0);
 	}
 }
