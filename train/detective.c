@@ -24,23 +24,11 @@
 #define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
 #define POLL_CHAR	133
 
-#define	SPEED_HIST	20
-
 /* FORWARD DECLARATIONS */
 
 /**
  * A Track Detective
  */
-
-typedef struct {
-	int mm;
-	int ms;
-} Speed;
-
-int speed( Speed *sp ) {
-	if( sp->ms == 0 ) sp->ms = -1;
-	return (sp->mm * 1000) / sp->ms;
-}
 
 
 typedef struct {
@@ -53,13 +41,6 @@ typedef struct {
 	TID  		csTid;
 	TID			tsTid;
 
-	// TODO remove the following testing elements
-	int			dist;
-	int			ticks;
-	int 		numSw;
-	Speed		histBuf[SPEED_HIST];
-	RB			hist;	
-	TrackModel	model;
 } Det;
 
 
@@ -161,21 +142,12 @@ int det_init( Det *det ) {
 
 	rb_init(&(det->stray), det->strayBuf ) ;
 //	rb_init(&(det->request), det->reqBuf, sizeof(DetRequest), MAX_NUM_TRAINS ) ;
+	memoryset ( (char *) tr->sensorHist, 0, sizeof(tr->sensorHist) );
 
 	DetRequest * req;
 	foreach( req, det->requests ) {
 		req->tid = UNUSED_TID;
 	}
-
-	// TODO move following into train
-	det->requests[0].tid = 99;
-	det->requests[0].events[0].sensor = 0;
-	memoryset ( (char *) det->sensorHist, 0, sizeof(det->sensorHist) );
-	det->numSw = 0;
-	parse_model( TRACK_B, &det->model );
-	rb_init( &(det->hist), det->histBuf );
-	memoryset( (char *) det->histBuf, 0, sizeof(det->histBuf) );
-
 
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
@@ -189,9 +161,7 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 	DetRequest *req;
 	TSReply		rpl;
 	int			woken = 0;
-	int 		last, avg, diff;
-	Speed		sp;
-
+	
 	foreach( req, det->requests ) {
 		if( req->tid != UNUSED_TID ) {
 			if(req->events[0].sensor == sensor ||
@@ -199,33 +169,10 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 				// Wake up the train
 				rpl.sensor = sensor;
 				rpl.ticks = ticks;
-			//	Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
+				Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
 				// Remove the request
 				req->tid = UNUSED_TID;
 				woken++;
-
-				//TODO remove these testing lines
-				sp.ms = (ticks - det->ticks) * MS_IN_TICK;
-				sp.mm = det->dist;
-				last = speed( &sp );
-				avg = det_avgSpeed( det );
-				rb_force( &det->hist, &sp );
-				diff = ((avg * sp.ms)/1000) - sp.mm;
-
-				if( abs(diff) > 100 )
-					printf("\033[31m");
-				else if( abs(diff) > 50 )
-					printf("\033[33m");
-				else if( abs(diff) > 20 )
-					printf("\033[36m");
-				else 
-					printf("\033[32m");
-				printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s \tdiff:%dmm\033[37m\r\n",
-						sp.mm, sp.ms, last, avg, diff);
-
-				det->dist = det_distance( det, sensor );
-				det->ticks = ticks;
-
 			}
 		}
 	}
@@ -235,7 +182,7 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 void poll() {
 	debug( "det: polling task started\r\n" );
 
-	TID detTid = MyParentTid();
+	TID deTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	TID ioTid = WhoIs( SERIALIO1_NAME );
 	char ch, raw[POLL_SIZE];
@@ -267,7 +214,7 @@ void poll() {
 		req.ticks = Time( csTid );
 
 		// Let the track server know
-		Send( detTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		Send( deTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
 	}
 }
 
@@ -275,7 +222,7 @@ void watchDog () {
 
 	debug( "det: poll watshdog task started\r\n" );
 
-	TID detTid = MyParentTid();
+	TID deTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	// We need the braces around the 0s because they're in unions
 	DetRequest 	req;
@@ -288,82 +235,6 @@ void watchDog () {
 		Delay( POLL_WAIT, csTid );
 
 		// Let the track server know
-		Send( detTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
+		Send( deTid, (char *) &req, sizeof(req), (char*) &rpl, sizeof(rpl));
 	}
 }
-
-int det_avgSpeed( Det *det ) {
-	Speed total = {0, 0}, *rec;
-
-	foreach( rec, det->histBuf ) {
-		total.mm += rec->mm;
-		total.ms += rec->ms;
-		debug("buffer %d/%d = \tspeed%dmm/s\r\n",
-			rec->mm, rec->ms, speed( rec ));
-	}
-	return speed( &total ); 
-}
-
-
-SwitchDir det_dir( Det *det, int sw ) {
-	TSRequest 	req = { ST, {sw}, {0} };
-	TSReply		rpl;
-	Send( det->tsTid, (char *)&req, sizeof(TSRequest), (char*)&rpl, sizeof(TSReply));
-
-	return rpl.dir;
-}
-
-int det_distance( Det *det, int sensor ) {
-	debug("det_distance: sensor:%d \r\n", sensor );
-	int idx = det->model.sensor_nodes[sensor];
-
-	Node *n = &det->model.nodes[idx];
-	Edge *e;
-	int dist = 0;
-	SwitchDir dir = SWITCH_CURVED;
-	if( sensor % 2 ) {
-		e = &n->se.behind;
-	} else {
-		e = &n->se.ahead;
-	}
-
-	det->numSw = 0;
-	while( 1 ) {
-		dist += e->distance;
-		printf("(%d)%s>", idx, n->name);
-		n = &det->model.nodes[e->dest];
-		//printf("neighbour %s\r\n", n->name);
-		if( n->type != NODE_SWITCH ) break;
-		dir = det_dir(det, n->id);
-		if( n->sw.behind.dest == idx ) {
-			idx = e->dest;
-			e = &n->sw.ahead[dir];
-		} else {
-			idx = e->dest;
-			e = &n->sw.behind;
-		}
-		det->numSw++;
-	} 
-
-	sensor = n->id * 2;
-	if( n->se.ahead.dest == idx ) 
-		sensor ++;
-
-	det->requests[0].tid = 99;
-	det->requests[0].events[0].sensor = sensor;
-	det->requests[0].events[1].sensor = sensor;
-
-	printf("(%d)%s: waiting for %c%d\r\n", idx, n->name, 
-			sensor_bank( sensor ), sensor_num( sensor ));
-	return dist;
-}
-
-/*
-	if( req.sensor != det.lsdet.nsorId ) {
-		dist = det_distance( &ts, det.lstSensorId );
-		time = (req.ticks - det.lstSensorUpdate) * MS_IN_TICK;
-		speed = (dist * 1000)/ time;
-		printf("speed = %d/%d = \t%dmm/s\r\n", dist, time, speed);
-		det.lstSensorUpdate = req.ticks;
-	}*/
-
