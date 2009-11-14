@@ -48,7 +48,11 @@ enum ERROR {
 	INVALID_NODE_NAME,		// Invalid node name
 	// --9970
 	INVALID_NODE_IDX,		// Invalid node index
-	RP_INVALID_REQ_TYPE		// Invalid request type for the Route Planner
+	RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
+	INVALID_SENSOR_IDX,		// Invalid sensor index
+	INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
+	INVALID_TRACK			// Invalid track identifier
+	// --9965
 } error;
 
 #endif
