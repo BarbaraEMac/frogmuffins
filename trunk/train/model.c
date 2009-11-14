@@ -755,19 +755,21 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 	}
 }
 
-int model_nameToIdx ( TrackModel *model, char *name ) {
+int model_nameToIdx ( TrackModel *model, const char *name ) {
 	if ( strlen(name) > 4 ) {
 		return INVALID_NODE_NAME;
 	}
 	
-	int n = model->num_nodes;
-	int i;
-	int num;
-	char type[12];
+	int   n = model->num_nodes;
+	int   i;
+	int   num;
+	char *ch = &name[1];
 
 	// Special case for even numbered sensors
-	sscanf (name, "%2s%d", type, &num);
-	if ( (strlen(type) == 1) && (num % 2 == 0) ) {
+	num = atoi (&ch);
+	if ( (name[0] >= 'A' && name[0] <= 'E') && 
+		 (name[1] >= '1' && name[1] <= '9') && 
+		 (num % 2 == 0) ) {
 		num -= 1;
 		itoa(num, &name[1]);
 	}
