@@ -16,6 +16,7 @@ typedef enum RPType {
 	DISPLAYFSTSW,
 	DISPLAYFSTRV,
 	DISPLAYPREDICT,
+	CONVERT,
 	RESERVE,
 	PLANROUTE,
 	MINDIST,
@@ -31,6 +32,8 @@ typedef struct {
 	int		idx1; 		// Current Sensor, Start Location
 	int 	idx2; 		// Previous Sensor
 
+	char 	name[2];	// Node name to be converted
+
 	int		dest;		// Destination Location Idx
 } RPRequest;
 
@@ -40,7 +43,13 @@ typedef struct {
 } Path;
 
 typedef struct {
+	int len;
+	int s[4];
+} Sensors;
+
+typedef struct {
 	union {
+		int idx;		// Index of node
 		int totalDist;	// stopping distance
 		int minDist;	// Minimum distance b/w nodes
 	};
@@ -48,14 +57,13 @@ typedef struct {
 	int checkinDist;	// Distance to next checkin location
 
 	Path path;			// Path of indices from s -> t
-	Path prediction;	// Prediction for the next sensors
+	Sensors nextSensors;// Prediction for the next sensors
 
-	int reverse;		// Set to 1 if need to reverse. Garbage otherwise.
+	int reverse;		// 1 if need to reverse; Garbage otherwise;
 
 	int switchId;		// Id of the next switch
 	SwitchDir switchDir;// 'S' OR 'C' if the switch needs to be thrown
 						// 0 		  Otherwise
-
 } RPReply;
 
 void rp_run();

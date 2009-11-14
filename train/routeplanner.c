@@ -66,8 +66,8 @@ int rp_getNextCheckinP 	(RoutePlanner *rp, Path *path, RPReply *rpl);
 int rp_distToNextSw   	(RoutePlanner *rp, Path *p, RPReply *rpl);
 SwitchDir rp_getSwitchDir(RoutePlanner *rp, Node *sw, Node *next);
 int rp_distToNextRv   	(RoutePlanner *rp, Path *p, RPReply *rpl);
-void rp_predictSensors  (RoutePlanner *rp, Path *p, int sensorId );
-void rp_predictSensorHelper (RoutePlanner *rp, Path *p, Node *n, int prevIdx);
+void rp_predictSensors  (RoutePlanner *rp, Sensors *p, int sensorId );
+void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx);
 
 inline void clearReply (RPReply *reply);
 
@@ -96,7 +96,7 @@ void rp_run() {
 	int 			senderTid;
 	RPRequest		req;
 	RPReply			reply;
-	Path			p;
+	Sensors			s;	
 	int 			i;
 
 	rp_init ();
@@ -170,18 +170,27 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				
-				rp_predictSensors(&rp, &p, req.idx1);
-				if ( p.len == 0 ) {
+				rp_predictSensors(&rp, &s, req.idx1);
+				if ( s.len == 0 ) {
 					printf ("There are no sensors.\r\n");
 				} else {
 					printf ("Sensors: ");
-					for ( i = 0; i < p.len; i ++ ) {
-						printf ("%c%d, ", sensor_bank(p.path[i]), sensor_num(p.path[i]) );
+					for ( i = 0; i < s.len; i ++ ) {
+						printf ("%c%d, ", sensor_bank(s.s[i]), sensor_num(s.s[i]) );
 					}
 					printf("\r\n");
 				}
 
 				break;
+
+			case CONVERT:
+				reply.idx = model_nameToIdx(&rp.model, req.name);
+				
+				debug ("converting %s into %d\r\n", req.name, reply.idx);
+				Reply ( senderTid, (char*)&reply, sizeof(RPReply) );
+
+				break;
+
 			case RESERVE:
 				// TODO: Reply with success?
 				rp_reserve (&rp, &req);
@@ -240,7 +249,9 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
 
 	rp_getNextCheckinP (rp, &p, reply);
 	
-	 
+	// TODO: start on a sensor/give starting sensor
+ 	rp_predictSensors (rp, &reply->nextSensors, req->idx1);
+	
 	/*
 	int q = 0;
 	debug("pathlen = %d\r\n", reply->pathLen);
@@ -397,7 +408,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p, RPReply *reply) {
 // 1 = A2
 // 2 = A3
 // 3 = A4
-void rp_predictSensors (RoutePlanner *rp, Path *p, int sensorId ) {
+void rp_predictSensors (RoutePlanner *rp, Sensors *p, int sensorId ) {
 	int   idx =  rp->model.sensor_nodes[sensorId];
 	Node *n   = &rp->model.nodes[idx];
 	Edge *e   = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
@@ -412,7 +423,7 @@ void rp_predictSensors (RoutePlanner *rp, Path *p, int sensorId ) {
 	rp_predictSensorHelper ( rp, p, n, idx );
 }
 
-void rp_predictSensorHelper (RoutePlanner *rp, Path *p, Node *n, int prevIdx) {
+void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx) {
 	Node *n1, *n2;
 	
 	switch ( n->type ) {
@@ -443,9 +454,9 @@ void rp_predictSensorHelper (RoutePlanner *rp, Path *p, Node *n, int prevIdx) {
 		
 		case NODE_SENSOR:
 			// Store the sensor id
-			p->path[p->len] = (n->idx * 2);
+			p->s[p->len] = (n->idx * 2);
 			if ( n->se.ahead.dest == prevIdx ) {
-				p->path[p->len] += 1;
+				p->s[p->len] += 1;
 			}
 
 			// Advance length of the "path"
@@ -520,7 +531,7 @@ void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
 		return;
 	}
 
-	while ( (rp->dists[req->idx1][p.path[i]] != (dist - EPSILON)) && 
+	while ( (rp->dists[req->idx1][p.path[i]] != (dist + EPSILON)) && 
 			(i < p.len) ) {
 		i++;
 	}
