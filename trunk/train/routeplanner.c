@@ -49,11 +49,10 @@ typedef struct {
 	TrackModel model;
 
 	Reservation reserves[MAX_NUM_TRAINS];
-
-	
 } RoutePlanner;
 
-void rp_init();
+void rp_init      (RoutePlanner *rp);
+int  rp_errorCheckRequest (RoutePlanner *rp, RPRequest *req);
 void rp_planRoute (RoutePlanner *rp, RPReply *reply, RPRequest *req);
 
 inline int rp_minDistN 		 (RoutePlanner *rp, Node *a, Node *b);
@@ -98,41 +97,29 @@ void rp_run() {
 	RPReply			reply;
 	Sensors			s;	
 	int 			i;
+	int				err;
 
-	rp_init ();
-
-	// HACK
-	parse_model( TRACK_A, &rp.model );
-
-	// TODO: Get the model from the first task
-	// Send ();
-
-	// Initialize shortest paths using model
-	floyd_warshall (&rp, rp.model.num_nodes); 
-/*	
-	int j, k;
-	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
-	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
-		for ( k = 0; k < rp.model.num_nodes; k ++ ) {
-			//debug ("IDX CHECK: (%d, %d) & (%d, %d)\r\n", j, rp.model.nodes[j].idx, k, rp.model.nodes[k].idx);
-			rp_getNextCheckin ( &rp,
-								&rp.model.nodes[j],
-								&rp.model.nodes[k] );
-			Getc(WhoIs(SERIALIO2_NAME));
-		}
-	}
-	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
-*/
-	// Initialize track reservation system (nothing is reserved)
-	
+	// Initialize the Route Planner
+	rp_init (&rp);
 
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
-//		debug ("routeplanner: received a message sender=%d from=%d type=%d idx1=%d idx2=%d PLAN=%d\r\n", 
-//				senderTid, req.trainId, req.type, req.idx1, req.idx2, PLANROUTE);
+//		debug("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
+//			  senderTid, req.trainId, req.type, req.idx1, req.idx2);
+
+		// Error Check this request!
+		if( (err = rp_errorCheckRequest(&rp, &req)) < NO_ERROR ) {
+			req.type = ERROR;	// Make sure we don't do any work below.
+			reply.err = err;	// Return the error.
+			Reply ( senderTid, (char*)&reply, sizeof(RPReply) );
+		}
 
 		switch ( req.type ) {
+			case ERROR:
+				// Do nothing since we handled the error already!
+				break;
+
 			case DISPLAYROUTE:
 				// Reply to the shell
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
@@ -176,7 +163,8 @@ void rp_run() {
 				} else {
 					printf ("Sensors: ");
 					for ( i = 0; i < s.len; i ++ ) {
-						printf ("%c%d, ", sensor_bank(s.s[i]), sensor_num(s.s[i]) );
+						printf ("%c%d, ", sensor_bank(s.s[i]), 
+								sensor_num(s.s[i]) );
 					}
 					printf("\r\n");
 				}
@@ -201,7 +189,8 @@ void rp_run() {
 				break;
 			
 			case PLANROUTE:
-				debug ("routeplanner: planning a route for tr %d\r\n", req.trainId);
+				debug ("routeplanner: planning a route for tr %d\r\n", 
+						req.trainId);
 				// Determine the shortest path 
 				rp_planRoute (&rp, &reply, &req);
 					
@@ -224,6 +213,9 @@ void rp_run() {
 				Reply(senderTid, (char*)&reply, sizeof(RPReply));
 				break;
 
+			default:
+				// This will never be called since we handle errors above.
+				break;
 		}
 		
 		// Clear the reply for the next time we use it
@@ -234,8 +226,70 @@ void rp_run() {
 
 }
 
-void rp_init() {
+void rp_init(RoutePlanner *rp) {
+	char ch;
+	int shellTid;
+	int track;
+
+	// Get the model from the shell
+	Receive(&shellTid, (char*)&ch, sizeof(ch));
+	Reply  (shellTid,  (char*)&ch, sizeof(ch));
+	
+	debug ("Using track %c\r\n", ch);
+
+	// Parse the model for this track
+	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
+	parse_model( track, &rp->model );
+	
+	// Initialize shortest paths using model
+	floyd_warshall (rp, rp->model.num_nodes); 
+
+	/*	
+	int j, k;
+	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
+	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
+		for ( k = 0; k < rp.model.num_nodes; k ++ ) {
+			//debug ("IDX CHECK: (%d, %d) & (%d, %d)\r\n", j, 
+			//rp.model.nodes[j].idx, k, rp.model.nodes[k].idx);
+			rp_getNextCheckin ( &rp,
+								&rp.model.nodes[j],
+								&rp.model.nodes[k] );
+			Getc(WhoIs(SERIALIO2_NAME));
+		}
+	}
+	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
+	*/
+
+	// TODO: Initialize track reservation system (nothing is reserved)
+
+	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
+}
+
+int rp_errorCheckRequest (RoutePlanner *rp, RPRequest *req) {
+	int err;
+	// Check the train id.
+	if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
+		 req->trainId != 46 && req->trainId != 52 ) {
+		return INVALID_TRAIN;
+	}
+
+	// Check the name of the node.
+	if ((err = model_nameToIdx(&rp->model, req->name)) < NO_ERROR ) {
+		return err;
+	}
+
+	// Check destination index.
+	if ( (req->dest < 0) || (req->dest > 80) ) {
+		return INVALID_NODE_IDX;
+	}
+
+	// Check request type.
+	if ( (req->type < 0) || (req->type > NEIGHBOURDIST) ) {
+		return RP_INVALID_REQ_TYPE;
+	}
+
+	return NO_ERROR;
 }
 
 void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
