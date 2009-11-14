@@ -11,7 +11,7 @@
 #include "debug.h"
 
 // strcat
-char * strcat ( char *dest, const char *source, int destSize) {
+char * strconcat ( char *dest, const char *source, int destSize) {
 	int destLen   = strlen(dest);
 	int sourceLen = strlen(source);
 	int totalLen  = destLen + sourceLen;

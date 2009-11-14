@@ -46,7 +46,7 @@ typedef struct {
  * character of source, and a new null-character is appended at the end of 
  * the new string formed by the concatenation of both in destination.
  */
-char * strcat ( char *dest, const char *source, int destSize);
+char * strconcat ( char *dest, const char *source, int destSize);
 
 /*
  * Copy characters from string
