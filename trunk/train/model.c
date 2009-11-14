@@ -668,7 +668,7 @@ char * track[] = {
   19 straight 215 \
   45 curved 338 \
   44 behind 187 \
-61 SW99 switch 0x99 345 155 curved 3 \
+61 SW switch 0x99 345 155 curved 3 \
   62 straight 230 \
   16 curved 228 \
   58 behind 24 \
@@ -756,8 +756,21 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 }
 
 int model_nameToIdx ( TrackModel *model, char *name ) {
+	if ( strlen(name) > 4 ) {
+		return INVALID_NODE_NAME;
+	}
+	
 	int n = model->num_nodes;
 	int i;
+	int num;
+	char type[12];
+
+	// Special case for even numbered sensors
+	sscanf (name, "%2s%d", type, &num);
+	if ( (strlen(type) == 1) && (num % 2 == 0) ) {
+		num -= 1;
+		itoa(num, &name[1]);
+	}
 
 	for ( i = 0; i < n; i ++ ) {
 		if ( strcmp(model->nodes[i].name, name) == 0 ) {
