@@ -133,8 +133,7 @@ int Getc (TID iosTid) {
 	IORequest req;
 	
 	req.type    = GETC;
-	req.len     = 0;
-
+	req.len 	= 0;
 	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, &ret, sizeof(char));
 	
 	return ret;
@@ -161,6 +160,14 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 
 	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, 0, 0);
 	
+}
+
+void Purge (TID iosTid) {
+	IORequest req;
+
+	req.type    = PURGE;
+	req.len 	= 0;
+	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, 0, 0);
 }
 
 void getcHelper() {
