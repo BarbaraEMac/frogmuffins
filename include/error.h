@@ -40,12 +40,15 @@ enum ERROR {
 	CANNOT_INIT_SWITCHES,	// Switch initialization failed
 	SERIAL_OVERRUN,			// Serial IO data was overrun
 	INVALID_UART_SPEED,		// The uart speed specified is not valid
-	// --9975
+	// -9975
 	UNHANDLED_UART_INTR,	// The interrupt intercepted is not handled
 	INVALID_UART_ADDR,		// The addres passed in is not a UART
 	TIMEOUT,				// A timeout has occured
-	DET_INVALID_REQ_TYPE	// Invalid Track Detective request type
-		
+	DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
+	INVALID_NODE_NAME,		// Invalid node name
+	// --9970
+	INVALID_NODE_IDX,		// Invalid node index
+	RP_INVALID_REQ_TYPE		// Invalid request type for the Route Planner
 } error;
 
 #endif
