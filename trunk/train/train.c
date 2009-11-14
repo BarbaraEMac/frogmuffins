@@ -31,8 +31,8 @@ typedef struct {
 
 typedef struct {
 	int  		id;			// Identifying number
-	int  		currLoc;		// Current Location
-	int	 		prevLoc;		// Previous Location
+	int  		currSensor;		// Current Location
+	int	 		prevSensor;		// Previous Location
 	int  		dest;			// Desired End Location
 		
 	int 		 speed;			// The current speed
@@ -85,7 +85,7 @@ void train_run () {
 	train_init ( &tr, &rpReq );
 	
 	// Until you've reached your destination:
-	while ( tr.currLoc != tr.dest ) {
+	while ( tr.currSensor != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
 		debug ("train: has a route\r\n");
@@ -134,8 +134,8 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 
 	// Copy the data to the train
 	tr->id      = init.id;
-	tr->currLoc = init.currLoc;
-	tr->prevLoc = init.prevLoc;
+	tr->currSensor = init.currLoc;
+	tr->prevSensor = init.prevLoc;
 	tr->dest    = init.dest;
 
 	// Reply to the shell
@@ -242,8 +242,8 @@ void train_update( Train *tr, DeReply *rpl ) {
 			sp.mm, sp.ms, last, avg, diff);
 
 	// Update train location
-	tr->prevLoc = tr->currLoc;
-	tr->currLoc = rpl->sensor / 2; // TODO fix this
+	tr->prevSensor = tr->currSensor;
+	tr->currSensor = rpl->sensor; // TODO fix this
 	
 	tr->dist = tr_distance( tr, rpl->sensor );
 	tr->ticks = rpl->ticks;
@@ -254,7 +254,7 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	RPReply reply;
 	
 	req->type = PLANROUTE;
-	req->lastSensor = tr->currLoc;
+	req->lastSensor = tr->currSensor;
 	req->destIdx = tr->dest;
 
 	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
