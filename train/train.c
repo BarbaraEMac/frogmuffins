@@ -18,7 +18,8 @@
 #include "trackserver.h"
 #include "train.h"
 
-#define	SPEED_HIST	20
+#define	SPEED_HIST				20
+#define PREDICTION_WINDOW 		1000
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -88,7 +89,9 @@ void train_run () {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
 		debug ("train: has a route\r\n");
-		debug ("Next node=%d checkinDist=%d reverse?=%d sw?=%d dir=%d\r\n", rpReply.path.path[0], rpReply.checkinDist, rpReply.reverse, rpReply.switchId, rpReply.switchDir);
+		debug ("Next node=%d checkinDist=%d reverse?=%d sw?=%d dir=%d\r\n",
+				rpReply.path.path[0], rpReply.checkinDist, rpReply.reverse,
+				rpReply.switchId, rpReply.switchDir);
 
 		// This makes the assumption that yo uare NOWHERE
 		// near a switch. Neither forward nor backwards can be a sw.
@@ -289,15 +292,20 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 
 TSReply train_predict (Train *tr, RPReply *rep) {
 	TSReply reply;
+	SensorWatch preds[4];
+	int i;
+
+	for ( i = 0; i < 4; i ++ ) {
+		preds[i].sensor = rep->nextSensors[i];
+		preds[i].start  = train_time (tr, ???) - (PREDICTION_WINDOW/2);
+		preds[i].end    = preds.start + PREDICTION_WINDOW;
+	}
 
 	// Tell the detective about the Route Planner's prediction.
-	Send ( tr->deTid, (char*)&rep->prediction, sizeof(Path), 
+	Send ( tr->deTid, (char*)&preds, sizeof(SensorWatch)*4, 
 					  (char*)&Reply, sizeof(TSReply) );
 	return reply;
 }
-
-
-
 
 //-----------------------------------------------------------------------------
 //-------------------------- Track Server Commands ----------------------------
