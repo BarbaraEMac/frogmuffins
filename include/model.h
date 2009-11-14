@@ -88,7 +88,7 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
  * Converts a node name into the index in O(n) time.
  * Returns NOT_FOUND if the name is not a valid node name.
  */
-int   model_nameToIdx (TrackModel *model, char *name);
+int model_nameToIdx (TrackModel *model, const char *name);
 
 /**
  * Converts a given index into the node name.
