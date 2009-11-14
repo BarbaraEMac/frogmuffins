@@ -15,6 +15,10 @@
 
 #define array_size( array ) (sizeof(array)/sizeof(*array))
 
+#define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
+
+#define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
+
 // TIDs are really ints.
 typedef int TID;
 
