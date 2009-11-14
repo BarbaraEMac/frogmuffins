@@ -2,17 +2,6 @@
  * CS 452: User Task
  * becmacdo
  * dgoc
- *
- * FUNCTION NAME SPECIFICATION
- * Please use the following name convention.
- *
- * If a function can take in a Node OR index number, create 2 functions for ease:
- *  fooN (..., Node *node, ...) 
- *  fooI (..., int idx, ...)
- *
- * If a function can take in 2 Nodes OR a Path, create 2 functions for ease:
- * 	barN (..., Node *a, Node *b, ...)
- * 	barP (..., Path *p, ...)
  */
 #define DEBUG 2
 
@@ -51,68 +40,101 @@ typedef struct {
 	Reservation reserves[MAX_NUM_TRAINS];
 } RoutePlanner;
 
-void rp_init      (RoutePlanner *rp);
-int  rp_errorCheckRequest (RoutePlanner *rp, RPRequest *req);
-void rp_planRoute (RoutePlanner *rp, RPReply *reply, RPRequest *req);
+inline SwitchDir getSwitchDir(Node *sw, Node *next);
 
-inline int rp_minDistN 		 (RoutePlanner *rp, Node *a, Node *b);
-inline int rp_minDistI 		 (RoutePlanner *rp, int idx1, int idx2 );
-inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b);
-inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2);
+int rp_init      		(RoutePlanner *rp);
+int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req);
+int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req);
+inline void clearReply (RPReply *trReply);
 
-//int rp_getNextCheckinN  (RoutePlanner *rp, Node *a, Node *b);
-int rp_getNextCheckinP 	(RoutePlanner *rp, Path *path, RPReply *rpl); 
-int rp_distToNextSw   	(RoutePlanner *rp, Path *p, RPReply *rpl);
-SwitchDir rp_getSwitchDir(RoutePlanner *rp, Node *sw, Node *next);
-int rp_distToNextRv   	(RoutePlanner *rp, Path *p, RPReply *rpl);
-void rp_predictSensors  (RoutePlanner *rp, Sensors *p, int sensorId );
-void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx);
+// Route Finding Functions
+void rp_planRoute 		(RoutePlanner *rp, RPReply *trReply, RPRequest *req);
 
-inline void clearReply (RPReply *reply);
+int  rp_distToNextRv   	(RoutePlanner *rp, Path *p);
+int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
+void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
+
+void rp_predictSensors  (RoutePlanner *rp, SensorsPred *p, int sensorId );
+void rp_predictSensorHelper(RoutePlanner *rp, SensorsPred *p, Node *n, int prevIdx);
+int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
-void rp_reserve   (RoutePlanner *rp, RPRequest *req);
-void cancelReserve(TrackModel *model, Reservation *rsv);
-int  makeReserve  (TrackModel *model, Reservation *rsv);
-int  mapTrainId   (int trainId);
+void rp_reserve   		(RoutePlanner *rp, RPRequest *req);
+void cancelReserve		(TrackModel *model, Reservation *rsv);
+int  makeReserve  		(TrackModel *model, Reservation *rsv);
+int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
-void outputPath 	   (RoutePlanner *rp, int i, int j);
-void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req);
-void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req);
-void rp_displayPath (RoutePlanner *rp, Path *p );
+void rp_outputPath 	   	(RoutePlanner *rp, int i, int j);
+void rp_displayFirstSw	(RoutePlanner *rp, RPRequest *req);
+void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
+void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
 // Shortest Path Algorithms
-void floyd_warshall (RoutePlanner *rp, int n);
-int  cost			(TrackModel *model, int idx1, int idx2);
-void makePath 		(RoutePlanner *rp, Path *p, int i, int j);
-void makePathHelper (RoutePlanner *rp, Path *p, int i, int j);
+void floyd_warshall 	(RoutePlanner *rp, int n);
+int  cost				(TrackModel *model, int idx1, int idx2);
+void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
+void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
+
+// Convert a sensor index into a node index
+inline int sIdxToIdx ( int sIdx ) {
+	return (int) (sIdx / 2);
+}
+
+inline int idxtosIdx (int idx, char *name) {
+	int ret = idx * 2;
+	if ( (atod(name[1]) % 2) == 0 ) {
+		ret += 1;
+	}
+	debug ("idx=%d ret=%d\r\n", idx, ret);
+	return ret;
+}
 // ----------------------------------------------------------------------------
+
+// ahead[0] = straight
+// ahead[1] = curved
+inline SwitchDir getSwitchDir (Node *sw, Node *next) {
+	Edge *e = &sw->sw.ahead[0];
+
+	return ( e->dest == next->idx ) ? SWITCH_STRAIGHT : SWITCH_CURVED;
+}
 
 void rp_run() {
 	debug ("rp_run\r\n");
 	RoutePlanner	rp;
 	int 			senderTid;
 	RPRequest		req;
-	RPReply			reply;
-	Sensors			s;	
+	RPReply			trReply;
+	RPShellReply    shReply;
+	int 			shellTid;
+	SensorsPred		pred;	
 	int 			i;
 	int				err;
+	int				tmp;
 
 	// Initialize the Route Planner
-	rp_init (&rp);
+	shellTid = rp_init (&rp);
 
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
 //		debug("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
-//			  senderTid, req.trainId, req.type, req.idx1, req.idx2);
+//			  senderTid, req.trainId, req.type, req.nodeIdx1, req.nodeIdx2);
 
-		// Error Check this request!
-		if( (err = rp_errorCheckRequest(&rp, &req)) < NO_ERROR ) {
-			req.type = ERROR;	// Make sure we don't do any work below.
-			reply.err = err;	// Return the error.
-			Reply ( senderTid, (char*)&reply, sizeof(RPReply) );
+		// Error check the shell's request.
+		if ( senderTid == shellTid ) {
+			if( (err = rp_errorCheckShRequest(&rp, &req)) < NO_ERROR ) {
+				req.type = ERROR;	// Make sure we don't do any work below.
+				shReply.err = err;	// Return the error.
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
+			} 
+		// Error check a train's request.
+		} else {
+			if( (err = rp_errorCheckTrRequest(&rp, &req)) < NO_ERROR ) {
+				req.type = ERROR;	// Make sure we don't do any work below.
+				trReply.err = err;	// Return the error.
+				Reply ( senderTid, (char*)&trReply, sizeof(RPReply) );
+			}
 		}
 
 		switch ( req.type ) {
@@ -122,25 +144,19 @@ void rp_run() {
 
 			case DISPLAYROUTE:
 				// Reply to the shell
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
-				// If we are within the bounds of nodes:
-				if ( (req.idx1 < rp.model.num_nodes) && 
-					 (req.idx2 < rp.model.num_nodes) ) {
-					// Display the path
-					outputPath ( &rp, req.idx1, req.idx2 );
-					// Display the total distance
-					printf ("%s\r\nDistance travelled = %d\r\n", 
-							rp.model.nodes[req.idx2].name,
-							rp_minDistN( &rp, 
-										 &rp.model.nodes[req.idx1], 
-										 &rp.model.nodes[req.idx2]) );
-				}
+				// Display the path
+				rp_outputPath ( &rp, req.nodeIdx1, req.nodeIdx2 );
+				// Display the total distance
+				printf ("%s\r\nDistance travelled = %d\r\n", 
+						rp.model.nodes[req.nodeIdx2].name,
+						rp.dists[req.nodeIdx1][req.nodeIdx2]);
 				break;
 
 			case DISPLAYFSTSW:
 				// Reply to the shell
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
 				rp_displayFirstSw (&rp, &req);
 
@@ -148,34 +164,38 @@ void rp_run() {
 
 			case DISPLAYFSTRV:
 				// Reply to the shell
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
 				rp_displayFirstRv (&rp, &req);
 				break;
 			
 			case DISPLAYPREDICT:
 				// Reply to the shell
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
-				rp_predictSensors(&rp, &s, req.idx1);
-				if ( s.len == 0 ) {
+				rp_predictSensors(&rp, &pred, idxtosIdx(req.nodeIdx1, req.name));
+				
+				if ( req.nodeIdx1 > 39 ) {
+					printf ("\033[36m%s is not a valid sensor.\033[37m\r\n", req.name);
+				} else if ( pred.len == 0 ) {
 					printf ("There are no sensors.\r\n");
 				} else {
 					printf ("Sensors: ");
-					for ( i = 0; i < s.len; i ++ ) {
-						printf ("%c%d, ", sensor_bank(s.s[i]), 
-								sensor_num(s.s[i]) );
+					for ( i = 0; i < pred.len; i ++ ) {
+						printf ("%c%d, ", sensor_bank(pred.idxs[i]), 
+								sensor_num(pred.idxs[i]) );
 					}
 					printf("\r\n");
 				}
-
+				
 				break;
 
 			case CONVERT:
-				reply.idx = model_nameToIdx(&rp.model, req.name);
+				// Convert the node name into the node's index
+				shReply.idx = model_nameToIdx(&rp.model, req.name);
 				
-				debug ("converting %s into %d\r\n", req.name, reply.idx);
-				Reply ( senderTid, (char*)&reply, sizeof(RPReply) );
+				// Reply to the shell
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
 				break;
 
@@ -184,33 +204,21 @@ void rp_run() {
 				rp_reserve (&rp, &req);
 				
 				// Reply to the client train
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&trReply, sizeof(RPReply));
 				
 				break;
 			
 			case PLANROUTE:
-				debug ("routeplanner: planning a route for tr %d\r\n", 
-						req.trainId);
 				// Determine the shortest path 
-				rp_planRoute (&rp, &reply, &req);
+				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+				Reply(senderTid, (char*)&trReply, sizeof(RPReply));
 				break;
 
-			//TODO: Make this reply with jsut an int?
-			case MINDIST:
-				reply.minDist = rp_minDistI (&rp, req.idx1, req.idx2);
-
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
-				break;
-
-			//TODO: Make this reply with jsut an int?
-			case NEIGHBOURDIST:
-				// Returns -1 if they are not neighbours. Distance otherwise
-				reply.minDist = rp_neighbourDistI (&rp, req.idx1, req.idx2);
-				
-				Reply(senderTid, (char*)&reply, sizeof(RPReply));
+			case MIN_SENSOR_DIST:
+				tmp = rp_minSensorDist (&rp, req.sensor1, req.sensor2);
+				Reply( senderTid, (char*)&tmp, sizeof(int) );
 				break;
 
 			default:
@@ -218,24 +226,28 @@ void rp_run() {
 				break;
 		}
 		
-		// Clear the reply for the next time we use it
-		clearReply (&reply);
+		// Clear the trReply for the next time we use it
+		clearReply (&trReply);
 	}
 
 	Exit(); // This will never be called
 
 }
 
-void rp_init(RoutePlanner *rp) {
+int rp_init(RoutePlanner *rp) {
 	char ch;
-	int shellTid;
-	int track;
+	int  shellTid;
+	int  track;
+	int	 err = NO_ERROR;
 
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
-	Reply  (shellTid,  (char*)&ch, sizeof(ch));
+	if ( ch != 'A' && ch != 'a' && ch != 'B' && ch != 'b' ) {
+		err = INVALID_TRACK;
+	}
+	Reply  (shellTid,  (char*)&err, sizeof(int));
 	
-	debug ("Using track %c\r\n", ch);
+	debug ("routeplanner: Using track %c\r\n", ch);
 
 	// Parse the model for this track
 	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
@@ -243,18 +255,12 @@ void rp_init(RoutePlanner *rp) {
 	
 	// Initialize shortest paths using model
 	floyd_warshall (rp, rp->model.num_nodes); 
-
 	/*	
 	int j, k;
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
 	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
 		for ( k = 0; k < rp.model.num_nodes; k ++ ) {
-			//debug ("IDX CHECK: (%d, %d) & (%d, %d)\r\n", j, 
-			//rp.model.nodes[j].idx, k, rp.model.nodes[k].idx);
-			rp_getNextCheckin ( &rp,
-								&rp.model.nodes[j],
-								&rp.model.nodes[k] );
-			Getc(WhoIs(SERIALIO2_NAME));
+		 // print out stuff ..
 		}
 	}
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
@@ -264,170 +270,111 @@ void rp_init(RoutePlanner *rp) {
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
+
+	return shellTid;
 }
 
-int rp_errorCheckRequest (RoutePlanner *rp, RPRequest *req) {
+int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req) {
 	int err;
+	char tmpName[5];
+
+	// Unfortunately, we need to copy this since model_nametoIdx changes it
+	strncpy (tmpName, req->name, 5);
+
+	// Check request type.
+	if ( (req->type < 0) || (req->type > MIN_SENSOR_DIST) ) {
+		return RP_INVALID_REQ_TYPE;
+	}
+	
+	// Check the name of the node.
+	if ( (req->name != 0) && 
+		 (err = model_nameToIdx(&rp->model, tmpName)) < NO_ERROR ) {
+		return err;
+	}
+
+	// Error check the node indicies.
+	if ( (req->nodeIdx1 < 0) || (req->nodeIdx1 > rp->model.num_nodes) ||
+		 (req->nodeIdx2 < 0) || (req->nodeIdx2 > rp->model.num_nodes) ) {
+		return INVALID_NODE_IDX;
+	}
+	
+	return NO_ERROR;
+}
+
+int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
+	// Check request type.
+	if ( (req->type < 0) || (req->type > MIN_SENSOR_DIST) ) {
+		return RP_INVALID_REQ_TYPE;
+	}
+
+	// Check the sensor
+	if ( (req->sensor1 < 0) || (req->sensor1 > 80) ||
+		 (req->sensor2 < 0) || (req->sensor2 > 80) ) {
+		return INVALID_SENSOR_IDX;
+	}
+
 	// Check the train id.
 	if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
 		 req->trainId != 46 && req->trainId != 52 ) {
 		return INVALID_TRAIN;
 	}
 
-	// Check the name of the node.
-	if ((err = model_nameToIdx(&rp->model, req->name)) < NO_ERROR ) {
-		return err;
+	// Check the last hit sensor.
+	if ( (req->lastSensor < 0) || (req->lastSensor > 80) ) {
+		return INVALID_SENSOR_IDX;
+	}
+
+	// Check the train's average speed.
+	if ( (req->avgSpeed < 0) || (req->avgSpeed > 1000) ) {
+		return INVALID_TRAIN_SPEED;
 	}
 
 	// Check destination index.
-	if ( (req->dest < 0) || (req->dest > 80) ) {
+	if ( (req->destIdx < 0) || (req->destIdx > rp->model.num_nodes) ) {
 		return INVALID_NODE_IDX;
-	}
-
-	// Check request type.
-	if ( (req->type < 0) || (req->type > NEIGHBOURDIST) ) {
-		return RP_INVALID_REQ_TYPE;
 	}
 
 	return NO_ERROR;
 }
 
-void rp_planRoute ( RoutePlanner *rp, RPReply *reply, RPRequest *req ) {
+inline void clearReply (RPReply *trReply) {
+	trReply->err      = NO_ERROR;
+	trReply->stopDist = 0;
+}
+
+// ----------------------------------------------------------------------------
+// --------------------------- Route Finding ----------------------------------
+// ----------------------------------------------------------------------------
+void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
+	int  nextRv;
+	int  totalDist;
+	int  currentIdx = sIdxToIdx(req->lastSensor);
 	Path p;
 
-	// Distance from current location to destination
-	reply->totalDist = rp_minDistI ( rp, req->idx1, req->dest );
+	// Distance from current sensor to destination node
+	totalDist = rp->dists[currentIdx][req->destIdx];
 
-	// Construct the path from i -> j
-	makePath ( rp, &p, req->idx1, req->dest );
+	// Construct the path from current sensor to destination node
+	makePath ( rp, &p, currentIdx, req->destIdx );
 
-	rp_getNextCheckinP (rp, &p, reply);
-	
-	// TODO: start on a sensor/give starting sensor
- 	rp_predictSensors (rp, &reply->nextSensors, req->idx1);
-	
-	/*
-	int q = 0;
-	debug("pathlen = %d\r\n", reply->pathLen);
-	for ( q = 0; q < reply->pathLen; q ++ ) {
-		debug("%d> ", reply->path[q]);
-	}
-	*/
-}
+	// Get the distance to the next reverse
+	nextRv = rp_distToNextRv (rp, &p);
 
-inline int rp_minDistN (RoutePlanner *rp, Node *a, Node *b) {
-	return rp_minDistI(rp, a->idx, b->idx);
-}
-
-inline int rp_minDistI (RoutePlanner *rp, int idx1, int idx2 ) {
-	return rp->dists[idx1][idx2];
-}
-
-inline int rp_neighbourDistN (RoutePlanner *rp, Node *a, Node *b) {
-	return rp_neighbourDistI(rp, a->idx, b->idx);	
-}
-
-inline int rp_neighbourDistI (RoutePlanner *rp, int idx1, int idx2 ) {
-	int c = cost (&rp->model, idx1, idx2);
-
-	return ( c == INT_MAX ) ? -1 : c;
-}
-/*
-int rp_getNextCheckinN (RoutePlanner *rp, Node *a, Node *b) {
-	debug ("Making a path from %s(%d) to %s(%d)\r\n", 
-			a->name, a->idx, b->name, b->idx);
-	
-	Path path;
-	makePath ( rp, &path, a->idx, b->idx );
-	
-	return rp_getNextCheckinP(rp, &path);
-
-}
-*/
-int rp_getNextCheckinP ( RoutePlanner *rp, Path *p, RPReply *reply ) {
-	int nextSw = rp_distToNextSw(rp, p, reply);
-	int nextRv = rp_distToNextRv(rp, p, reply);
-
-	if ( nextSw == nextRv && nextSw == INT_MAX ) {
-		debug ("%s to %s: Neither.\r\n", 
-				rp->model.nodes[p->path[0]].name, 
-				rp->model.nodes[p->path[p->len-1]].name);
-		
-		reply->reverse   = 0;
-		reply->switchId  = -1;
-		reply->switchDir = 0;
-
-		reply->checkinDist = reply->totalDist;
-	}
-	else if ( nextSw < nextRv ) {
-		debug ("%s to %s: First Checkin=SWITCH dist=%d\r\n", 
-				rp->model.nodes[p->path[0]].name, 
-				rp->model.nodes[p->path[p->len-1]].name, nextSw);
-		
-		reply->checkinDist = nextSw;
-		
+	// The stop distance is min {next reverse, total distance to travel}
+	if ( nextRv < totalDist ) {
+		trReply->stopDist = nextRv;
 	} else {
-		debug ("%s to %s: First Checkin=REVERSE dist=%d\r\n", 
-				rp->model.nodes[p->path[0]].name, 
-				rp->model.nodes[p->path[p->len]].name, nextRv);
-		
-		// Tell the train to reverse at next checkin
-		reply->reverse   = 1;
-		reply->switchId  = -1;
-		reply->switchDir = 0;
-		reply->checkinDist = nextRv;
+		trReply->stopDist = totalDist;
 	}
 
-	// TODO: fix this error(?) return.
-	// There is nothing to do on the path but DRIVE.
-	if ( nextSw == nextRv && nextSw == INT_MAX ) {
-		return INT_MAX;
-	}
-	return (nextSw < nextRv) ? nextSw : nextRv;
+	// Get the next switches 
+	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
+	
+	// Predict the next sensors the train could hit
+ 	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
 }
 
-int rp_distToNextSw (RoutePlanner *rp, Path *p, RPReply *reply) {
-	int *path = p->path;
-	Node *itr;
-
-	// Start at i=1 to skip first node
-	// Stop at len - 1 since we don't have to switch the last node if we
-	// want to stop on it
-	int i;
-	for ( i = 1; i < p->len - 1; i ++ ) {
-		itr = &rp->model.nodes[path[i]];
-		
-		if ( itr->type == NODE_SWITCH ) {
-		//	Node *prev = &rp->model.nodes[path[i-1]];
-			
-			// If coming from either "ahead" edges, you don't need to 
-			// change a switch direction.
-			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
-				 (itr->sw.ahead[1].dest == path[i-1])) ) {
-//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
-				
-				// Give the train the switch info
-				reply->switchId = itr->id;
-				reply->switchDir = rp_getSwitchDir (rp, itr, 
-												&rp->model.nodes[path[i+1]]);
-
-				return rp->dists[path[0]][path[i]] - EPSILON;
-			}
-		}
-	}
-
-	return INT_MAX;
-}
-
-// ahead[0] = straight
-// ahead[1] = curved
-SwitchDir rp_getSwitchDir (RoutePlanner *rp, Node *sw, Node *next) {
-	Edge *e = &sw->sw.ahead[0];
-
-	return ( e->dest == next->idx ) ? SWITCH_STRAIGHT : SWITCH_CURVED;
-}
-
-int rp_distToNextRv (RoutePlanner *rp, Path *p, RPReply *reply) {
+int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 	int  i;
 	int  *path = p->path;
 	Node *itr;
@@ -446,10 +393,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p, RPReply *reply) {
 				  (itr->sw.ahead[1].dest == path[i+1])) &&
 				 ((itr->sw.ahead[0].dest == path[i-1]) ||
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
-				
 //				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
-				
-
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -458,11 +402,67 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p, RPReply *reply) {
 	return INT_MAX;
 }
 
-// 0 = A1
-// 1 = A2
-// 2 = A3
-// 3 = A4
-void rp_predictSensors (RoutePlanner *rp, Sensors *p, int sensorId ) {
+int rp_distToNextSw (RoutePlanner *rp, Path *p) {
+	int *path = p->path;
+	Node *itr;
+
+	// Start at i=1 to skip first node
+	// Stop at len - 1 since we don't have to switch the last node if we
+	// want to stop on it
+	int i;
+	for ( i = 1; i < p->len - 1; i ++ ) {
+		itr = &rp->model.nodes[path[i]];
+		
+		if ( itr->type == NODE_SWITCH ) {
+		//	Node *prev = &rp->model.nodes[path[i-1]];
+			
+			// If coming from either "ahead" edges, you don't need to 
+			// change a switch direction.
+			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
+				 (itr->sw.ahead[1].dest == path[i-1])) ) {
+//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
+				return rp->dists[path[0]][path[i]] - EPSILON;
+			}
+		}
+	}
+
+	return INT_MAX;
+}
+
+void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings) {
+	int *path = p->path;
+	Node *itr;
+	int n = 0;
+
+	// Start at i=1 to skip first node
+	// Stop at len - 1 since we don't have to switch the last node if we
+	// want to stop on it
+	int i;
+	for ( i = 1; i < p->len - 1; i ++ ) {
+		itr = &rp->model.nodes[path[i]];
+		
+		if ( itr->type == NODE_SWITCH ) {
+			
+			// If coming from either "ahead" edges, you don't need to 
+			// change a switch direction.
+			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
+				 (itr->sw.ahead[1].dest == path[i-1])) ) {
+//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
+				
+				settings[n].dist = rp->dists[path[0]][path[i]];
+				settings[n].id   = itr->id;
+				settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
+				n ++;
+			}
+
+		// STOP WHEN YOU DON'T HIT A SWITCH
+		} else {
+			break;
+		}
+	}
+}
+
+void rp_predictSensors (RoutePlanner *rp, SensorsPred *pred, int sensorId ) {
 	int   idx =  rp->model.sensor_nodes[sensorId];
 	Node *n   = &rp->model.nodes[idx];
 	Edge *e   = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
@@ -471,13 +471,14 @@ void rp_predictSensors (RoutePlanner *rp, Sensors *p, int sensorId ) {
 	n = &rp->model.nodes[e->dest]; 
 
 	// Clear the path
-	p->len = 0;
+	pred->len = 0;
 
 	// Fill the "path" with sensor ids
-	rp_predictSensorHelper ( rp, p, n, idx );
+	rp_predictSensorHelper ( rp, pred, n, idx );
 }
 
-void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx) {
+void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
+							  Node *n, int prevIdx ) {
 	Node *n1, *n2;
 	
 	switch ( n->type ) {
@@ -489,32 +490,32 @@ void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx)
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, p, n1, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx );
 			
 			} else if ( n->sw.ahead[1].dest == prevIdx ) {
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, p, n1, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx );
 			} else { //behind
 				n1 = &rp->model.nodes[n->sw.ahead[0].dest]; 
 				n2 = &rp->model.nodes[n->sw.ahead[1].dest]; 
 				
 				// Recurse on these next nodes
-				rp_predictSensorHelper ( rp, p, n1, n->idx );
-				rp_predictSensorHelper ( rp, p, n2, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx );
+				rp_predictSensorHelper ( rp, pred, n2, n->idx );
 			}
 			break;
 		
 		case NODE_SENSOR:
 			// Store the sensor id
-			p->s[p->len] = (n->idx * 2);
+			pred->idxs[pred->len] = (n->idx * 2);
 			if ( n->se.ahead.dest == prevIdx ) {
-				p->s[p->len] += 1;
+				pred->idxs[pred->len] += 1;
 			}
 
 			// Advance length of the "path"
-			p->len ++;
+			pred->len ++;
 			break;
 	
 		case NODE_STOP:
@@ -522,22 +523,30 @@ void rp_predictSensorHelper (RoutePlanner *rp, Sensors *p, Node *n, int prevIdx)
 	}
 }
 
-inline void clearReply (RPReply *reply) {
-	//TODO
+int rp_minSensorDist ( RoutePlanner *rp, int sensor1, int sensor2 ) {
+	int idx1 = sIdxToIdx (sensor1);
+	int idx2 = sIdxToIdx (sensor2);
 
+	return rp->dists[idx1][idx2];
 }
 
 //-----------------------------------------------------------------------------
 //--------------------- Displaying To Monitor ---------------------------------
 //-----------------------------------------------------------------------------
 
-void outputPath (RoutePlanner *rp, int i, int j) {
+void rp_outputPath (RoutePlanner *rp, int i, int j) {
 	if ( rp->paths[i][j] == -1 ) {
-		printf ("%s> ", rp->model.nodes[i].name);
+		if ( rp->model.nodes[i].type == NODE_SENSOR ) {
+			printf ("%c%d> ", 
+					sensor_bank(rp->model.nodes[i].id), 
+					sensor_num( rp->model.nodes[i].id));
+		} else {
+			printf ("%s> ", rp->model.nodes[i].name);
+		}
 	}
 	else {
-		outputPath (rp, i, rp->paths[i][j]);
-		outputPath (rp, rp->paths[i][j], j);
+		rp_outputPath (rp, i, rp->paths[i][j]);
+		rp_outputPath (rp, rp->paths[i][j], j);
 	}
 }
 
@@ -545,26 +554,25 @@ void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req) {
 	Path p;
 	int dist;
 	int i = 0;
-	RPReply reply;
 	
-	makePath ( rp, &p, req->idx1, req->idx2 );
-	dist = rp_distToNextSw(rp, &p, &reply);
+	makePath ( rp, &p, req->nodeIdx1, req->nodeIdx2 );
+	dist = rp_distToNextSw(rp, &p);
 	
 	if ( dist == INT_MAX ) {
 		printf ("No switch to change along path from %s to %s.\r\n", 
-				rp->model.nodes[req->idx2].name, 
+				rp->model.nodes[req->nodeIdx2].name, 
 				rp->model.nodes[p.path[i]].name);
 		return;
 	}
 
-	while ( (rp->dists[req->idx1][p.path[i]] != (dist - EPSILON)) && 
+	while ( (rp->dists[req->nodeIdx1][p.path[i]] != dist) && 
 			(i < p.len) ) {
 		i++;
 	}
 	printf("%s %s to %s is %s. Distance to it is %d.\r\n",
 			"First switch to change from",
-			rp->model.nodes[req->idx1].name, 
-			rp->model.nodes[req->idx2].name, 
+			rp->model.nodes[req->nodeIdx1].name, 
+			rp->model.nodes[req->nodeIdx2].name, 
 			rp->model.nodes[p.path[i]].name,
 			dist);
 }
@@ -573,27 +581,26 @@ void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
 	int i = 0;
 	int dist;
 	Path p;
-	RPReply reply;
 
-	makePath ( rp, &p, req->idx1, req->idx2 );
-	dist = rp_distToNextRv(rp, &p, &reply);
+	makePath ( rp, &p, req->nodeIdx1, req->nodeIdx2 );
+	dist = rp_distToNextRv(rp, &p);
 	
 	if ( dist == INT_MAX ) {
 		printf ("Never reverse along path from %s to %s.\r\n", 
-				rp->model.nodes[req->idx2].name, 
+				rp->model.nodes[req->nodeIdx2].name, 
 				rp->model.nodes[p.path[i]].name);
 		return;
 	}
 
-	while ( (rp->dists[req->idx1][p.path[i]] != (dist + EPSILON)) && 
+	while ( (rp->dists[req->nodeIdx1][p.path[i]] != (dist + EPSILON)) && 
 			(i < p.len) ) {
 		i++;
 	}
 	
 	printf("%s %s to %s is %s. Distance to it is %d.\r\n",
 			"First reverse from",
-			rp->model.nodes[req->idx1].name, 
-			rp->model.nodes[req->idx2].name, 
+			rp->model.nodes[req->nodeIdx1].name, 
+			rp->model.nodes[req->nodeIdx2].name, 
 			rp->model.nodes[p.path[i]].name,
 			dist);
 }
@@ -715,7 +722,7 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		//		debug("DIST: (%s,%s)=%d THROUGH ", model->nodes[i].name, 
 		//									   model->nodes[j].name, 
 			//								   rp->dists[i][j]);
-			outputPath(model, rp, i ,j);		
+			rp_outputPath(model, rp, i ,j);		
 			printf ("%s\r\n", model->nodes[j].name);
 			}
 		}
