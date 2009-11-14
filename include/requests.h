@@ -204,6 +204,12 @@ int Putc (char ch, TID iosTid);
  */
 int PutStr (const char *str, int strLen, TID iosTid);
 
+
+/**
+ * Purges the input buffer of the given channel
+ */
+void Purge (TID iosTid);
+
 /**
  * Similar to getc, but returns TIMEOUT_ERROR if getc does not acquire
  * a character within prescribed amount of time;
