@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG  2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>

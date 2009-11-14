@@ -38,6 +38,15 @@ typedef struct {
 	// function for writing
 } FILE;
 
+/**
+ * Has not been tested yet.
+ * Concatenate strings
+ * Appends a copy of the source string to the destination string. 
+ * The terminating null character in destination is overwritten by the first
+ * character of source, and a new null-character is appended at the end of 
+ * the new string formed by the concatenation of both in destination.
+ */
+char * strcat ( char *dest, const char *source, int destSize);
 
 /*
  * Copy characters from string

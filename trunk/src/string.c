@@ -10,6 +10,23 @@
 #include "requests.h"
 #include "debug.h"
 
+// strcat
+char * strcat ( char *dest, const char *source, int destSize) {
+	int destLen   = strlen(dest);
+	int sourceLen = strlen(source);
+	int totalLen  = destLen + sourceLen;
+
+	assert ( destSize <= totalLen );
+
+	int i;
+	for ( i = 0 ; i < sourceLen; i ++ ) {
+		dest[ destLen + i - 1 ] = source[i];
+	}
+	dest[totalLen] = '\0';
+
+	return dest;
+}
+
 // strncpy
 char * strncpy ( char *dest, const char * src, size_t num ) {
 	// Copy the source into destination
