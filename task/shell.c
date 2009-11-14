@@ -41,6 +41,9 @@ typedef struct {
 // Use this function to grab a line of data before the shell starts.
 void shell_inputData (TIDs tids, char *input);
 
+void shell_initTrack (TIDs tids, char *input);
+void shell_initTrain (TIDs tids, char *input);
+
 /**
  * Given an input command, error check it and execute it.
  */
@@ -70,7 +73,6 @@ void shell_run ( ) {
     int i = 0, h = 0;
 	int	time, tens, secs, mins;
 	TIDs tids;
-	TrainInit trInit;
 
 	// Create the name server
 	// Create the Serial I/O server
@@ -95,39 +97,15 @@ void shell_run ( ) {
 	tids.idle = Create (9, &idleTask);
 
 	input = history[h++];
-/*
-	output ("Track: ");
-	shell_inputData(tids, input);
-*/	
-	output ("Train Id: ");
-	shell_inputData(tids, input);
-	trInit.id = atoi((const char**)&input);
 
-	output ("Ahead Landmark Idx: " );
-	shell_inputData(tids, input);
-	trInit.currLoc = atoi((const char**)&input);
-
-	output ("Behind Landmark Idx: " );
-	shell_inputData(tids, input);
-	trInit.prevLoc = atoi((const char**)&input);
-
-	output ("Destination Landmark Idx: ");
-	shell_inputData(tids, input);
-	trInit.dest = atoi((const char**)&input);
-
-	// Create the first train!
-	tids.tr1Tid = Create ( 5, &train_run );
-	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
-
-	// Tell the train its init info.
-	Send ( tids.tr1Tid, (char*)&trInit, sizeof(TrainInit),
-						(char*)&trInit.id, sizeof(int) );
-
+	// Initialize the track we want to use.
+	shell_initTrack (tids, input);
+	
+	// Initialize the first train.
+	shell_initTrain (tids, input);
 
 	output ("Type 'h' for a list of commands.\r\n");
     
-	
-	
 	time = Time(tids.cs)/2;
 	tens = time % 10;
 	secs = (time / 10) % 60;
@@ -226,6 +204,42 @@ void shell_inputData (TIDs tids, char *input) {
     }
 }
 
+void shell_initTrack (TIDs tids, char *input) {
+	output ("Track: ");
+	shell_inputData(tids, input);
+	// Tell the Route Planner which track we are using
+	Send (tids.rp, (char*)&input[0], sizeof(char),
+				   (char*)&input[0], sizeof(char));
+}
+
+void shell_initTrain (TIDs tids, char *input) {
+	TrainInit trInit;
+	
+	output ("Train Id: ");
+	shell_inputData(tids, input);
+	trInit.id = atoi((const char**)&input);
+
+	output ("Ahead Landmark Idx: " );
+	shell_inputData(tids, input);
+	trInit.currLoc = atoi((const char**)&input);
+
+	output ("Behind Landmark Idx: " );
+	shell_inputData(tids, input);
+	trInit.prevLoc = atoi((const char**)&input);
+
+	output ("Destination Landmark Idx: ");
+	shell_inputData(tids, input);
+	trInit.dest = atoi((const char**)&input);
+
+	// Create the first train!
+	tids.tr1Tid = Create ( 5, &train_run );
+	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
+
+	// Tell the train its init info.
+	Send ( tids.tr1Tid, (char*)&trInit, sizeof(TrainInit),
+						(char*)&trInit.id, sizeof(int) );
+}
+
 // Execute a train command
 TSReply trainCmd ( TSRequest *req, TID tsTid ) {
 	TSReply	rpl;
@@ -250,6 +264,10 @@ void shell_exec( char *command, TIDs tids ) {
 
 	RPRequest	rpReq;
 	RPReply 	rpRpl;
+
+	char 		tmpStr1[12];
+	char 		tmpStr2[12];
+	int			tmpInt;
 
 	char *commands[] = {
 		"h = Help!", 
@@ -333,22 +351,80 @@ void shell_exec( char *command, TIDs tids ) {
 	} else if( sscanf(command, "cache OFF") >= 0 ) {
 		cache_off();
 	// path
-	} else if( sscanf(command, "path %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
-		rpReq.type = DISPLAYROUTE;
-		rpCmd ( &rpReq, tids.rp );
+	} else if( sscanf(command, "path %s %s", tmpStr1, tmpStr2) >= 0 ) {
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr1, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+
+		tmpInt = rpRpl.idx;
+		
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr2, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+			output ("Invalid node name.\r\n");
+		} else {
+			rpReq.type = DISPLAYROUTE;
+			rpReq.idx1 = tmpInt;
+			rpReq.idx2 = rpRpl.idx;
+			rpCmd ( &rpReq, tids.rp );
+		}
 	// first switch
-	} else if( sscanf(command, "fstSw %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
-		rpReq.type = DISPLAYFSTSW;
-		rpCmd ( &rpReq, tids.rp );
+	} else if( sscanf(command, "fstSw %s %s", tmpStr1, tmpStr2) >= 0 ) {
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr1, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+
+		tmpInt = rpRpl.idx;
+		
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr2, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+		
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+			output ("Invalid node name.\r\n");
+		} else {
+			rpReq.type = DISPLAYFSTSW;
+			rpReq.idx1 = tmpInt;
+			rpReq.idx2 = rpRpl.idx;
+			rpCmd ( &rpReq, tids.rp );
+		}
 	// first reverse
-	} else if( sscanf(command, "fstRv %d %d", &rpReq.idx1, &rpReq.idx2) >= 0 ) {
-		rpReq.type = DISPLAYFSTRV;
-		rpCmd ( &rpReq, tids.rp );
+	} else if( sscanf(command, "fstRv %s %s", tmpStr1, tmpStr2) >= 0 ) {
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr1, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
 
-	} else if( sscanf(command, "predict %d", &rpReq.idx1) >= 0 ) {
-		rpReq.type = DISPLAYPREDICT;
-
-		rpCmd ( &rpReq, tids.rp );
+		tmpInt = rpRpl.idx;
+		
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr2, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+		
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+			output ("Invalid node name.\r\n");
+		} else {
+			rpReq.type = DISPLAYFSTRV;
+			rpReq.idx1 = tmpInt;
+			rpReq.idx2 = rpRpl.idx;
+			rpCmd ( &rpReq, tids.rp );
+		}
+	} else if( sscanf(command, "predict %s", tmpStr1) >= 0 ) {
+		rpReq.type = CONVERT;
+		strncpy(rpReq.name, (const char*)tmpStr1, 5);
+		rpRpl = rpCmd ( &rpReq, tids.rp );
+		
+		if ( (rpRpl.idx == NOT_FOUND) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+			output ("Invalid node name.\r\n");
+		} else {
+			rpReq.type = DISPLAYPREDICT;
+			rpReq.idx1 = rpRpl.idx;
+			rpCmd ( &rpReq, tids.rp );
+		}
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
