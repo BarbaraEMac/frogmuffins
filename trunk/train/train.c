@@ -89,16 +89,12 @@ void train_run () {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
 		debug ("train: has a route\r\n");
-		debug ("Next node=%d checkinDist=%d reverse?=%d sw?=%d dir=%d\r\n",
-				rpReply.path.path[0], rpReply.checkinDist, rpReply.reverse,
-				rpReply.switchId, rpReply.switchDir);
 
 		// This makes the assumption that yo uare NOWHERE
 		// near a switch. Neither forward nor backwards can be a sw.
 		// If you are backwards, turn around.
-		if ( rpReply.path.path[0] == tr.prevLoc ) {
-			train_reverse(&tr);
-		}
+		// TODO:
+
 
 		// TODO: Will this call block until we've reached our sensor?
 		// It probably shouldn't so that we can calibrate ..
@@ -111,7 +107,7 @@ void train_run () {
 		// Start driving slowly ... 
 		debug ("train is driving\r\n");
 		train_drive (&tr, 6);
-		while ( someDistanceTravelled < rpReply.checkinDist ) {
+		while ( someDistanceTravelled < rpReply.stopDist ) {
 			someDistanceTravelled ++;
 			; // BUSY WAIT
 		}
@@ -120,13 +116,9 @@ void train_run () {
 		//debug ("train is stopping\r\n");
 		
 		// If you should reverse, do it.
-		if ( rpReply.reverse == 1 ) {
 			train_reverse(&tr);
-		}
 		// If you should flip a switch, do it.
-		if ( rpReply.switchId != -1 ) {
 			train_flipSwitch (&tr, &rpReply);
-		}
 
 	}
 
@@ -157,7 +149,7 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	
 	// Initialize the Route Planner request
 	rpReq->trainId = tr->id;
-	rpReq->dest    = tr->dest;
+	rpReq->destIdx = tr->dest;
 
 	// Initialize the calibration data
 	tr->numSw = 0;
@@ -280,9 +272,8 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	RPReply reply;
 	
 	req->type = PLANROUTE;
-	req->idx1 = tr->currLoc;
-	req->idx2 = tr->prevLoc;
-	req->dest = tr->dest;
+	req->lastSensor = tr->currLoc;
+	req->destIdx = tr->dest;
 
 	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
@@ -294,7 +285,7 @@ TSReply train_predict (Train *tr, RPReply *rep) {
 	TSReply reply;
 	SensorWatch preds[4];
 	int i;
-
+/*
 	for ( i = 0; i < 4; i ++ ) {
 		preds[i].sensor = rep->nextSensors[i];
 		preds[i].start  = train_time (tr, ???) - (PREDICTION_WINDOW/2);
@@ -304,7 +295,7 @@ TSReply train_predict (Train *tr, RPReply *rep) {
 	// Tell the detective about the Route Planner's prediction.
 	Send ( tr->deTid, (char*)&preds, sizeof(SensorWatch)*4, 
 					  (char*)&Reply, sizeof(TSReply) );
-	return reply;
+*/	return reply;
 }
 
 //-----------------------------------------------------------------------------
@@ -337,9 +328,10 @@ void train_flipSwitch (Train *tr, RPReply *rpReply) {
 	TSRequest req;
 	TSReply	  reply;
 
+	// TODO
 	req.type = SW;
-	req.sw   = rpReply->switchId;
-	req.dir  = rpReply->switchDir;
+	//req.sw   = rpReply->switchId;
+	//req.dir  = rpReply->switchDir;
 
 	Send (tr->tsTid, (char*)&req,   sizeof(TSRequest),
 			  		 (char*)&reply, sizeof(TSReply));

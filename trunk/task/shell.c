@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -205,11 +205,17 @@ void shell_inputData (TIDs tids, char *input) {
 }
 
 void shell_initTrack (TIDs tids, char *input) {
+	int err;
+	
 	output ("Track: ");
 	shell_inputData(tids, input);
 	// Tell the Route Planner which track we are using
 	Send (tids.rp, (char*)&input[0], sizeof(char),
-				   (char*)&input[0], sizeof(char));
+				   (char*)&err, 	 sizeof(int));
+
+	if ( err < NO_ERROR ) {
+		output ("Invalid Track ID. Using Track B.\r\n");
+	}
 }
 
 void shell_initTrain (TIDs tids, char *input) {
@@ -249,25 +255,31 @@ TSReply trainCmd ( TSRequest *req, TID tsTid ) {
 }
 
 // Execute a Route Planner Command
-RPReply rpCmd ( RPRequest *req, TID rpTid ) {
-	RPReply	rpl;
+RPShellReply rpCmd ( RPRequest *req, TID rpTid ) {
+	RPShellReply	rpl;
 	
-	Send( rpTid, (char*)req, sizeof(RPRequest), (char*) &rpl, sizeof(rpl) ); 
+	Send( rpTid, (char*) req,  sizeof(RPRequest),
+				 (char*) &rpl, sizeof(rpl) ); 
 	return rpl;
 }
 
 // Execute the command passed in
 void shell_exec( char *command, TIDs tids ) {
-	int i;
-	TSRequest	tsReq;
-	TSReply		tsRpl;
+	int 		 i;
+	char 		 tmpStr1[12];
+	char 		 tmpStr2[12];
+	int			 tmpInt;
 
-	RPRequest	rpReq;
-	RPReply 	rpRpl;
+	TSRequest	 tsReq;
+	TSReply		 tsRpl;
 
-	char 		tmpStr1[12];
-	char 		tmpStr2[12];
-	int			tmpInt;
+	RPRequest	 rpReq;
+	RPShellReply rpRpl;
+
+	// Clear the request
+	rpReq.name[0]  = 0;
+	rpReq.nodeIdx1 = 0;
+	rpReq.nodeIdx2 = 0;
 
 	char *commands[] = {
 		"h = Help!", 
@@ -362,13 +374,13 @@ void shell_exec( char *command, TIDs tids ) {
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
-		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
-			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.err == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.err == INVALID_NODE_NAME) ) {
 			output ("Invalid node name.\r\n");
 		} else {
 			rpReq.type = DISPLAYROUTE;
-			rpReq.idx1 = tmpInt;
-			rpReq.idx2 = rpRpl.idx;
+			rpReq.nodeIdx1 = tmpInt;
+			rpReq.nodeIdx2 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
 	// first switch
@@ -383,13 +395,13 @@ void shell_exec( char *command, TIDs tids ) {
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 		
-		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
-			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.err == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.err == INVALID_NODE_NAME) ) {
 			output ("Invalid node name.\r\n");
 		} else {
 			rpReq.type = DISPLAYFSTSW;
-			rpReq.idx1 = tmpInt;
-			rpReq.idx2 = rpRpl.idx;
+			rpReq.nodeIdx1 = tmpInt;
+			rpReq.nodeIdx2 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
 	// first reverse
@@ -403,14 +415,14 @@ void shell_exec( char *command, TIDs tids ) {
 		rpReq.type = CONVERT;
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
-		
-		if ( (tmpInt == NOT_FOUND)         || (rpRpl.idx == NOT_FOUND) ||
-			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+			
+		if ( (tmpInt == NOT_FOUND)         || (rpRpl.err == NOT_FOUND) ||
+			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.err == INVALID_NODE_NAME) ) {
 			output ("Invalid node name.\r\n");
 		} else {
 			rpReq.type = DISPLAYFSTRV;
-			rpReq.idx1 = tmpInt;
-			rpReq.idx2 = rpRpl.idx;
+			rpReq.nodeIdx1 = tmpInt;
+			rpReq.nodeIdx2 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
 	} else if( sscanf(command, "predict %s", tmpStr1) >= 0 ) {
@@ -418,11 +430,11 @@ void shell_exec( char *command, TIDs tids ) {
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 		
-		if ( (rpRpl.idx == NOT_FOUND) || (rpRpl.idx == INVALID_NODE_NAME) ) {
+		if ( (rpRpl.idx == NOT_FOUND) || (rpRpl.err == INVALID_NODE_NAME) ) {
 			output ("Invalid node name.\r\n");
 		} else {
 			rpReq.type = DISPLAYPREDICT;
-			rpReq.idx1 = rpRpl.idx;
+			rpReq.nodeIdx1 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
     // Help

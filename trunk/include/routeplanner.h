@@ -20,22 +20,28 @@ typedef enum RPType {
 	CONVERT,
 	RESERVE,
 	PLANROUTE,
-	MINDIST,
-	NEIGHBOURDIST	// This must be last for error checking purposes
+	MIN_SENSOR_DIST // This must be last for error checking purposes
 } RPType;
 
 typedef struct {
 	RPType	type;		// Route Planner request type
 	
+	// Shell
+	char 	name[6];	// Node name to be converted
+	
+	int 	nodeIdx1;	// Predict sensors for this node OR 
+						// Find Path from this node
+	int 	nodeIdx2;	// to this node.
+
+	// Train
+	int 	sensor1;	// Find min distance from this sensor
+	int 	sensor2;	// to this sensor.
+
 	int		trainId;	// Unique id for train
+	int     lastSensor;	// Last Hit Sensor Idx
 	int   	avgSpeed;	// Average speed of a train
-						// between the past sensors
-	int		idx1; 		// Current Sensor, Start Location
-	int 	idx2; 		// Previous Sensor
-
-	char 	name[3];	// Node name to be converted
-
-	int		dest;		// Destination Location Idx
+	int		destIdx;	// Destination Location Index
+	
 } RPRequest;
 
 typedef struct {
@@ -45,27 +51,29 @@ typedef struct {
 
 typedef struct {
 	int len;
-	int s[4];
-} Sensors;
+	int idxs[4];
+} SensorsPred;
+
+typedef struct {
+	int dist;
+	int id;
+	SwitchDir dir;
+} SwitchSetting;
 
 typedef struct {
 	union {
 		int err;		// Check this first! If < 0, ERROR OCCURRED!
-		int idx;		// Index of node
-		int totalDist;	// stopping distance
-		int minDist;	// Minimum distance b/w nodes
+		int idx;		// Index of node (CONVERT return)
 	};
-	
-	int checkinDist;	// Distance to next checkin location
+} RPShellReply;
 
-	Path path;			// Path of indices from s -> t
-	Sensors nextSensors;// Prediction for the next sensors
+typedef struct {
+	int err;			// Check this first! If < 0, ERROR OCCURRED!
 
-	int reverse;		// 1 if need to reverse; Garbage otherwise;
+	int stopDist;		// Distance to next stop
+	SwitchSetting switches[3];
+	SensorsPred   nextSensors;// Prediction for the next sensors
 
-	int switchId;		// Id of the next switch
-	SwitchDir switchDir;// 'S' OR 'C' if the switch needs to be thrown
-						// 0 		  Otherwise
 } RPReply;
 
 void rp_run();
