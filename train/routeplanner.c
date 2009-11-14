@@ -49,7 +49,7 @@ inline void clearReply (RPReply *trReply);
 
 // Route Finding Functions
 void rp_planRoute 		(RoutePlanner *rp, RPReply *trReply, RPRequest *req);
-
+int  rp_turnAround 		(RoutePlanner *rp, Path *p, int sensorId);
 int  rp_distToNextRv   	(RoutePlanner *rp, Path *p);
 int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
@@ -367,11 +367,32 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 		trReply->stopDist = totalDist;
 	}
 
+	// If the train needs to turn around right now,
+	if (rp_turnAround (rp, &p, req->lastSensor) ) {
+		trReply->stopDist = -trReply->stopDist;
+	}
+
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
 	
 	// Predict the next sensors the train could hit
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
+}
+
+int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
+	if ( p->len < 2 ) {
+		return 0;
+	}
+	
+	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
+	int   even   = (sensorId %2) == 0;
+
+	if ( (sensor->se.ahead.dest  == p->path[1] && even) ||
+		 (sensor->se.behind.dest == p->path[1] && !even) ) {
+		return 1;
+	}
+	
+	return 0;
 }
 
 int rp_distToNextRv (RoutePlanner *rp, Path *p) {
@@ -459,6 +480,12 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 		} else {
 			break;
 		}
+	}
+
+	// Set the rest of the settings to invalid.
+	for ( ; n < 3; n ++ ) {
+		settings[n].dist = -1;
+		settings[n].id   = -1;
 	}
 }
 
