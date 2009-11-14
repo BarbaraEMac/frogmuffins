@@ -6,6 +6,7 @@ dg	*	implement cprintf
 dg	*	return to redboot from asserts (Matt knows how to do this)
 	*	spawn a task for reversing a train
 dg	*	rewrite serialio requests so as not to send 80 chars every time
-	*	create a generic fifo structure
+bm	*	create a generic fifo structure
+dg	* 	create a generic buffer structure
 	*	wake up the tasks waiting on the sendQ of an exited task (with erro code)
 	*	get 100 in course
