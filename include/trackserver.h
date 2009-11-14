@@ -69,13 +69,13 @@ typedef struct {
 	};
 	union {
 		char 		rawSensors[NUM_SENSOR_BANKS*2];
-		SensorWatch events[2];
+		SensorWatch events[4];
 	};
 	union {
 		int			ticks;
 		int			numEvents;
 	};
-} DetRequest;
+} DeRequest;
 
 
 

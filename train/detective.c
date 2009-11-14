@@ -1,7 +1,7 @@
 /*
  * CS 452: Track Detective User Task
  */
-#define DEBUG 		1
+#define DEBUG 		2
 
 #include <string.h>
 #include <buffer.h>
@@ -35,7 +35,7 @@ typedef struct {
 	int			sensorHist[NUM_SENSORS];
 	char		strayBuf[NUM_STRAY];
 	RB			stray;
-	DetRequest	requests[MAX_NUM_TRAINS];
+	DeRequest	requests[MAX_NUM_TRAINS];
 	int			lstPoll;
 	TID 	 	iosTid;
 	TID  		csTid;
@@ -55,7 +55,7 @@ void det_run () {
 	debug ("det_run: The Track Server is about to start. \r\n");	
 	Det 		det;
 	int			senderTid;
-	DetRequest 	req;
+	DeRequest 	req;
 	TSReply		reply;
 	int			i, k, len, sensor;
 	char		ch;
@@ -68,10 +68,11 @@ void det_run () {
 		// Receive a server request
 		len = Receive ( &senderTid, (char *) &req, sizeof(req) );
 	
-		assert( len == sizeof(DetRequest) );
+		assert( len == sizeof(DeRequest) );
 		
 		switch (req.type) {
 			case POLL:
+				Reply ( senderTid, 0, 0 );
 				//debug("det: Poll results  %s\r\n", req.channel, req.rawSensors);
 				for( i = 0; i < NUM_SENSOR_BANKS*2; i++ ) {
 					for( k = 0; k < 8; k++ ) {
@@ -93,7 +94,8 @@ void det_run () {
 				break;
 
 			case WATCH_DOG:
-				debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
+				Reply ( senderTid, 0, 0 );
+				//debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
 				if( det.lstPoll < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					// Don't tell me for another 5 seconds
@@ -123,10 +125,10 @@ void det_run () {
 			default:
 				reply.ret = DET_INVALID_REQ_TYPE;
 				error (reply.ret, "Track Server request type is not valid.");
+				Reply ( senderTid, (char *) &reply, sizeof(reply) );
 				break;
 		}
 
-		Reply ( senderTid, (char *) &reply, sizeof(reply) );
 
 	}
 }
@@ -141,10 +143,10 @@ int det_init( Det *det ) {
 	det->lstPoll = POLL_GRACE; //wait 5 seconds before complaining
 
 	rb_init(&(det->stray), det->strayBuf ) ;
-//	rb_init(&(det->request), det->reqBuf, sizeof(DetRequest), MAX_NUM_TRAINS ) ;
-	memoryset ( (char *) tr->sensorHist, 0, sizeof(tr->sensorHist) );
+//	rb_init(&(det->request), det->reqBuf, sizeof(DeRequest), MAX_NUM_TRAINS ) ;
+	memoryset ( (char *) det->sensorHist, 0, sizeof(det->sensorHist) );
 
-	DetRequest * req;
+	DeRequest * req;
 	foreach( req, det->requests ) {
 		req->tid = UNUSED_TID;
 	}
@@ -158,14 +160,13 @@ int det_init( Det *det ) {
 
 int det_wake ( Det *det, int sensor, int ticks ) {
 	debug ("det_wake: sensor: %d, time: %d,s\r\n", sensor, ticks * MS_IN_TICK );
-	DetRequest *req;
+	DeRequest *req;
 	TSReply		rpl;
-	int			woken = 0;
+	int			woken = 0, i;
 	
 	foreach( req, det->requests ) {
-		if( req->tid != UNUSED_TID ) {
-			if(req->events[0].sensor == sensor ||
-			req->events[1].sensor == sensor ) {
+		for( i = 0; (req->tid != UNUSED_TID) && (i < req->numEvents); i ++ ) {
+			if(req->events[i].sensor == sensor ) {
 				// Wake up the train
 				rpl.sensor = sensor;
 				rpl.ticks = ticks;
@@ -173,6 +174,7 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 				// Remove the request
 				req->tid = UNUSED_TID;
 				woken++;
+
 			}
 		}
 	}
@@ -187,7 +189,7 @@ void poll() {
 	TID ioTid = WhoIs( SERIALIO1_NAME );
 	char ch, raw[POLL_SIZE];
 	// We need the braces around the 0s because they're in unions
-	DetRequest	req;
+	DeRequest	req;
 	TSReply		rpl;
 	int 		i, res;
 
@@ -225,7 +227,7 @@ void watchDog () {
 	TID deTid = MyParentTid();
 	TID csTid = WhoIs( CLOCK_NAME );
 	// We need the braces around the 0s because they're in unions
-	DetRequest 	req;
+	DeRequest 	req;
 	TSReply		rpl;
 	req.type = WATCH_DOG;
 
