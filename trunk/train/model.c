@@ -756,26 +756,29 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 }
 
 int model_nameToIdx ( TrackModel *model, const char *name ) {
-	if ( strlen(name) > 4 ) {
-		return INVALID_NODE_NAME;
-	}
-	
 	int   n = model->num_nodes;
 	int   i;
 	int   num;
-	char *ch = &name[1];
+	char  copy[NODE_NAME_LEN];
+	const char *ch = &copy[1];
+
+	// make a local copy so we cah change it if need be
+	strncpy( copy, name, NODE_NAME_LEN );
+
+	// name too long
+	if( copy[NODE_NAME_LEN - 1] != '\0' ) return NOT_FOUND;
 
 	// Special case for even numbered sensors
-	num = atoi (&ch);
-	if ( (name[0] >= 'A' && name[0] <= 'E') && 
-		 (name[1] >= '1' && name[1] <= '9') && 
+	num = atoi( &ch );
+	if ( (copy[0] >= 'A' && copy[0] <= 'E') && 
+		 (copy[1] >= '1' && copy[1] <= '9') && 
 		 (num % 2 == 0) ) {
 		num -= 1;
-		itoa(num, &name[1]);
+		itoa( num, &copy[1] );
 	}
 
 	for ( i = 0; i < n; i ++ ) {
-		if ( strcmp(model->nodes[i].name, name) == 0 ) {
+		if ( strcmp(model->nodes[i].name, copy) == 0 ) {
 			return i;
 		}
 	}
@@ -808,11 +811,4 @@ char * model_idxToName ( TrackModel *model, int idx ) {
 	return model->nodes[idx].name;
 }
 
-/*
-void free_model(track_model_t* model)
-{
-  if (model->nodes == 0) return;
-
-  free(model->nodes);
-  model->nodes = 0;
-}*/
+*/
