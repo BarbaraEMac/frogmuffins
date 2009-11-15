@@ -87,7 +87,7 @@ void train_run () {
 	while ( tr.currSensor != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
-		debug ("train: has a route err=%d stopDist=%d\r\n",
+		debug ("train: has a route ERROR=%d stopDist=%d\r\n",
 				rpReply.err, rpReply.stopDist);
 
 		// If you should reverse, do it.
@@ -136,6 +136,9 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	// Initialize the Route Planner request
 	rpReq->trainId = tr->id;
 	rpReq->destIdx = tr->dest;
+	rpReq->sensor1 = 0;
+	rpReq->sensor2 = 0;
+
 
 	// Initialize the calibration data
 	tr->numSw = 0;
@@ -250,8 +253,6 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	return reply;
 }
 
-// TODO: Does this block UNTIL it happens?
-// This is bad if we need to stop before the next sensor.
 void train_wait (Train *tr, RPReply *rep) {
 	DeReply 	rpl;
 	DeRequest	req;
