@@ -49,6 +49,8 @@ void shell_initTrain (TIDs tids, char *input);
  */
 void shell_exec ( char *command, TIDs tids);
 
+RPShellReply rpCmd ( RPRequest *req, TID rpTid );
+
 // ----------------------------------------------------------------------------
 
 // A fun idle task that counts to high numbers
@@ -219,23 +221,34 @@ void shell_initTrack (TIDs tids, char *input) {
 }
 
 void shell_initTrain (TIDs tids, char *input) {
-	TrainInit trInit;
+	RPRequest 	 rpReq;
+	RPShellReply rpRpl;
+	TrainInit 	 trInit;
+
+	rpReq.nodeIdx1 = 0;
+	rpReq.nodeIdx2 = 0;
 	
 	output ("Train Id: ");
 	shell_inputData(tids, input);
 	trInit.id = atoi((const char**)&input);
 
-	output ("Ahead Landmark Idx: " );
+	output ("Current Sensor: " );
 	shell_inputData(tids, input);
-	trInit.currLoc = atoi((const char**)&input);
+	
+	rpReq.type = CONVERT_SENSOR;
+	strncpy(rpReq.name, (const char*)input, 5);
+	rpRpl = rpCmd ( &rpReq, tids.rp );
 
-	output ("Behind Landmark Idx: " );
-	shell_inputData(tids, input);
-	trInit.prevLoc = atoi((const char**)&input);
+	trInit.currLoc = rpRpl.idx;
 
-	output ("Destination Landmark Idx: ");
+	output ("Destination: ");
 	shell_inputData(tids, input);
-	trInit.dest = atoi((const char**)&input);
+	
+	rpReq.type = CONVERT_IDX;
+	strncpy(rpReq.name, (const char*)input, 5);
+	rpRpl = rpCmd ( &rpReq, tids.rp );
+	
+	trInit.dest = rpRpl.idx;
 
 	// Create the first train!
 	tids.tr1Tid = Create ( 5, &train_run );
@@ -364,13 +377,13 @@ void shell_exec( char *command, TIDs tids ) {
 		cache_off();
 	// path
 	} else if( sscanf(command, "path %s %s", tmpStr1, tmpStr2) >= 0 ) {
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
 		tmpInt = rpRpl.idx;
 		
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
@@ -385,13 +398,13 @@ void shell_exec( char *command, TIDs tids ) {
 		}
 	// first switch
 	} else if( sscanf(command, "fstSw %s %s", tmpStr1, tmpStr2) >= 0 ) {
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
 		tmpInt = rpRpl.idx;
 		
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 		
@@ -406,13 +419,13 @@ void shell_exec( char *command, TIDs tids ) {
 		}
 	// first reverse
 	} else if( sscanf(command, "fstRv %s %s", tmpStr1, tmpStr2) >= 0 ) {
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
 		tmpInt = rpRpl.idx;
 		
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr2, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 			
@@ -426,7 +439,7 @@ void shell_exec( char *command, TIDs tids ) {
 			rpCmd ( &rpReq, tids.rp );
 		}
 	} else if( sscanf(command, "predict %s", tmpStr1) >= 0 ) {
-		rpReq.type = CONVERT;
+		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 		

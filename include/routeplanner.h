@@ -17,7 +17,8 @@ typedef enum RPType {
 	DISPLAYFSTSW,
 	DISPLAYFSTRV,
 	DISPLAYPREDICT,
-	CONVERT,
+	CONVERT_SENSOR,
+	CONVERT_IDX,
 	RESERVE,
 	PLANROUTE,
 	MIN_SENSOR_DIST // This must be last for error checking purposes

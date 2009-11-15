@@ -35,7 +35,7 @@ typedef struct {
 	int	 		prevSensor;		// Previous Location
 	int  		dest;			// Desired End Location
 		
-	int 		 speed;			// The current speed
+	int 	    speed;			// The current speed
 	
 	int 		rpTid;			// Id of the Route Planner
 	int 		tsTid;			// Id of the Track Server
@@ -88,38 +88,22 @@ void train_run () {
 	while ( tr.currSensor != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute (&tr, &rpReq);
-		debug ("train: has a route\r\n");
+		debug ("train: has a route err=%d stopDist=%d\r\n",
+				rpReply.err, rpReply.stopDist);
 
-		// This makes the assumption that yo uare NOWHERE
-		// near a switch. Neither forward nor backwards can be a sw.
-		// If you are backwards, turn around.
-		// TODO
+		// If you should reverse, do it.
+		if( rpReply.stopDist < 0 ) {
+			train_reverse(&tr);
+			rpReply.stopDist = -rpReply.stopDist;
+		}
+		train_flipSwitches (&tr, &rpReply);
 
 		// TODO: This is just to start ....
-		// Drive until you need to check in
-		// Start driving slowly ... 
-		debug ("train is driving\r\n");
 		train_drive (&tr, 6);
 
 		// It probably shouldn't so that we can calibrate ..
 		// Tell the detective about your predicted sensors
 		train_wait(&tr, &rpReply);
-
-		while ( someDistanceTravelled < rpReply.stopDist ) {
-			someDistanceTravelled ++;
-			; // BUSY WAIT
-		}
-		// Stop for now ...
-		//train_drive (&tr, 0);
-		//debug ("train is stopping\r\n");
-		
-		// If you should reverse, do it.
-		if( rpReply.stopDist < 0 ) {
-			train_reverse(&tr);
-		}
-		// If you should flip a switch, do it.
-		train_flipSwitches (&tr, &rpReply);
-
 	}
 
 	Exit(); // When you've reached your destination
@@ -134,9 +118,12 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 
 	// Copy the data to the train
 	tr->id      = init.id;
-	tr->currSensor = init.currLoc;
-	tr->prevSensor = init.prevLoc;
+	tr->currLoc = init.currLoc;
 	tr->dest    = init.dest;
+	tr->speed = 0;
+
+	debug ("Train %d is at sensor %d going to destidx %d\r\n",
+			tr->id, tr->currLoc, tr->dest);
 
 	// Reply to the shell
 	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
@@ -253,9 +240,10 @@ void train_update( Train *tr, DeReply *rpl ) {
 RPReply train_planRoute (Train *tr, RPRequest *req) {
 	RPReply reply;
 	
-	req->type = PLANROUTE;
+	req->type       = PLANROUTE;
 	req->lastSensor = tr->currSensor;
-	req->destIdx = tr->dest;
+	req->destIdx    = tr->dest;
+	req->avgSpeed   = tr->speed; // TODO: make average
 
 	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
@@ -263,6 +251,8 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 	return reply;
 }
 
+// TODO: Does this block UNTIL it happens?
+// This is bad if we need to stop before the next sensor.
 void train_wait (Train *tr, RPReply *rep) {
 	TSReply 	rpl;
 	DeRequest	req;
@@ -324,6 +314,8 @@ void train_flipSwitches (Train *tr, RPReply *rpReply) {
 
 			Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
 							 (char *)&reply, sizeof(TSReply));
+		} else {
+			break;
 		}
 	}
 }
