@@ -97,8 +97,11 @@ void train_run () {
 		}
 		train_flipSwitches (&tr, &rpReply);
 
-		// TODO: This is just to start ....
-		train_drive (&tr, 6);
+		// TODO: PLACE calibration here
+		if( rpReply.stopDist < 10 ) {
+			tr.speed = 0;
+		}
+		train_drive (&tr, tr.speed);
 
 		// It probably shouldn't so that we can calibrate ..
 		// Tell the detective about your predicted sensors
@@ -119,7 +122,7 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	tr->id      = init.id;
 	tr->currSensor = init.currLoc;
 	tr->dest    = init.dest;
-	tr->speed 	= 0;
+	tr->speed 	= 6;
 
 	debug ("Train %d is at sensor %d going to destidx %d\r\n",
 			tr->id, tr->currSensor, tr->dest);
@@ -155,8 +158,7 @@ Speed train_speed( Train *tr ) {
 	foreach( rec, tr->histBuf ) {
 		total.mm += rec->mm;
 		total.ms += rec->ms;
-		debug("buffer %d/%d = \t%dmm/s\r\n",
-			rec->mm, rec->ms, speed( rec ));
+		//debug("buffer %d/%d = \t%dmm/s\r\n", rec->mm, rec->ms, speed( rec ));
 	}
 	return total;
 }
@@ -309,7 +311,9 @@ void train_flipSwitches (Train *tr, RPReply *rpReply) {
 	SwitchSetting  *ss;
 
 	foreach( ss, rpReply->switches ) {
-		if( ss->id >= 0 ) {
+		if( ss->id > 0 ) {
+			debug("train: flipping sw%d to %c\r\n",
+					ss->id, switch_dir(ss->dir));
 			req.type = SW;
 			req.sw   = ss->id;
 			req.dir  = ss->dir;
