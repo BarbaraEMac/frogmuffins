@@ -37,7 +37,8 @@ OBJECTS = arch/blank.o \
 		  train/model.o \
 		  train/routeplanner.o \
 		  train/trackserver.o \
-		  train/train.o
+		  train/train.o \
+		  train/ui.o
 
 HEADERS = include/*.h
 
