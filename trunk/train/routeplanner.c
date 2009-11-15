@@ -412,6 +412,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
 	
 	printf ("Predicted Sensors: ");
+	int i;
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
 		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
 				sensor_num(trReply->nextSensors.idxs[i]) );
