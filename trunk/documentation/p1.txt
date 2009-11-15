@@ -32,6 +32,44 @@ algorithms - how they work
 			- why we chose them
 			error codes
 			data structures
+
+	Model
+	=====
+
+	How it is stored (data structure)
+
+	When parsed 
+
+	Who owns / uses it
+
+	Accuracy
+
+
+	Route Planner
+	=============
+
+	shortest path alg
+
+
+
+
+	Detective
+	=========
+
+	
+	Track Server
+	============
+
+
+	Train
+	=====
+
+	
+	UI / Shell
+	==========
+
+
+
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
