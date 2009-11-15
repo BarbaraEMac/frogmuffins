@@ -52,7 +52,7 @@ typedef struct {
 
 typedef struct {
 	int len;
-	int idxs[4];
+	int idxs[8];
 } SensorsPred;
 
 typedef struct {
