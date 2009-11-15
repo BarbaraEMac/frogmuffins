@@ -39,7 +39,7 @@ typedef struct {
 } TIDs;
 
 // Use this function to grab a line of data before the shell starts.
-void shell_inputData (TIDs tids, char *input);
+void shell_inputData (TIDs tids, char *input, int defaultLen );
 
 void shell_initTrack (TIDs tids, char *input);
 void shell_initTrain (TIDs tids, char *input);
@@ -48,6 +48,7 @@ void shell_initTrain (TIDs tids, char *input);
  * Given an input command, error check it and execute it.
  */
 void shell_exec ( char *command, TIDs tids);
+void shell_run ( TIDs tids );
 
 RPShellReply rpCmd ( RPRequest *req, TID rpTid );
 
@@ -92,6 +93,7 @@ void bootstrap ( ) {
 	// Create the idle task
 	tids.idle = Create (9, &idleTask);
 
+	output("Running on board %08x. \r\n", board_id() );
 
 	// Run the shell
 	shell_run( tids );
@@ -180,9 +182,14 @@ void shell_run ( TIDs tids ) {
     }
 }
 
-void shell_inputData (TIDs tids, char *input) {
+void shell_inputData (TIDs tids, char *input, int defaultLen ) {
 	char ch;
     int i = 0;
+	
+	// Print out the default value
+	while ( i < defaultLen ) {
+		output("%c", input[i++] );
+	}
 
 	FOREVER {
         input[i] = 0;	// Clear the next character
@@ -217,8 +224,16 @@ void shell_inputData (TIDs tids, char *input) {
 void shell_initTrack (TIDs tids, char *input) {
 	int err;
 	
+	if( board_id() == 0x9224e4a1 ) {
+		input[0] = 'A';
+	} else if ( board_id() == 0x9224c1a8 ) {
+		input[0] = 'B';
+	} else {
+		input[0] = '\0';
+	}
+
 	output ("Track: ");
-	shell_inputData(tids, input);
+	shell_inputData(tids, input, 1 );
 	// Tell the Route Planner which track we are using
 	Send (tids.rp, (char*)&input[0], sizeof(char),
 				   (char*)&err, 	 sizeof(int));
@@ -237,11 +252,11 @@ void shell_initTrain (TIDs tids, char *input) {
 	rpReq.nodeIdx2 = 0;
 	
 	output ("Train Id: ");
-	shell_inputData(tids, input);
+	shell_inputData(tids, input, 0);
 	trInit.id = atoi((const char**)&input);
 
 	output ("Current Sensor: " );
-	shell_inputData(tids, input);
+	shell_inputData(tids, input, 0);
 	
 	rpReq.type = CONVERT_SENSOR;
 	strncpy(rpReq.name, (const char*)input, 5);
@@ -250,7 +265,7 @@ void shell_initTrain (TIDs tids, char *input) {
 	trInit.currLoc = rpRpl.idx;
 
 	output ("Destination: ");
-	shell_inputData(tids, input);
+	shell_inputData(tids, input, 0);
 	
 	rpReq.type = CONVERT_IDX;
 	strncpy(rpReq.name, (const char*)input, 5);
