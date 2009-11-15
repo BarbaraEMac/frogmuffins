@@ -39,7 +39,7 @@ typedef struct {
 } TIDs;
 
 // Use this function to grab a line of data before the shell starts.
-void shell_inputData (TIDs tids, char *input, int defaultLen );
+void shell_inputData (TIDs tids, char *input, bool reset );
 
 void shell_initTrack (TIDs tids, char *input);
 void shell_initTrain (TIDs tids, char *input);
@@ -182,12 +182,13 @@ void shell_run ( TIDs tids ) {
     }
 }
 
-void shell_inputData (TIDs tids, char *input, int defaultLen ) {
+void shell_inputData (TIDs tids, char *input, bool reset ) {
 	char ch;
+	if( reset ) input[0] = 0;
     int i = 0;
 	
 	// Print out the default value
-	while ( i < defaultLen ) {
+	while ( input[i] ) {
 		output("%c", input[i++] );
 	}
 
@@ -233,7 +234,7 @@ void shell_initTrack (TIDs tids, char *input) {
 	}
 
 	output ("Track: ");
-	shell_inputData(tids, input, 1 );
+	shell_inputData(tids, input, false );
 	// Tell the Route Planner which track we are using
 	Send (tids.rp, (char*)&input[0], sizeof(char),
 				   (char*)&err, 	 sizeof(int));
@@ -252,11 +253,11 @@ void shell_initTrain (TIDs tids, char *input) {
 	rpReq.nodeIdx2 = 0;
 	
 	output ("Train Id: ");
-	shell_inputData(tids, input, 0);
+	shell_inputData(tids, input, true );
 	trInit.id = atoi((const char**)&input);
 
 	output ("Current Sensor: " );
-	shell_inputData(tids, input, 0);
+	shell_inputData(tids, input, true );
 	
 	rpReq.type = CONVERT_SENSOR;
 	strncpy(rpReq.name, (const char*)input, 5);
@@ -265,7 +266,7 @@ void shell_initTrain (TIDs tids, char *input) {
 	trInit.currLoc = rpRpl.idx;
 
 	output ("Destination: ");
-	shell_inputData(tids, input, 0);
+	shell_inputData(tids, input, true );
 	
 	rpReq.type = CONVERT_IDX;
 	strncpy(rpReq.name, (const char*)input, 5);
