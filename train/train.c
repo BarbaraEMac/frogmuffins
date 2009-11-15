@@ -79,7 +79,6 @@ void train_run () {
 	Train 	  tr;
 	RPRequest rpReq;		// Route Planner request
 	RPReply   rpReply;		// Reply from the Route Planner
-	int someDistanceTravelled = 0;
 
 	// Initialize this train
 	train_init ( &tr, &rpReq );
@@ -118,12 +117,12 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 
 	// Copy the data to the train
 	tr->id      = init.id;
-	tr->currLoc = init.currLoc;
+	tr->currSensor = init.currLoc;
 	tr->dest    = init.dest;
-	tr->speed = 0;
+	tr->speed 	= 0;
 
 	debug ("Train %d is at sensor %d going to destidx %d\r\n",
-			tr->id, tr->currLoc, tr->dest);
+			tr->id, tr->currSensor, tr->dest);
 
 	// Reply to the shell
 	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
@@ -254,7 +253,7 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 // TODO: Does this block UNTIL it happens?
 // This is bad if we need to stop before the next sensor.
 void train_wait (Train *tr, RPReply *rep) {
-	TSReply 	rpl;
+	DeReply 	rpl;
 	DeRequest	req;
 	int 		i;
 
@@ -273,6 +272,8 @@ printf("predicting %c%d, after %dms, before %dms\r\n",
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->deTid, (char *) &req, sizeof(DeRequest),
 					 (char *) &rpl, sizeof(TSReply) );
+
+	train_update( tr, &rpl );
 }
 
 //-----------------------------------------------------------------------------
