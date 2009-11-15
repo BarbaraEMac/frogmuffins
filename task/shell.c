@@ -67,13 +67,7 @@ void idleTask () {
 	}
 }
 
-void shell_run ( ) {
-    debug ("shell_run\r\n");
-
-	// Initialize variables
-    char ch, *input, history[INPUT_HIST][INPUT_LEN];
-    int i = 0, h = 0;
-	int	time, tens, secs, mins;
+void bootstrap ( ) {
 	TIDs tids;
 
 	// Create the name server
@@ -97,6 +91,20 @@ void shell_run ( ) {
 	
 	// Create the idle task
 	tids.idle = Create (9, &idleTask);
+
+
+	// Run the shell
+	shell_run( tids );
+
+}
+
+void shell_run ( TIDs tids ) {
+    debug ("shell_run\r\n");
+
+	// Initialize variables
+    char ch, *input, history[INPUT_HIST][INPUT_LEN];
+    int i = 0, h = 0;
+	int	time, tens, secs, mins;
 
 	input = history[h++];
 
@@ -439,6 +447,7 @@ void shell_exec( char *command, TIDs tids ) {
 			rpReq.nodeIdx2 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
+	// predict
 	} else if( sscanf(command, "predict %s", tmpStr1) >= 0 ) {
 		rpReq.type = CONVERT_IDX;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);

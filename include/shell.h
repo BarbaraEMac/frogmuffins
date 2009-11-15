@@ -13,6 +13,6 @@
 /**
  * Start the command prompt shell running.
  */
-void shell_run ();
+void bootstrap ();
 
 #endif
