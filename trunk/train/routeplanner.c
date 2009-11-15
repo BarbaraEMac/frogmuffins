@@ -111,6 +111,7 @@ void rp_run() {
 	int 			i;
 	int				err;
 	int				tmp;
+	char 			tmpStr[12];
 
 	// Initialize the Route Planner
 	shellTid = rp_init (&rp);
@@ -118,8 +119,8 @@ void rp_run() {
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
-//		debug("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
-//			  senderTid, req.trainId, req.type, req.nodeIdx1, req.nodeIdx2);
+		debug("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
+			  senderTid, req.trainId, req.type, req.nodeIdx1, req.nodeIdx2);
 
 		// Error check the shell's request.
 		if ( senderTid == shellTid ) {
@@ -189,8 +190,21 @@ void rp_run() {
 				}
 				
 				break;
+			
+			case CONVERT_SENSOR:
+				strncpy ( tmpStr, req.name, 12 );
 
-			case CONVERT:
+				// Get the corresponding index
+				shReply.idx = model_nameToIdx(&rp.model, tmpStr);
+				// Get the sensor id
+				shReply.idx = idxtosIdx (shReply.idx, req.name);
+				
+				debug ("converted %s to %d\r\n", req.name, shReply.idx);
+				// Reply to the shell
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
+				break;
+
+			case CONVERT_IDX:
 				// Convert the node name into the node's index
 				shReply.idx = model_nameToIdx(&rp.model, req.name);
 				
@@ -321,6 +335,7 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 
 	// Check the last hit sensor.
 	if ( (req->lastSensor < 0) || (req->lastSensor > 80) ) {
+		debug ("invalid sensor index: %d\r\n", req->lastSensor);
 		return INVALID_SENSOR_IDX;
 	}
 
@@ -346,6 +361,7 @@ inline void clearReply (RPReply *trReply) {
 // --------------------------- Route Finding ----------------------------------
 // ----------------------------------------------------------------------------
 void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
+	debug ("PLANNING A ROUTE\r\n");
 	int  nextRv;
 	int  totalDist;
 	int  currentIdx = sIdxToIdx(req->lastSensor);
@@ -356,8 +372,9 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
-
-	// Get the distance to the next reverse
+	rp_displayPath ( rp, &p );
+	
+		// Get the distance to the next reverse
 	nextRv = rp_distToNextRv (rp, &p);
 
 	// The stop distance is min {next reverse, total distance to travel}
@@ -369,14 +386,25 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// If the train needs to turn around right now,
 	if (rp_turnAround (rp, &p, req->lastSensor) ) {
+		debug ("Train needs to turn around first.\r\n");
 		trReply->stopDist = -trReply->stopDist;
 	}
+	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
 
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
 	
 	// Predict the next sensors the train could hit
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
+	
+	int i;
+	printf ("Predicted Sensors: ");
+	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
+		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
+				sensor_num(trReply->nextSensors.idxs[i]) );
+	}
+	printf("\r\n");
+
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
