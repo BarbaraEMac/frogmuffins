@@ -1,7 +1,7 @@
 /*
  * CS 452: Track Detective User Task
  */
-#define DEBUG 		2
+#define DEBUG 		1
 
 #include <string.h>
 #include <buffer.h>
