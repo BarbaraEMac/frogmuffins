@@ -171,7 +171,7 @@ int main( int argc, char* argv[] ) {
 	mgr_init ( &mgr );
 
 	// Create the shell task and set it as the active one
-	active = td_create ( NUM_PRIORITY-2, &shell_run, -1, &mgr );
+	active = td_create ( NUM_PRIORITY-2, &bootstrap, -1, &mgr );
 	if_error ( (int) active, "Error initializing the shell.");
 
 	FOREVER {	

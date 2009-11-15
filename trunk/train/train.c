@@ -35,7 +35,7 @@ typedef struct {
 	int	 		prevSensor;		// Previous Location
 	int  		dest;			// Desired End Location
 		
-	int 	    speed;			// The current speed
+	int 	    speedSet;		// The current speed setting
 	
 	int 		rpTid;			// Id of the Route Planner
 	int 		tsTid;			// Id of the Track Server
@@ -51,15 +51,16 @@ typedef struct {
 
 } Train;
 
-int speed( Speed *sp ) {
-	if( sp->ms == 0 ) sp->ms = -1;
-	return (sp->mm * 1000) / sp->ms;
+int speed( Speed sp ) {
+	if( sp.ms == 0 ) sp.ms = -1;
+	return (sp.mm * 1000) / sp.ms;
 }
 
 
 void 		train_init    		(Train *tr, RPRequest *rpReq);
 int			train_time			(Train *tr, int mm);
 Speed 		train_speed			(Train *tr);
+void 		train_predictSpeed	(Train *tr, int mm);
 
 // Route Planner Commands
 RPReply		train_planRoute 	(Train *tr, RPRequest *req);
@@ -70,7 +71,7 @@ void 		train_update		(Train *tr, DeReply *rpl);
 
 // Track Server Commands
 void 		train_reverse		(Train *tr);
-void 		train_drive  		(Train *tr, int speed);
+void 		train_drive  		(Train *tr, int speedSet);
 void		train_flipSwitches	(Train *tr, RPReply *rpReply);
 SwitchDir	train_dir			(Train *tr, int sw );
 // ----------------------------------------------------------------------------
@@ -97,13 +98,9 @@ void train_run () {
 		}
 		train_flipSwitches (&tr, &rpReply);
 
-		// TODO: PLACE calibration here
-		if( rpReply.stopDist < 10 ) {
-			tr.speed = 0;
-		}
-		train_drive (&tr, tr.speed);
+		// Set the speed to an appropriate setting
+		train_predictSpeed (&tr, rpReply.stopDist);
 
-		// It probably shouldn't so that we can calibrate ..
 		// Tell the detective about your predicted sensors
 		train_wait(&tr, &rpReply);
 	}
@@ -119,10 +116,10 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
 
 	// Copy the data to the train
-	tr->id      = init.id;
-	tr->currSensor = init.currLoc;
-	tr->dest    = init.dest;
-	tr->speed 	= 6;
+	tr->id      	= init.id;
+	tr->currSensor 	= init.currLoc;
+	tr->dest   		= init.dest;
+	tr->speedSet	= 6;
 
 	debug ("Train %d is at sensor %d going to destidx %d\r\n",
 			tr->id, tr->currSensor, tr->dest);
@@ -169,45 +166,17 @@ int	train_time (Train *tr, int mm) {
 	return (avg.ms * mm) / avg.mm;
 }
 
-int tr_distance( Train *tr, int sensor ) {
-	debug("tr_distance: sensor:%d \r\n", sensor );
-	int idx = tr->model.sensor_nodes[sensor];
+void train_predictSpeed( Train *tr, int mm ) {
 
-	Node *n = &tr->model.nodes[idx];
-	Edge *e;
-	int dist = 0;
-	SwitchDir dir = SWITCH_CURVED;
-	if( sensor % 2 ) {
-		e = &n->se.behind;
-	} else {
-		e = &n->se.ahead;
-	}
+	//Speed current = train_speed( tr );
+	// TODO: PLACE calibration here
+	tr->speedSet  = 6;
+	if( mm < 10 ) tr->speedSet = 0;
 
-	tr->numSw = 0;
-	while( 1 ) {
-		dist += e->distance;
-		printf("(%d)%s>", idx, n->name);
-		n = &tr->model.nodes[e->dest];
-		//printf("neighbour %s\r\n", n->name);
-		if( n->type != NODE_SWITCH ) break;
-		dir = train_dir( tr, n->id);
-		if( n->sw.behind.dest == idx ) {
-			idx = e->dest;
-			e = &n->sw.ahead[dir];
-		} else {
-			idx = e->dest;
-			e = &n->sw.behind;
-		}
-		tr->numSw++;
-	} 
+	train_drive (tr, tr->speedSet);
 
-	sensor = n->id * 2;
-	if( n->se.ahead.dest == idx ) 
-		sensor ++;
-
-	printf("(%d)%s\r\n", idx, n->name );
-	return dist;
 }
+
 
 void train_update( Train *tr, DeReply *rpl ) {
 	int 		last, avg, diff;
@@ -215,9 +184,9 @@ void train_update( Train *tr, DeReply *rpl ) {
 	
 	sp.ms = (rpl->ticks - tr->ticks) * MS_IN_TICK;
 	sp.mm = tr->dist;
-	last = speed( &sp );
+	last = speed( sp );
 	pr = train_speed( tr );
-	avg = speed(&pr);
+	avg = speed( pr );
 	rb_force( &tr->hist, &sp );
 	diff = ((avg * sp.ms) - (sp.mm * 1000)) / 1000;
 
@@ -241,19 +210,42 @@ void train_update( Train *tr, DeReply *rpl ) {
 
 }
 
+//-----------------------------------------------------------------------------
+//-------------------------- Route Planner Commands ---------------------------
+//-----------------------------------------------------------------------------
+
+int tr_distance( Train *tr ) {
+	RPReply reply;
+	RPRequest req;
+	
+	req.type		= MIN_SENSOR_DIST;
+	req.sensor1		= tr->prevSensor;
+	req.sensor2		= tr->currSensor;
+
+	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
+			 		 (char*) &reply, sizeof(RPReply));
+	
+	return reply.stopDist;
+}
+
+
 RPReply train_planRoute (Train *tr, RPRequest *req) {
 	RPReply reply;
 	
 	req->type       = PLANROUTE;
 	req->lastSensor = tr->currSensor;
 	req->destIdx    = tr->dest;
-	req->avgSpeed   = tr->speed; // TODO: make average
+	req->avgSpeed   = speed( train_speed( tr ) );
 
 	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
 	
 	return reply;
 }
+
+//-----------------------------------------------------------------------------
+//-------------------------- Detective Commands -------------------------------
+//-----------------------------------------------------------------------------
 
 void train_wait (Train *tr, RPReply *rep) {
 	DeReply 	rpl;
@@ -293,13 +285,13 @@ void train_reverse (Train *tr) {
 					 (char *)&reply, sizeof(TSReply));
 }
 
-void train_drive (Train *tr, int speed) {
+void train_drive (Train *tr, int speedSet) {
 	TSRequest req;
 	TSReply	  reply;
 
 	req.type = TR;
 	req.train = tr->id;
-	req.speed = speed;
+	req.speed = speedSet;
 
 	Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
 					 (char *)&reply, sizeof(TSReply));
