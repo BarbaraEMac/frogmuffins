@@ -825,7 +825,7 @@ int cost (TrackModel *model, int idx1, int idx2) {
 		j = idx1;
 	}
 	
-	// TODO: Is this correct?
+	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
 	if ( (model->nodes[i].reserved == 1) || 
 		 (model->nodes[j].reserved == 1) ) {
