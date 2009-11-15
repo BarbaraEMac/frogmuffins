@@ -30,18 +30,20 @@ typedef struct {
 	// Shell
 	char 	name[6];	// Node name to be converted
 	
-	int 	nodeIdx1;	// Predict sensors for this node OR 
-						// Find Path from this node
-	int 	nodeIdx2;	// to this node.
-
-	// Train
-	int 	sensor1;	// Find min distance from this sensor
-	int 	sensor2;	// to this sensor.
+	union {
+		int 	nodeIdx1;	// Predict sensors for this node OR 
+							// Find Path from this node
+		int     lastSensor;	// Last Hit Sensor Idx
+		int 	sensor1;	// Find min distance from this sensor
+	};
+	union {
+		int 	nodeIdx2;	// to this node.
+		int 	sensor2;	// to this sensor.
+		int		destIdx;	// Destination Location Index
+	};
 
 	int		trainId;	// Unique id for train
-	int     lastSensor;	// Last Hit Sensor Idx
 	int   	avgSpeed;	// Average speed of a train
-	int		destIdx;	// Destination Location Index
 	
 } RPRequest;
 
