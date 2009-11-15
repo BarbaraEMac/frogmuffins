@@ -81,7 +81,7 @@ inline int sIdxToIdx ( int sIdx ) {
 	return (int) (sIdx / 2);
 }
 
-inline int idxtosIdx (int idx, char *name) {
+inline int idxTosIdx (int idx, char *name) {
 	int ret = idx * 2;
 	if ( (atod(name[1]) % 2) == 0 ) {
 		ret += 1;
@@ -174,7 +174,9 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
-				rp_predictSensors(&rp, &pred, idxtosIdx(req.nodeIdx1, req.name));
+				pred.len = 0;
+
+				rp_predictSensors(&rp, &pred, idxTosIdx(req.nodeIdx1, req.name));
 				
 				if ( req.nodeIdx1 > 39 ) {
 					printf ("\033[36m%s is not a valid sensor.\033[37m\r\n", req.name);
@@ -197,7 +199,7 @@ void rp_run() {
 				// Get the corresponding index
 				shReply.idx = model_nameToIdx(&rp.model, tmpStr);
 				// Get the sensor id
-				shReply.idx = idxtosIdx (shReply.idx, req.name);
+				shReply.idx = idxTosIdx (shReply.idx, req.name);
 				
 				debug ("converted %s to %d\r\n", req.name, shReply.idx);
 				// Reply to the shell
@@ -360,6 +362,12 @@ inline void clearReply (RPReply *trReply) {
 // ----------------------------------------------------------------------------
 // --------------------------- Route Finding ----------------------------------
 // ----------------------------------------------------------------------------
+
+int oppositeSensorId (int sensorIdx) {
+//	debug ("opposite to %d is %d\r\n", sensorIdx, (sensorIdx ^1));
+	return (sensorIdx ^ 1);
+}
+
 void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	debug ("PLANNING A ROUTE\r\n");
 	int  nextRv;
@@ -380,30 +388,46 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	// The stop distance is min {next reverse, total distance to travel}
 	if ( nextRv < totalDist ) {
 		trReply->stopDist = nextRv;
+		debug ("Stop distance is a reverse\r\n");
 	} else {
 		trReply->stopDist = totalDist;
+		debug ("Stop distance is the total distance.\r\n");
 	}
+	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
+
+	// Clear the next sensor predictions
+	trReply->nextSensors.len = 0;
 
 	// If the train needs to turn around right now,
 	if (rp_turnAround (rp, &p, req->lastSensor) ) {
 		debug ("Train needs to turn around first.\r\n");
 		trReply->stopDist = -trReply->stopDist;
-	}
-	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
+		
+		// Predicting sensors we expect to hit.
+		// Then, we'll predict the behind sensors.
+		rp_predictSensors(rp, &trReply->nextSensors, oppositeSensorId(req->lastSensor));
+	}	
 
-	// Get the next switches 
-	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
-	
 	// Predict the next sensors the train could hit
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
 	
-	int i;
 	printf ("Predicted Sensors: ");
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
 		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
 				sensor_num(trReply->nextSensors.idxs[i]) );
 	}
 	printf("\r\n");
+
+	// Get the next switches 
+	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
+	
+	printf ("Switch settings: \r\n");
+	for ( i = 0; i < 3; i ++ ) {
+		printf("i=%d dist=%d id=%d dir=%d\r\n", i, 
+				trReply->switches[i].dist, trReply->switches[i].id, 
+				trReply->switches[i].dir);
+	}
+
 
 }
 
@@ -415,8 +439,8 @@ int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
 	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
 	int   even   = (sensorId %2) == 0;
 
-	if ( (sensor->se.ahead.dest  == p->path[1] && even) ||
-		 (sensor->se.behind.dest == p->path[1] && !even) ) {
+	if ( (sensor->se.behind.dest  == p->path[1] && even) ||
+		 (sensor->se.ahead.dest == p->path[1] && !even) ) {
 		return 1;
 	}
 	
@@ -514,19 +538,17 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	for ( ; n < 3; n ++ ) {
 		settings[n].dist = -1;
 		settings[n].id   = -1;
+		settings[n].dir  = -1;
 	}
 }
 
 void rp_predictSensors (RoutePlanner *rp, SensorsPred *pred, int sensorId ) {
-	int   idx =  rp->model.sensor_nodes[sensorId];
-	Node *n   = &rp->model.nodes[idx];
-	Edge *e   = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
+	int idx = sIdxToIdx ( sensorId );
+	Node *n = &rp->model.nodes[idx];
+	Edge *e = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
 	
 	// Get next node along the path
 	n = &rp->model.nodes[e->dest]; 
-
-	// Clear the path
-	pred->len = 0;
 
 	// Fill the "path" with sensor ids
 	rp_predictSensorHelper ( rp, pred, n, idx );
