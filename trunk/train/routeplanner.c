@@ -709,7 +709,7 @@ void rp_reserve (RoutePlanner *rp, RPRequest *req) {
 						 rsv->next1, rsv->next2 ); 
 */
 	// Make this new reservation
-	int retDist = makeReserve(&rp->model, rsv);
+//	int retDist = makeReserve(&rp->model, rsv);
 
 }
 
