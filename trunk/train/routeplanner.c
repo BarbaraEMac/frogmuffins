@@ -124,17 +124,15 @@ void rp_run() {
 
 		// Error check the shell's request.
 		if ( senderTid == shellTid ) {
-			if( (err = rp_errorCheckShRequest(&rp, &req)) < NO_ERROR ) {
+			if( ( err = rp_errorCheckShRequest( &rp, &req )) < NO_ERROR ) {
 				req.type = ERROR;	// Make sure we don't do any work below.
-				shReply.err = err;	// Return the error.
-				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
+				Reply(senderTid, (char*)&err, sizeof(int));
 			} 
 		// Error check a train's request.
 		} else {
 			if( (err = rp_errorCheckTrRequest(&rp, &req)) < NO_ERROR ) {
 				req.type = ERROR;	// Make sure we don't do any work below.
-				trReply.err = err;	// Return the error.
-				Reply ( senderTid, (char*)&trReply, sizeof(RPReply) );
+				Reply ( senderTid, (char*)&err, sizeof(int) );
 			}
 		}
 
@@ -144,6 +142,7 @@ void rp_run() {
 				break;
 
 			case DISPLAYROUTE:
+				debug("dispaying the route for %d to %d\r\n", req.nodeIdx1, req.nodeIdx2);
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
@@ -291,27 +290,41 @@ int rp_init(RoutePlanner *rp) {
 }
 
 int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req) {
-	int err;
+	int  err;
 	char tmpName[5];
-
-	// Unfortunately, we need to copy this since model_nametoIdx changes it
-	strncpy (tmpName, req->name, 5);
 
 	// Check request type.
 	if ( (req->type < 0) || (req->type > MIN_SENSOR_DIST) ) {
 		return RP_INVALID_REQ_TYPE;
 	}
 	
-	// Check the name of the node.
-	if ( (req->name != 0) && 
-		 (err = model_nameToIdx(&rp->model, tmpName)) < NO_ERROR ) {
-		return err;
-	}
-
-	// Error check the node indicies.
-	if ( (req->nodeIdx1 < 0) || (req->nodeIdx1 > rp->model.num_nodes) ||
-		 (req->nodeIdx2 < 0) || (req->nodeIdx2 > rp->model.num_nodes) ) {
-		return INVALID_NODE_IDX;
+	switch (req->type) {
+		case CONVERT_SENSOR:
+		case CONVERT_IDX:
+			// Unfortunately, we need to copy this since model_nametoIdx changes it
+			strncpy (tmpName, req->name, 5);
+			
+			// Check the name of the node.
+			if ( (err = model_nameToIdx(&rp->model, tmpName) ) < NO_ERROR ) {
+				return err;
+			}
+			break;
+		
+		case DISPLAYROUTE:
+		case DISPLAYFSTSW:
+		case DISPLAYFSTRV:
+			// Error check the node indicies.
+			if ( (req->nodeIdx1 < 0) || (req->nodeIdx1 > rp->model.num_nodes) ||
+				 (req->nodeIdx2 < 0) || (req->nodeIdx2 > rp->model.num_nodes) ) {
+				return INVALID_NODE_IDX;
+			}
+			break;
+		case DISPLAYPREDICT:
+			// Error check the node indicies.
+			if ( (req->nodeIdx1 < 0) || (req->nodeIdx1 > rp->model.num_nodes) ) {
+				return INVALID_NODE_IDX;
+			}
+			break;
 	}
 	
 	return NO_ERROR;
@@ -323,34 +336,49 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 		return RP_INVALID_REQ_TYPE;
 	}
 
-	// Check the sensor
-	if ( (req->sensor1 < 0) || (req->sensor1 > 80) ||
-		 (req->sensor2 < 0) || (req->sensor2 > 80) ) {
-		return INVALID_SENSOR_IDX;
-	}
+	switch (req->type) {
 
-	// Check the train id.
-	if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
-		 req->trainId != 46 && req->trainId != 52 ) {
-		return INVALID_TRAIN;
-	}
+		case RESERVE:
+			// Check the train id.
+			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
+				req->trainId != 46 && req->trainId != 52 ) {
+				return INVALID_TRAIN;
+			}
+		//	TODO:Check something else
+			break;
+				
+		case PLANROUTE:
+			// Check the train id.
+			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
+				req->trainId != 46 && req->trainId != 52 ) {
+				return INVALID_TRAIN;
+			}
 
-	// Check the last hit sensor.
-	if ( (req->lastSensor < 0) || (req->lastSensor > 80) ) {
-		debug ("invalid sensor index: %d\r\n", req->lastSensor);
-		return INVALID_SENSOR_IDX;
-	}
+			// Check the last hit sensor.
+			if ( (req->lastSensor < 0) || (req->lastSensor > 80) ) {
+				debug ("invalid sensor index: %d\r\n", req->lastSensor);
+				return INVALID_SENSOR_IDX;
+			}
 
-	// Check the train's average speed.
-	if ( (req->avgSpeed < 0) || (req->avgSpeed > 1000) ) {
-		return INVALID_TRAIN_SPEED;
-	}
+			// Check the train's average speed.
+			if ( (req->avgSpeed < 0) || (req->avgSpeed > 1000) ) {
+				return INVALID_TRAIN_SPEED;
+			}
 
-	// Check destination index.
-	if ( (req->destIdx < 0) || (req->destIdx > rp->model.num_nodes) ) {
-		return INVALID_NODE_IDX;
+			// Check destination index.
+			if ( (req->destIdx < 0) || (req->destIdx > rp->model.num_nodes) ) {
+				return INVALID_NODE_IDX;
+			}
+			break;
+	
+		case MIN_SENSOR_DIST:
+			// Check the sensor
+			if ( (req->sensor1 < 0) || (req->sensor1 > 80) ||
+				(req->sensor2 < 0) || (req->sensor2 > 80) ) {
+				return INVALID_SENSOR_IDX;
+			}
+			break;
 	}
-
 	return NO_ERROR;
 }
 

@@ -86,11 +86,13 @@ void train_run () {
 		debug ("train: has a route ERROR=%d stopDist=%d\r\n",
 				rpReply.err, rpReply.stopDist);
 
-		// If you should reverse, do it.
+		// If you should reverse / are backwards, turn around.
 		if( rpReply.stopDist < 0 ) {
 			train_reverse(&tr);
 			rpReply.stopDist = -rpReply.stopDist;
 		}
+		
+		// Flip the switches along the path.
 		train_flipSwitches (&tr, &rpReply);
 
 		// Set the speed to an appropriate setting
@@ -249,16 +251,18 @@ void train_wait( Train *tr, RPReply *rep ) {
 	DeRequest	req;
 	int 		i;
 
-	req.type = WATCH_FOR;
+	req.type      = WATCH_FOR;
 	req.numEvents = rep->nextSensors.len;
 
 	for( i = 0; i < req.numEvents ; i ++ ) {
 		req.events[i].sensor = rep->nextSensors.idxs[i];
 		req.events[i].start  = 0;//train_time ( tr ) - (PREDICTION_WINDOW/2);
 		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
-printf("predicting %c%d, after %dms, before %dms\r\n",
-	sensor_bank( req.events[i].sensor ), sensor_num( req.events[i].sensor ),
-	req.events[i].start, req.events[i].end );
+		
+		printf("predicting %c%d, after %dms, before %dms\r\n",
+				sensor_bank( req.events[i].sensor ), 
+				sensor_num( req.events[i].sensor ),
+				req.events[i].start, req.events[i].end );
 	}
 
 	// Tell the detective about the Route Planner's prediction.
