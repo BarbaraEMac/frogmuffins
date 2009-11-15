@@ -39,14 +39,13 @@ typedef struct {
 	TID  		csTid;
 } TS;
 
-int ts_start		( TS *ts );
-int ts_stop			( TS *ts );
-int ts_init			( TS *ts );
-int ts_trainSet		( TS *ts, int train, int speed );
-int ts_switchSet	( TS *ts, int sw, char dir );
-int ts_switchSetAll	( TS *ts, char dir );
-int checkTrain		( int train );
-SwitchDir checkDir	( int dir );
+int	ts_start		( TS *ts );
+int	ts_stop			( TS *ts );
+int	ts_init			( TS *ts );
+int	ts_trainSet		( TS *ts, int train, int speed );
+int	ts_switchSet	( TS *ts, int sw, SwitchDir dir );
+int	ts_switchSetAll	( TS *ts, SwitchDir dir );
+int	checkTrain		( int train );
 
 /* ACTUAL CODE */
 
@@ -89,7 +88,8 @@ void ts_run () {
 				break;
 
 			case SW:
-				debug ("ts: Setting switch %d to dir %c.\r\n", req.sw, req.dir);
+				debug ("ts: Setting switch %d to dir %c.\r\n", req.sw, 
+						switch_dir( req.dir ) );
 				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
 				break;
 			
@@ -143,7 +143,7 @@ int ts_init( TS *ts ) {
 	ts_start( ts );
 	
 	memoryset ( ts->speeds, 0, NUM_TRNS );
-	ts_switchSetAll( ts, 'C' );
+	ts_switchSetAll( ts, SWITCH_CURVED );
 	
 	err = Create( 4, &det_run );
 	if( err < NO_ERROR ) return err;
@@ -169,15 +169,6 @@ int checkTrain( int train ) {
 	return INVALID_TRAIN; 
 }
 
-// check if the direction index is within range
-SwitchDir checkDir( int dir ) {
-    if( dir == 's' || dir == 'S' ) { return SWITCH_STRAIGHT; }
-    if( dir == 'c' || dir == 'C' ) { return SWITCH_CURVED; }
-    
-	debug("ts: Train direction %c not in range.\r\n", dir );
-    return INVALID_DIR;
-}
-
 // send commands to the train, try a few times
 int ts_trainSet( TS *ts, int train, int speed ) {
     debug ("ts: trainSet: tr=%d sp=%d\r\n", train, speed);
@@ -198,26 +189,27 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 }
 
 // set a switch to a desired position checking for bad input
-int ts_switchSet( TS *ts, int sw, char dir ) {
+int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
     debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, dir );
-	// check the direction is a valid character
-	int ret = checkDir( dir );
-	if ( ret >= NO_ERROR ) {
-		SwitchDir swd = ret;
+	int ret = NO_ERROR;
+	if ( dir == SWITCH_STRAIGHT || dir == SWITCH_CURVED ) {
 		// TODO wait?
-		char bytes[3] = { 33 + ret, (char) sw, 32 };// 32 TURNS OFF SOLENOID
+		char bytes[3] = { 33 + dir, (char) sw, 32 };// 32 TURNS OFF SOLENOID
 
 		// Send the command
 		ret = PutStr( bytes, sizeof(bytes), ts->iosTid );
 		
 		// Store the new direction
-		ts->switches[sw] = swd;    
+		ts->switches[sw] = dir;    
+	} else {
+		ret = INVALID_DIR;
+		error( ret, "TrackServer received invalid direction.");
 	}
 	return ret;
 }
 
 // set all the switches to given direction
-int ts_switchSetAll( TS *ts, char dir ) {
+int ts_switchSetAll( TS *ts, SwitchDir dir ) {
     int err = 0;
 
 	int i;

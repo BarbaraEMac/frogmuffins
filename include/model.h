@@ -99,5 +99,7 @@ int model_nameToIdx (TrackModel *model, const char *name);
 char sensor_bank( int sensor );
 char sensor_num( int sensor );
 char switch_dir( SwitchDir dir );
+SwitchDir switch_init ( char dir );
+
 
 #endif

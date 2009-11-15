@@ -794,6 +794,15 @@ char switch_dir( SwitchDir dir ) {
 	return (dir == SWITCH_CURVED) ? 'C' : 'S'; 
 }
 
+// check if the direction index is within range
+SwitchDir switch_init( char dir ) {
+    if( dir == 's' || dir == 'S' ) { return SWITCH_STRAIGHT; }
+    if( dir == 'c' || dir == 'C' ) { return SWITCH_CURVED; }
+    
+    return INVALID_DIR;
+}
+
+
 /*
 char * model_idxToName ( TrackModel *model, int idx ) {
 	return model->nodes[idx].name;

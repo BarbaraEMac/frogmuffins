@@ -295,10 +295,10 @@ void shell_exec( char *command, TIDs tids ) {
 	rpReq.nodeIdx2 = 0;
 
 	char *commands[] = {
-		"h = Help!", 
-		"k1 = Execute kernel 1 user tasks.", 
-		"k2 = Execute kernel 2 user tasks.", 
-		"k3 = Execute kernel 3 user tasks.", 
+		"\th = Help!", 
+		"\tk1 = Execute kernel 1 user tasks.", 
+		"\tk2 = Execute kernel 2 user tasks.", 
+		"\tk3 = Execute kernel 3 user tasks.", 
 	//	"cache ON/OFF = turn the instruction cache on/off respectively",
 		"++ Train Controller Commands ++",
 		"\t rv train_num  = Reverse specified train.",
@@ -343,8 +343,9 @@ void shell_exec( char *command, TIDs tids ) {
 		tsRpl = trainCmd( &tsReq, tids.ts );
 		output( "Switch %d is set to %c. \r\n", tsReq.sw, switch_dir( tsRpl.dir ) );
 	// sw
-    } else if( sscanf(command, "sw %d %c", &tsReq.sw, &tsReq.dir) >=0 ) {
+    } else if( sscanf(command, "sw %d %c", &tsReq.sw, tmpStr1) >=0 ) {
 		tsReq.type = SW;
+		tsReq.dir = switch_init( tmpStr1[0] );
 		trainCmd( &tsReq, tids.ts );
 	// tr
 	} else if( sscanf(command, "tr %d %d", &tsReq.train, &tsReq.speed) >= 0 ) {
@@ -453,7 +454,7 @@ void shell_exec( char *command, TIDs tids ) {
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
-			output( "\t%s\r\n", commands[i] );
+			output( "%s\r\n", commands[i] );
 		}
 	// Nothing was entered
 	} else if( command[0] == '\0' ) {
