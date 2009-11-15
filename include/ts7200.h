@@ -10,6 +10,9 @@
 #define ON	1
 #define	OFF	0
 
+
+#define	EXTENSION_ID 0x80832440
+
 #define	TIMER1_BASE	0x80810000
 #define	TIMER2_BASE	0x80810020
 #define	TIMER3_BASE	0x80810080
@@ -163,6 +166,11 @@ typedef volatile struct _vic {
 #define VIC1			(VIC *) VIC1_BASE
 #define VIC2			(VIC *) VIC2_BASE
 
+typedef volatile struct _security {
+	int	id;
+} ExtID;
+
+#define EID				(ExtID *) EXTENSION_ID
 
 typedef enum _interrupt {
 	// -		 =  0,	// Unused
@@ -252,5 +260,6 @@ int volatile *clock_init( Clock *clock, int enable, int interrupt, int val ) ;
 void clock_stop( Clock *clock ) ;
 void clock_bwwait( int ms ) ;
 
+int board_id() ;
 
 #endif

@@ -140,3 +140,8 @@ void clock_bwwait( int ms ) {
 	// Stop the timer
     clock_stop( TIMER1 );
 }
+
+int board_id () {
+	ExtID *extId = EID;
+	return extId->id;
+}

@@ -19,6 +19,12 @@
 
 #define min( a, b ) ( ((a) < (b)) ? (a) : (b) )
 
+#define false 0
+#define	true 1
+
+// booleans are integers
+typedef int bool;
+
 // TIDs are really ints.
 typedef int TID;
 
