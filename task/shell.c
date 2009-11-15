@@ -18,6 +18,7 @@
 #include "task.h"
 #include "trackserver.h"
 #include "train.h"
+#include "ui.h"
 
 #define INPUT_LEN   60
 #define INPUT_HIST  1
@@ -34,6 +35,7 @@ typedef struct {
 	TID ios2;
 	TID ts;
 	TID rp;
+	TID ui;
 	TID tr1Tid;	// TODO: Make this numbering dynamic?
 	TID idle;
 } TIDs;
@@ -90,6 +92,10 @@ void bootstrap ( ) {
 	tids.rp = Create (7, &rp_run);
 	output ("Initializing the route planner. \r\n");
 	
+	// Create the ui 
+//	tids.ui = Create (5, &ui_displayTrack);
+//	output ("Initializing the UI. \r\n");
+
 	// Create the idle task
 	tids.idle = Create (9, &idleTask);
 
@@ -97,7 +103,6 @@ void bootstrap ( ) {
 
 	// Run the shell
 	shell_run( tids );
-
 }
 
 void shell_run ( TIDs tids ) {
@@ -235,9 +240,14 @@ void shell_initTrack (TIDs tids, char *input) {
 
 	output ("Track: ");
 	shell_inputData(tids, input, false );
+
 	// Tell the Route Planner which track we are using
 	Send (tids.rp, (char*)&input[0], sizeof(char),
 				   (char*)&err, 	 sizeof(int));
+	
+	// Tell the UI which track we are using
+//	Send (tids.ui, (char*)&input[0], sizeof(char),
+//				   (char*)&err, 	 sizeof(int));
 
 	if ( err < NO_ERROR ) {
 		output ("Invalid Track ID. Using Track B.\r\n");
@@ -249,9 +259,6 @@ void shell_initTrain (TIDs tids, char *input) {
 	RPShellReply rpRpl;
 	TrainInit 	 trInit;
 
-	rpReq.nodeIdx1 = 0;
-	rpReq.nodeIdx2 = 0;
-	
 	output ("Train Id: ");
 	shell_inputData(tids, input, true );
 	trInit.id = atoi((const char**)&input);
@@ -312,11 +319,6 @@ void shell_exec( char *command, TIDs tids ) {
 
 	RPRequest	 rpReq;
 	RPShellReply rpRpl;
-
-	// Clear the request
-	rpReq.name[0]  = 0;
-	rpReq.nodeIdx1 = 0;
-	rpReq.nodeIdx2 = 0;
 
 	char *commands[] = {
 		"\th = Help!", 
@@ -419,6 +421,7 @@ void shell_exec( char *command, TIDs tids ) {
 			rpReq.type = DISPLAYROUTE;
 			rpReq.nodeIdx1 = tmpInt;
 			rpReq.nodeIdx2 = rpRpl.idx;
+			output ("Displaying from %d to %d\r\n", tmpInt, rpRpl.idx);
 			rpCmd ( &rpReq, tids.rp );
 		}
 	// first switch
