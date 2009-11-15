@@ -30,7 +30,7 @@ typedef struct {
 } Speed;
 
 typedef struct {
-	int  		id;			// Identifying number
+	int  		id;				// Identifying number
 	int  		currSensor;		// Current Location
 	int	 		prevSensor;		// Previous Location
 	int  		dest;			// Desired End Location
@@ -41,14 +41,9 @@ typedef struct {
 	int 		tsTid;			// Id of the Track Server
 	int			deTid;			// Id of the Detective
 
-	int			dist;
 	int			ticks;
-	int 		numSw;
 	Speed		histBuf[SPEED_HIST];
 	RB			hist;	
-	TrackModel	model;
-	int			sensor; 		//TODO this is temporary
-
 } Train;
 
 int speed( Speed sp ) {
@@ -57,37 +52,37 @@ int speed( Speed sp ) {
 }
 
 
-void 		train_init    		(Train *tr, RPRequest *rpReq);
-int			train_time			(Train *tr, int mm);
-Speed 		train_speed			(Train *tr);
-void 		train_predictSpeed	(Train *tr, int mm);
+void 		train_init    		( Train *tr );
+int			train_time			( Train *tr, int mm );
+Speed 		train_speed			( Train *tr );
+void 		train_predictSpeed	( Train *tr, int mm );
 
 // Route Planner Commands
-RPReply		train_planRoute 	(Train *tr, RPRequest *req);
+RPReply		train_planRoute 	( Train *tr );
+int 		train_distance		( Train *tr ); // in mm
 
 // Detective Commands
-void	 	train_wait			(Train *tr, RPReply *rep);
-void 		train_update		(Train *tr, DeReply *rpl);
+void	 	train_wait			( Train *tr, RPReply *rep );
+void 		train_update		( Train *tr, DeReply *rpl );
 
 // Track Server Commands
-void 		train_reverse		(Train *tr);
-void 		train_drive  		(Train *tr, int speedSet);
-void		train_flipSwitches	(Train *tr, RPReply *rpReply);
-SwitchDir	train_dir			(Train *tr, int sw );
+void 		train_reverse		( Train *tr );
+void 		train_drive  		( Train *tr, int speedSet );
+void		train_flipSwitches	( Train *tr, RPReply *rpReply );
+SwitchDir	train_dir			( Train *tr, int sw );
 // ----------------------------------------------------------------------------
 
 void train_run () {
 	Train 	  tr;
-	RPRequest rpReq;		// Route Planner request
 	RPReply   rpReply;		// Reply from the Route Planner
 
 	// Initialize this train
-	train_init ( &tr, &rpReq );
+	train_init ( &tr );
 	
 	// Until you've reached your destination:
 	while ( tr.currSensor != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
-		rpReply = train_planRoute (&tr, &rpReq);
+		rpReply = train_planRoute ( &tr );
 		debug ("train: has a route ERROR=%d stopDist=%d\r\n",
 				rpReply.err, rpReply.stopDist);
 
@@ -108,7 +103,7 @@ void train_run () {
 	Exit(); // When you've reached your destination
 }
 
-void train_init ( Train *tr, RPRequest *rpReq ) {
+void train_init ( Train *tr ) {
 	int shellTid;
 	TrainInit init;
 	
@@ -133,16 +128,7 @@ void train_init ( Train *tr, RPRequest *rpReq ) {
 	tr->deTid = WhoIs (TRACK_DETECTIVE_NAME);
 	assert( tr->deTid >= NO_ERROR );
 	
-	// Initialize the Route Planner request
-	rpReq->trainId = tr->id;
-	rpReq->destIdx = tr->dest;
-	rpReq->sensor1 = 0;
-	rpReq->sensor2 = 0;
-
-
 	// Initialize the calibration data
-	tr->numSw = 0;
-	parse_model( TRACK_B, &tr->model );
 	rb_init( &(tr->hist), tr->histBuf );
 	memoryset( (char *) tr->histBuf, 0, sizeof(tr->histBuf) );
 
@@ -170,20 +156,30 @@ void train_predictSpeed( Train *tr, int mm ) {
 
 	//Speed current = train_speed( tr );
 	// TODO: PLACE calibration here
-	tr->speedSet  = 6;
-	if( mm < 10 ) tr->speedSet = 0;
-
-	train_drive (tr, tr->speedSet);
+	//tr->speedSet  = 6;
+	if( mm < 10 ) { 
+		tr->speedSet = 0;
+		train_drive (tr, 0);
+	}
+	//train_drive(tr, tr->speedSet);
 
 }
 
 
 void train_update( Train *tr, DeReply *rpl ) {
-	int 		last, avg, diff;
+	int 		last, avg, diff, dist;
 	Speed		sp, pr;
+
+	// Update train location
+	tr->prevSensor = tr->currSensor;
+	tr->currSensor = rpl->sensor; // TODO fix this
+
+	// Calculate the distance traveled
+	dist = train_distance( tr );
+
 	
 	sp.ms = (rpl->ticks - tr->ticks) * MS_IN_TICK;
-	sp.mm = tr->dist;
+	sp.mm = dist;
 	last = speed( sp );
 	pr = train_speed( tr );
 	avg = speed( pr );
@@ -201,11 +197,7 @@ void train_update( Train *tr, DeReply *rpl ) {
 	printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, last, avg, diff);
 
-	// Update train location
-	tr->prevSensor = tr->currSensor;
-	tr->currSensor = rpl->sensor; // TODO fix this
 	
-	tr->dist = tr_distance( tr, rpl->sensor );
 	tr->ticks = rpl->ticks;
 
 }
@@ -214,30 +206,35 @@ void train_update( Train *tr, DeReply *rpl ) {
 //-------------------------- Route Planner Commands ---------------------------
 //-----------------------------------------------------------------------------
 
-int tr_distance( Train *tr ) {
-	RPReply reply;
-	RPRequest req;
+int train_distance( Train *tr ) {
+	RPRequest	req;
+	int	dist;
 	
 	req.type		= MIN_SENSOR_DIST;
 	req.sensor1		= tr->prevSensor;
 	req.sensor2		= tr->currSensor;
 
-	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
-			 		 (char*) &reply, sizeof(RPReply));
+	Send (tr->rpTid, (char*) &req,  sizeof(RPRequest),
+			 		 (char*) &dist, sizeof(int));
 	
-	return reply.stopDist;
+	if_error( dist, "train: distance returned an error" );
+	return dist;
 }
 
 
-RPReply train_planRoute (Train *tr, RPRequest *req) {
-	RPReply reply;
-	
-	req->type       = PLANROUTE;
-	req->lastSensor = tr->currSensor;
-	req->destIdx    = tr->dest;
-	req->avgSpeed   = speed( train_speed( tr ) );
+RPReply train_planRoute( Train *tr ) {
+	RPReply 	reply;
+	RPRequest	req;
 
-	Send (tr->rpTid, (char*)  req,   sizeof(RPRequest),
+
+	// Initialize the Route Planner request
+	req.type		= PLANROUTE;
+	req.trainId		= tr->id;
+	req.lastSensor	= tr->currSensor;
+	req.destIdx		= tr->dest;
+	req.avgSpeed	= speed( train_speed( tr ) );
+
+	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
 	
 	return reply;
@@ -247,7 +244,7 @@ RPReply train_planRoute (Train *tr, RPRequest *req) {
 //-------------------------- Detective Commands -------------------------------
 //-----------------------------------------------------------------------------
 
-void train_wait (Train *tr, RPReply *rep) {
+void train_wait( Train *tr, RPReply *rep ) {
 	DeReply 	rpl;
 	DeRequest	req;
 	int 		i;
@@ -274,7 +271,7 @@ printf("predicting %c%d, after %dms, before %dms\r\n",
 //-----------------------------------------------------------------------------
 //-------------------------- Track Server Commands ----------------------------
 //-----------------------------------------------------------------------------
-void train_reverse (Train *tr) {
+void train_reverse( Train *tr ) {
 	TSRequest req;
 	TSReply	  reply;
 
@@ -285,7 +282,7 @@ void train_reverse (Train *tr) {
 					 (char *)&reply, sizeof(TSReply));
 }
 
-void train_drive (Train *tr, int speedSet) {
+void train_drive( Train *tr, int speedSet ) {
 	TSRequest req;
 	TSReply	  reply;
 
@@ -297,7 +294,7 @@ void train_drive (Train *tr, int speedSet) {
 					 (char *)&reply, sizeof(TSReply));
 }
 
-void train_flipSwitches (Train *tr, RPReply *rpReply) {
+void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 	TSRequest		req;
 	TSReply			reply;
 	SwitchSetting  *ss;
