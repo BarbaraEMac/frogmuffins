@@ -15,6 +15,7 @@
 #define NODE_MAX_EDGES 		3
 #define TRACK_A				0
 #define	TRACK_B				1
+#define	NODE_NAME_LEN		5
 
 typedef enum {
 	SWITCH_STRAIGHT = 0,
@@ -50,7 +51,7 @@ typedef struct {
     NODE_SENSOR = 2,
     NODE_STOP = 1,
   } type;
-  char name[5];
+  char name[NODE_NAME_LEN];
   int id, idx;
   union {
     Switch sw;
