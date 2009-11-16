@@ -142,7 +142,6 @@ void rp_run() {
 				break;
 
 			case DISPLAYROUTE:
-				debug("dispaying the route for %d to %d\r\n", req.nodeIdx1, req.nodeIdx2);
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
@@ -449,14 +448,14 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
-	
+/**	
 	printf ("Switch settings: \r\n");
 	for ( i = 0; i < 3; i ++ ) {
 		printf("i=%d dist=%d id=%d dir=%d\r\n", i, 
 				trReply->switches[i].dist, trReply->switches[i].id, 
 				trReply->switches[i].dir);
 	}
-
+*/
 
 }
 
