@@ -326,6 +326,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 
 			Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
 							 (char *)&reply, sizeof(TSReply));
+			if_error( reply.ret, "Track Server did not flip switch.");
 		} else {
 			break;
 		}
