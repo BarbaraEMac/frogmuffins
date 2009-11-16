@@ -24,6 +24,11 @@ typedef enum RPType {
 	MIN_SENSOR_DIST // This must be last for error checking purposes
 } RPType;
 
+enum StopAction {
+	STOP = 0,
+	STOP_AND_REVERSE
+};
+
 typedef struct {
 	RPType	type;		// Route Planner request type
 	
@@ -76,6 +81,8 @@ typedef struct {
 	int stopDist;		// Distance to next stop
 	SwitchSetting switches[8];
 	SensorsPred   nextSensors;// Prediction for the next sensors
+
+	enum StopAction stopAction;
 
 } RPReply;
 
