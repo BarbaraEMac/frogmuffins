@@ -156,9 +156,7 @@ TD * td_init ( int priority, Task start, TID parentId, TDM *mgr ) {
     td->spsr = DEFAULT_PSR;	
 	td->sb = (int *) STACK_BASE + (STACK_SIZE * idx); 
 	td->sp = td->sb - 16; 	// leave space for the 'stored registers'
-	asm( "#; look after this");
 	td->sp[PC_OFFSET] = (int) start;
-	asm( "#; but before this");
 	
 	td->parentId = parentId;
 	td->priority = priority;
