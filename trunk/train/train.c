@@ -310,7 +310,9 @@ void train_wait( Train *tr, RPReply *rep ) {
 		
 	}
 
-	req.expire = train_time( tr, rep->stopDist ) / MS_IN_TICK;
+	req.expire = tr->ticks 
+					+ 1000
+					+ train_time( tr, rep->stopDist ) / MS_IN_TICK;
 
 	assert( tr->deTid == 9 );
 	// Tell the detective about the Route Planner's prediction.
@@ -321,6 +323,7 @@ void train_wait( Train *tr, RPReply *rep ) {
 	if( rpl.sensor < NO_ERROR ) {
 		error( rpl.sensor, "Train Missed a sensor." );
 
+		assert( Time( tr->csTid ) > req.expire );
 		// Reverse the train if needed
 		if( rep->stopAction == STOP_AND_REVERSE ) {
 			train_reverse( tr );
