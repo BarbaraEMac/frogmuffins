@@ -31,6 +31,6 @@ int abs( int n );
  *
  * Copied from http://www.codecodex.com/wiki/Calculate_an_integer_square_root
  */
-unsigned long isqrt( x );
+unsigned long isqrt( unsigned long x );
 
 #endif
