@@ -37,6 +37,8 @@ void getNextRequest ( TD *td, Request *req ) {
 	// Reset the return value
 	td->returnValue = td->a->retVal;
 
+	assert( td->sp > td->sb - STACK_SIZE );
+
 	debug( "KERNEL ENTRY: (%d) sp=%x spsr=%x pc=%x\r\n", 
 			td->id, td->sp, td->spsr, td->sp[PC_OFFSET] );
 	debug( "INTERRUPTS: %x\r\n", readMemory(VIC1_BASE + VIC_RAW_INTR) );	
