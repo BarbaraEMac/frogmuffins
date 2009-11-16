@@ -11,6 +11,8 @@
 
 #define ROUTEPLANNER_NAME	"RoutePlnr"
 
+#define NUM_SETTINGS		8
+
 typedef enum RPType {
 	ERROR = 0,
 	DISPLAYROUTE = 1,
@@ -25,7 +27,7 @@ typedef enum RPType {
 } RPType;
 
 enum StopAction {
-	STOP = 0,
+	JUST_STOP = 0,
 	STOP_AND_REVERSE
 };
 
@@ -79,7 +81,7 @@ typedef struct {
 	int err;			// Check this first! If < 0, ERROR OCCURRED!
 
 	int stopDist;		// Distance to next stop
-	SwitchSetting switches[8];
+	SwitchSetting switches[NUM_SETTINGS];
 	SensorsPred   nextSensors;// Prediction for the next sensors
 
 	enum StopAction stopAction;
