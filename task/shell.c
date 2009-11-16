@@ -118,15 +118,13 @@ void shell_run ( TIDs tids ) {
 	// Initialize the track we want to use.
 	shell_initTrack (tids, input);
 	
-	// Initialize the first train.
-	shell_initTrain (tids, input);
-
 	output ("Type 'h' for a list of commands.\r\n");
     
 	time = Time(tids.cs)/2;
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
+	cprintf(tids.ios2, "%s", "\033F");
 	output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 	
 	i=0;
@@ -150,6 +148,7 @@ void shell_run ( TIDs tids ) {
 				/*input = history[h++];
 				h %= INPUT_HIST;*/
 				i = 0;
+				cprintf(tids.ios2, "%s", "\033F");
 				output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 				break;
 			case '\b': // Backspace was pressed
@@ -327,6 +326,7 @@ void shell_exec( char *command, TIDs tids ) {
 		"\tk2 = Execute kernel 2 user tasks.", 
 		"\tk3 = Execute kernel 3 user tasks.", 
 	//	"cache ON/OFF = turn the instruction cache on/off respectively",
+		"go = Initialize a train.",
 		"++ Train Controller Commands ++",
 		"\t rv train_num  = Reverse specified train.",
 		"\t st switch_num = Display status of switch.",
@@ -480,6 +480,9 @@ void shell_exec( char *command, TIDs tids ) {
 			rpReq.nodeIdx1 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
+	} else if( sscanf(command, "go") >= 0 ) {
+		// Initialize the first train.
+		shell_initTrain (tids, command);
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
