@@ -94,10 +94,10 @@ void train_run () {
 			rpReply.switches[0].id = -1;
 			rpReply.nextSensors.len = 0;
 		}
-
+		
 		// If you should reverse / are backwards, turn around.
 		if( rpReply.stopDist < 0 ) {
-			//train_reverse(&tr);
+			train_reverse(&tr);
 			rpReply.stopDist = -rpReply.stopDist;
 		}
 		
@@ -175,6 +175,8 @@ void train_predictSpeed( Train *tr, int mm ) {
 	if( mm < 10 ) { 
 		tr->speedSet = 0;
 		train_drive (tr, 0);
+		debug("train: Reached it's destination.");
+		Exit ();
 	}
 	//train_drive(tr, tr->speedSet);
 
@@ -187,7 +189,7 @@ void train_update( Train *tr, DeReply *rpl ) {
 
 	// Update train location
 	tr->prevSensor = tr->currSensor;
-	tr->currSensor = rpl->sensor; // TODO fix this
+	tr->currSensor = rpl->sensor; 
 
 	// Calculate the distance traveled
 	dist = train_distance( tr );
@@ -272,10 +274,6 @@ void train_wait( Train *tr, RPReply *rep ) {
 		req.events[i].start  = 0;//train_time ( tr ) - (PREDICTION_WINDOW/2);
 		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
 		
-		printf("predicting %c%d, after %dms, before %dms\r\n",
-				sensor_bank( req.events[i].sensor ), 
-				sensor_num( req.events[i].sensor ),
-				req.events[i].start, req.events[i].end );
 	}
 
 	// Tell the detective about the Route Planner's prediction.
