@@ -19,7 +19,8 @@
 #include "train.h"
 
 #define	SPEED_HIST				10
-#define PREDICTION_WINDOW 		1000
+#define PREDICTION_WINDOW 		(1000 /MS_IN_TICK)
+#define	BLANK_RECORD_DIVISOR	2
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -34,8 +35,10 @@ typedef struct {
 	int  		currSensor;		// Current Location
 	int	 		prevSensor;		// Previous Location
 	int  		dest;			// Desired End Location
+	TrainMode	mode;			// Train Mode (calibration or normal)
 		
 	int 	    speedSet;		// The current speed setting
+	bool		speedChanged;	// Has the speed changed
 	Speed		velocity;		// The actuall current speed (in mm/s)
 	
 	TID 		rpTid;			// Id of the Route Planner
@@ -44,6 +47,7 @@ typedef struct {
 	TID			csTid;			// Id of the Clock Server
 
 	int			ticks;
+	int			sd;				// Standard deviation
 	Speed		histBuf[SPEED_HIST];
 	RB			hist;	
 } Train;
@@ -126,6 +130,7 @@ void train_init ( Train *tr ) {
 	tr->currSensor 	= init.currLoc;
 	tr->dest   		= init.dest;
 	tr->speedSet	= 6;
+	tr->mode 		= init.mode;
 
 	debug ("Train %d is at sensor %d going to destidx %d\r\n",
 			tr->id, tr->currSensor, tr->dest);
@@ -138,7 +143,10 @@ void train_init ( Train *tr ) {
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
 	tr->deTid = WhoIs (TRACK_DETECTIVE_NAME);
 	tr->csTid = WhoIs (CLOCK_NAME);
+	assert( tr->rpTid >= NO_ERROR );
+	assert( tr->tsTid >= NO_ERROR );
 	assert( tr->deTid >= NO_ERROR );
+	assert( tr->csTid >= NO_ERROR );
 	
 	// Initialize the calibration data
 	rb_init( &(tr->hist), tr->histBuf );
@@ -146,18 +154,35 @@ void train_init ( Train *tr ) {
 	tr->velocity.mm = 0;
 	tr->velocity.ms = 0;
 	tr->ticks = Time( tr->csTid );
+	tr->speedChanged = false;
 
 //	RegisterAs ("Train");;
 }
 
 Speed train_speed( Train *tr ) {
 	Speed total = {0, 0}, *rec;
+	int mean, var = 0, tmp;
 
+	// Calculate the mean
 	foreach( rec, tr->histBuf ) {
 		total.mm += rec->mm;
 		total.ms += rec->ms;
 		//debug("buffer %d/%d = \t%dmm/s\r\n", rec->mm, rec->ms, speed( rec ));
 	}
+
+	mean = speed(total);
+
+	// Calculate standard deviation
+	foreach( rec, tr->histBuf ) {
+		tmp = abs( speed( *rec ) - mean );
+		if( rec->mm > 0 ) {
+			var += tmp * tmp;
+		} else {
+			var += (tmp * tmp) / BLANK_RECORD_DIVISOR;
+		}
+	}
+
+	tr->sd = isqrt( var );
 	return total;
 }
 
@@ -173,6 +198,9 @@ void train_predictSpeed( Train *tr, int mm ) {
 	// TODO: PLACE calibration here
 	//tr->speedSet  = 6;
 	if( mm < 10 ) { 
+
+		tr->speedChanged = true;
+
 		tr->speedSet = 0;
 		train_drive (tr, 0);
 		debug("train: Reached it's destination.");
@@ -200,7 +228,11 @@ void train_update( Train *tr, DeReply *rpl ) {
 	last = speed( sp );
 	pr = train_speed( tr );
 	avg = speed( pr );
-	rb_force( &tr->hist, &sp );
+	if( ! tr->speedChanged ) {
+		debug( "adding speed %d to history data\r\n");
+		rb_force( &tr->hist, &sp );
+	}
+	tr->speedChanged = false;
 	diff = ((avg * sp.ms) - (sp.mm * 1000)) / 1000;
 
 	if( abs(diff) > 100 )
@@ -211,8 +243,8 @@ void train_update( Train *tr, DeReply *rpl ) {
 		printf("\033[36m");
 	else 
 		printf("\033[32m");
-	printf("speed = %d/%d = \t%dmm/s \tavg:%dmm/s \tdiff:%dmm\033[37m\r\n",
-			sp.mm, sp.ms, last, avg, diff);
+	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
+			sp.mm, sp.ms, last, avg, tr->sd, diff);
 
 	
 	tr->ticks = rpl->ticks;
@@ -231,8 +263,9 @@ int train_distance( Train *tr ) {
 	req.sensor1		= tr->prevSensor;
 	req.sensor2		= tr->currSensor;
 
-	Send (tr->rpTid, (char*) &req,  sizeof(RPRequest),
-			 		 (char*) &dist, sizeof(int));
+	assert( tr->rpTid == 12 );
+	Send( tr->rpTid, (char*) &req,  sizeof(RPRequest),
+			 		 (char*) &dist, sizeof(int) );
 	
 	if_error( dist, "train: distance returned an error" );
 	return dist;
@@ -251,8 +284,9 @@ RPReply train_planRoute( Train *tr ) {
 	req.destIdx		= tr->dest;
 	req.avgSpeed	= min( speed( tr->velocity ), 0 );
 
-	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
-			 		 (char*) &reply, sizeof(RPReply));
+	assert( tr->rpTid == 12 );
+	Send( tr->rpTid, (char*) &req,   sizeof(RPRequest),
+			 		 (char*) &reply, sizeof(RPReply) );
 	
 	return reply;
 }
@@ -271,14 +305,26 @@ void train_wait( Train *tr, RPReply *rep ) {
 
 	for( i = 0; i < req.numEvents ; i ++ ) {
 		req.events[i].sensor = rep->nextSensors.idxs[i];
-		req.events[i].start  = 0;//train_time ( tr ) - (PREDICTION_WINDOW/2);
+		req.events[i].start  = tr->ticks;//train_time ( tr ) - (PREDICTION_WINDOW/2);
 		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
 		
 	}
 
+	req.expire = train_time( tr, rep->stopDist ) / MS_IN_TICK;
+
+	assert( tr->deTid == 9 );
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->deTid, (char *) &req, sizeof(DeRequest),
 					 (char *) &rpl, sizeof(TSReply) );
+
+	// Did not predict properly
+	if( rpl.sensor < NO_ERROR ) {
+		error( rpl.sensor, "Train Missed a sensor." );
+		req.type = GET_STRAY;
+		// Try again
+		Send( tr->deTid, (char *) &req, sizeof(DeRequest),
+						 (char *) &rpl, sizeof(TSReply) );
+	}
 
 	train_update( tr, &rpl );
 }
@@ -289,12 +335,17 @@ void train_wait( Train *tr, RPReply *rep ) {
 void train_reverse( Train *tr ) {
 	TSRequest req;
 	TSReply	  reply;
+	
+	if( tr->mode == CALIBRATION ) return;
+
+	tr->speedChanged = true;
 
 	req.type = RV;
 	req.train = tr->id;
 
-	Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
-					 (char *)&reply, sizeof(TSReply));
+	assert( tr->tsTid == 8 );
+	Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
+					 (char *)&reply, sizeof(TSReply) );
 }
 
 void train_drive( Train *tr, int speedSet ) {
@@ -305,14 +356,17 @@ void train_drive( Train *tr, int speedSet ) {
 	req.train = tr->id;
 	req.speed = speedSet;
 
-	Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
-					 (char *)&reply, sizeof(TSReply));
+	assert( tr->tsTid == 8 );
+	Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
+					 (char *)&reply, sizeof(TSReply) );
 }
 
 void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 	TSRequest		req;
 	TSReply			reply;
 	SwitchSetting  *ss;
+
+	if( tr->mode == CALIBRATION ) return;
 
 	foreach( ss, rpReply->switches ) {
 		if( ss->id > 0 ) {
@@ -322,8 +376,9 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			req.sw   = ss->id;
 			req.dir  = ss->dir;
 
-			Send (tr->tsTid, (char *)&req,   sizeof(TSRequest),
-							 (char *)&reply, sizeof(TSReply));
+			assert( tr->tsTid == 8 );
+			Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
+							 (char *)&reply, sizeof(TSReply) );
 			if_error( reply.ret, "Track Server did not flip switch.");
 		} else {
 			break;
@@ -335,8 +390,9 @@ SwitchDir train_dir( Train *tr, int sw ) {
 	TSRequest 	req = { ST, {sw}, {0} };
 	TSReply		reply;
 
-	Send ( tr->tsTid, (char *)&req,	  sizeof(TSRequest), 
-					  (char *)&reply, sizeof(TSReply));
+	assert( tr->tsTid == 8 );
+	Send( tr->tsTid, (char *)&req,	  sizeof(TSRequest), 
+					  (char *)&reply, sizeof(TSReply) );
 	return reply.dir;
 }
 
