@@ -68,8 +68,6 @@ void ts_run () {
 		
 		switch (req.type) {
 			case RV:
-				debug ("ts: Reversing %d.\r\n", req.train);
-				
 				if ( (reply.ret = checkTrain ( req.train )) >= NO_ERROR ) {
 					speed = ts.speeds[req.train];
 					
@@ -84,28 +82,22 @@ void ts_run () {
 				break;
 			case ST:
 				reply.dir = ts.switches[req.sw]; 
-				debug ("ts: Switch %d is set to %c.\r\n", req.sw, reply.dir);
 				break;
 
 			case SW:
-				debug ("ts: Setting switch %d to dir %c.\r\n", req.sw, 
-						switch_dir( req.dir ) );
 				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
 				break;
 			
 			case TR:
-				debug ("ts: Setting train #%d to speed %d.\r\n", req.sw, req.speed );
 				reply.ret = ts_trainSet( &ts, req.train, req.speed );
 				break;
 
 			case WH:
-				debug ("ts: WHing\r\n");
 				reply.sensor = ts.lstSensor;
 				reply.ticks = (Time( ts.csTid ) - ts.lstSensorPoll);
 				break;
 
 			case POLL:
-				debug("ts: Poll results  %c%d \r\n", req.channel, req.sensor);
 				if( req.sensor != ts.lstSensor ) {
 					ts.lstSensorUpdate = req.ticks;
 				}
@@ -142,6 +134,14 @@ int ts_init( TS *ts ) {
 
 	ts_start( ts );
 	
+	// Stop the trains
+	int trains[] = {12, 22,  24, 49, 52};
+	int *i;
+	foreach( i, trains ) {
+		ts_trainSet( ts, *i, 0 );
+	}
+
+	// Reset the switches
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	ts_switchSetAll( ts, SWITCH_STRAIGHT );
 	
@@ -190,7 +190,7 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 
 // set a switch to a desired position checking for bad input
 int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
-    debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, dir );
+    debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, switch_dir (dir) );
 	int ret = NO_ERROR;
 	if ( sw < 0 || sw >= NUM_SWTS ) return INVALID_SWITCH;
 	if ( dir == SWITCH_STRAIGHT || dir == SWITCH_CURVED ) {
