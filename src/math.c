@@ -2,7 +2,8 @@
  * Math Library
  */
 
-int ctz( int x ) {
+int
+ctz( int x ) {
 	if ( x == 0 ) return 32;
 	int n = 0;
 	int mask = 0xFFFF;
@@ -19,7 +20,8 @@ int ctz( int x ) {
 }
 
 // The following function was copied from wikipedia
-int log_2(unsigned int x) {
+int
+log_2(unsigned int x) {
   int r = 0;
   while ((x >> r) != 0) {
     r++;
@@ -28,6 +30,32 @@ int log_2(unsigned int x) {
 }
 
 
-int abs ( int n ) {
+int
+abs ( int n ) {
 	return (n > 0) ? n : -n ;
 }
+
+unsigned long
+isqrt(x)
+unsigned long x;
+{
+    register unsigned long op, res, one;
+
+    op = x;
+    res = 0;
+
+    /* "one" starts at the highest power of four <= than the argument. */
+    one = 1 << 30;  /* second-to-top bit set */
+    while (one > op) one >>= 2;
+
+    while (one != 0) {
+        if (op >= res + one) {
+            op = op - (res + one);
+            res = res +  (one << 1);  // <-- faster than 2 * one
+        }
+        res >>= 1;
+        one >>= 2;
+    }
+    return(res);
+}
+

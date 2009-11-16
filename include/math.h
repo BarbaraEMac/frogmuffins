@@ -15,7 +15,7 @@
 int ctz( int x );
 
 
-int log_2(unsigned int x);
+int log_2( unsigned int x );
 
 
 /**
@@ -23,6 +23,14 @@ int log_2(unsigned int x);
  * 
  * Returns the absolute value of parameter n ( /n/ ).
  */
-int abs ( int n );
+int abs( int n );
+
+
+/**
+ * Integer Square Root
+ *
+ * Copied from http://www.codecodex.com/wiki/Calculate_an_integer_square_root
+ */
+unsigned long isqrt( x );
 
 #endif
