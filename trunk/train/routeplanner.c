@@ -396,7 +396,6 @@ int oppositeSensorId (int sensorIdx) {
 }
 
 void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
-	debug ("PLANNING A ROUTE\r\n");
 	int  nextRv;
 	int  totalDist;
 	int  currentIdx = sIdxToIdx(req->lastSensor);
@@ -532,15 +531,18 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings) {
 	int *path = p->path;
-	Node *itr;
+	Node *itr = &rp->model.nodes[path[0]];
+	Node *prevItr;
 	int n = 0;
+	int maxDist = 500;
 
 	// Start at i=1 to skip first node
 	// Stop at len - 1 since we don't have to switch the last node if we
 	// want to stop on it
 	int i;
 	for ( i = 1; i < p->len - 1; i ++ ) {
-		itr = &rp->model.nodes[path[i]];
+		prevItr = itr;
+		itr     = &rp->model.nodes[path[i]];
 		
 		if ( itr->type == NODE_SWITCH ) {
 			
@@ -555,9 +557,12 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 				settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
 				n ++;
 			}
+		}
 
-		// STOP WHEN YOU DON'T HIT A SWITCH
-		} else {
+		// Subtract from the distance as we travel further
+		maxDist -= rp->dists[prevItr->idx][itr->idx];
+
+		if ( (maxDist <= 0) && (n == 5) ) {
 			break;
 		}
 	}
