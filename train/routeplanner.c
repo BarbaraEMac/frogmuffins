@@ -145,6 +145,11 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
+			//	req->lastSensor = 70;
+			//	req->destIdx = 34;
+
+			//	rp_planRoute (&rp, &trReply, &req);
+
 				// Display the path
 				rp_outputPath ( &rp, req.nodeIdx1, req.nodeIdx2 );
 				// Display the total distance
@@ -208,6 +213,7 @@ void rp_run() {
 				// Convert the node name into the node's index
 				shReply.idx = model_nameToIdx(&rp.model, req.name);
 				
+				debug ("converted %s to %d\r\n", req.name, shReply.idx);
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
@@ -408,16 +414,19 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	makePath ( rp, &p, currentIdx, req->destIdx );
 	rp_displayPath ( rp, &p );
 	
-		// Get the distance to the next reverse
+	// Get the distance to the next reverse
 	nextRv = rp_distToNextRv (rp, &p);
+	debug ("TotalDist=%d Reverse Distance=%d\r\n", totalDist, nextRv);
 
 	// The stop distance is min {next reverse, total distance to travel}
 	if ( nextRv < totalDist ) {
 		trReply->stopDist = nextRv;
-		debug ("Stop distance is a reverse\r\n");
+		trReply->stopAction = STOP_AND_REVERSE;
+		debug ("Stop distance is a reverse. (%d)\r\n", nextRv);
 	} else {
-		trReply->stopDist = totalDist;
-		debug ("Stop distance is the total distance.\r\n");
+		trReply->stopDist   = totalDist;
+		trReply->stopAction = STOP;
+		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
 	}
 	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
 
@@ -447,14 +456,13 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
-/**	
+	
 	printf ("Switch settings: \r\n");
 	for ( i = 0; i < 3; i ++ ) {
 		printf("i=%d dist=%d id=%d dir=%d\r\n", i, 
 				trReply->switches[i].dist, trReply->switches[i].id, 
 				trReply->switches[i].dir);
 	}
-*/
 
 }
 
@@ -463,14 +471,20 @@ int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
 		return 0;
 	}
 	
+	debug ("TURNAROUND:\r\n");
+
 	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
 	int   even   = (sensorId %2) == 0;
+	debug ("sIdx=%d idx=%d node=%s even?%d \r\n", sensorId, sIdxToIdx(sensorId), sensor->name, even);
 
+	debug ("nextNode=%d Behind=%d ahead=%d\r\n", p->path[1], sensor->se.behind.dest, sensor->se.ahead.dest);
 	if ( (sensor->se.behind.dest  == p->path[1] && even) ||
 		 (sensor->se.ahead.dest == p->path[1] && !even) ) {
+		
 		return 1;
 	}
 	
+	debug (" DONE TURN AROUND\r\n");
 	return 0;
 }
 
@@ -493,7 +507,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 				  (itr->sw.ahead[1].dest == path[i+1])) &&
 				 ((itr->sw.ahead[0].dest == path[i-1]) ||
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
-//				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
+				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -548,8 +562,9 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 			
 			// If coming from either "ahead" edges, you don't need to 
 			// change a switch direction.
-			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
-				 (itr->sw.ahead[1].dest == path[i-1])) ) {
+			if ( (itr->sw.ahead[0].dest = path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
+			
+//			if ( !((() && (itr->sw.ahead[0].dest == path[i-1])) || ((itr->sw.ahead[0].dest != path[i+1]) && (itr->sw.ahead[1].dest == path[i-1]))) ) {
 //				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
 				
 				settings[n].dist = rp->dists[path[0]][path[i]];
