@@ -145,13 +145,11 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 
-			//	req->lastSensor = 70;
-			//	req->destIdx = 34;
-
-			//	rp_planRoute (&rp, &trReply, &req);
+				debug ("determining the shortest path from %d (%d) to %d\r\n", 
+						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
+				rp_planRoute (&rp, &trReply, &req);
 
 				// Display the path
-				rp_outputPath ( &rp, req.nodeIdx1, req.nodeIdx2 );
 				// Display the total distance
 				printf ("%s\r\nDistance travelled = %d\r\n", 
 						rp.model.nodes[req.nodeIdx2].name,
@@ -230,6 +228,8 @@ void rp_run() {
 			
 			case PLANROUTE:
 				// Determine the shortest path 
+				debug ("determining the shortest path from %d (%d) to %d\r\n", 
+						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
 				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
@@ -409,7 +409,8 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Distance from current sensor to destination node
 	totalDist = rp->dists[currentIdx][req->destIdx];
-
+	debug ("totalDist = %d\r\n", totalDist);
+	
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
 	rp_displayPath ( rp, &p );
@@ -425,7 +426,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 		debug ("Stop distance is a reverse. (%d)\r\n", nextRv);
 	} else {
 		trReply->stopDist   = totalDist;
-		trReply->stopAction = STOP;
+		trReply->stopAction = JUST_STOP;
 		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
 	}
 	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
@@ -559,11 +560,12 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 		itr     = &rp->model.nodes[path[i]];
 		
 		if ( itr->type == NODE_SWITCH ) {
-			
+			debug ("Switch: %s (%d), \r\n", itr->name, path[i]);
 			// If coming from either "ahead" edges, you don't need to 
 			// change a switch direction.
-			if ( (itr->sw.ahead[0].dest = path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
-			
+			if ( (itr->sw.ahead[0].dest == path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
+				debug ("behind=%d ahead[0]=%d ahead[1]=%d next along path=%s (%d)\r\n", 
+					itr->sw.ahead[0].dest, itr->sw.ahead[1].dest, rp->model.nodes[path[i+1]].name, path[i+1]);
 //			if ( !((() && (itr->sw.ahead[0].dest == path[i-1])) || ((itr->sw.ahead[0].dest != path[i+1]) && (itr->sw.ahead[1].dest == path[i-1]))) ) {
 //				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
 				
@@ -583,7 +585,7 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	}
 
 	// Set the rest of the settings to invalid.
-	for ( ; n < 3; n ++ ) {
+	for ( ; n < NUM_SETTINGS; n ++ ) {
 		settings[n].dist = -1;
 		settings[n].id   = -1;
 		settings[n].dir  = -1;
@@ -734,11 +736,12 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 	int n = p->len;
 	int i;
 	
+	debug ("Path: ");
 	for ( i = 0; i < n; i ++ ) {
-		printf ("%s> ", rp->model.nodes[p->path[i]].name);
+		debug ("%s> ", rp->model.nodes[p->path[i]].name);
 	}
 
-	printf("\r\n");
+	debug("\r\n");
 }
 //-----------------------------------------------------------------------------
 //--------------------------- Reservation Stuff -------------------------------
@@ -837,18 +840,17 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
       		}
     	}
   	}
-
-	/*
+/*
 	// Print out the results table of shortest rp->distss
   	for ( i = 0; i < 1; i++ ) {
     	for ( j = 0; j < n; j++ ) {
       		
 			if ( rp->dists[i][j] != INT_MAX ) {
-		//		debug("DIST: (%s,%s)=%d THROUGH ", model->nodes[i].name, 
-		//									   model->nodes[j].name, 
-			//								   rp->dists[i][j]);
-			rp_outputPath(model, rp, i ,j);		
-			printf ("%s\r\n", model->nodes[j].name);
+				debug("DIST: (%s,%s)=%d THROUGH ", rp->model.nodes[i].name, 
+											   rp->model.nodes[j].name, 
+										   rp->dists[i][j]);
+		//	rp_outputPath(model, rp, i ,j);		
+		//	printf ("%s\r\n", model->nodes[j].name);
 			}
 		}
     }
@@ -872,14 +874,14 @@ int cost (TrackModel *model, int idx1, int idx2) {
 		i = idx2;
 		j = idx1;
 	}
-	
+/*	
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
 	if ( (model->nodes[i].reserved == 1) || 
 		 (model->nodes[j].reserved == 1) ) {
 		return INT_MAX;
 	}
-
+*/
 	// Check each edge in O(3) time
 	while ( itr < (int) model->nodes[i].type ) {
 		// If the edge reaches the destination,
@@ -926,6 +928,9 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 // UGLY & FULL 'O HACKS
 // but it works ...
 void makePathHelper (RoutePlanner *rp, Path *p, int i, int j) {
+	assert ( p->len < MAX_NUM_NODES );
+	assert ( &p->path[p->len] < &p->path[MAX_NUM_NODES] );
+
 
 	if ( rp->paths[i][j] == -1 ) {
 		p->path[p->len] = i;
