@@ -74,7 +74,7 @@ typedef struct {
 	int err;			// Check this first! If < 0, ERROR OCCURRED!
 
 	int stopDist;		// Distance to next stop
-	SwitchSetting switches[3];
+	SwitchSetting switches[8];
 	SensorsPred   nextSensors;// Prediction for the next sensors
 
 } RPReply;
