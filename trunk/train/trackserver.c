@@ -192,6 +192,7 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
     debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, dir );
 	int ret = NO_ERROR;
+	if ( sw < 0 || sw >= NUM_SWTS ) return INVALID_SWITCH;
 	if ( dir == SWITCH_STRAIGHT || dir == SWITCH_CURVED ) {
 		// TODO wait?
 		char bytes[3] = { 33 + dir, (char) sw, 32 };// 32 TURNS OFF SOLENOID
