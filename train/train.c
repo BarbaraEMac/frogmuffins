@@ -320,6 +320,12 @@ void train_wait( Train *tr, RPReply *rep ) {
 	// Did not predict properly
 	if( rpl.sensor < NO_ERROR ) {
 		error( rpl.sensor, "Train Missed a sensor." );
+
+		// Reverse the train if needed
+		if( rep->stopAction == STOP_AND_REVERSE ) {
+			train_reverse( tr );
+		}
+
 		req.type = GET_STRAY;
 		// Try again
 		Send( tr->deTid, (char *) &req, sizeof(DeRequest),
