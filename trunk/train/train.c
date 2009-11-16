@@ -36,6 +36,7 @@ typedef struct {
 	int  		dest;			// Desired End Location
 		
 	int 	    speedSet;		// The current speed setting
+	Speed		velocity;		// The actuall current speed (in mm/s)
 	
 	int 		rpTid;			// Id of the Route Planner
 	int 		tsTid;			// Id of the Track Server
@@ -133,6 +134,8 @@ void train_init ( Train *tr ) {
 	// Initialize the calibration data
 	rb_init( &(tr->hist), tr->histBuf );
 	memoryset( (char *) tr->histBuf, 0, sizeof(tr->histBuf) );
+	tr->velocity.mm = 0;
+	tr->velocity.ms = 0;
 
 //	RegisterAs ("Train");;
 }
@@ -201,7 +204,7 @@ void train_update( Train *tr, DeReply *rpl ) {
 
 	
 	tr->ticks = rpl->ticks;
-
+	tr->velocity = sp;
 }
 
 //-----------------------------------------------------------------------------
@@ -234,7 +237,7 @@ RPReply train_planRoute( Train *tr ) {
 	req.trainId		= tr->id;
 	req.lastSensor	= tr->currSensor;
 	req.destIdx		= tr->dest;
-	req.avgSpeed	= speed( train_speed( tr ) );
+	req.avgSpeed	= speed( tr->velocity );
 
 	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
