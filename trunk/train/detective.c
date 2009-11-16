@@ -20,7 +20,7 @@
 #define	NUM_STRAY		256
 
 #define POLL_SIZE 	10
-#define POLL_WAIT 	(100 / MS_IN_TICK)
+#define POLL_WAIT 	(200 / MS_IN_TICK)
 #define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
 #define POLL_STR	(char [2]){133, 192}
 
