@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -44,7 +44,7 @@ typedef struct {
 void shell_inputData (TIDs tids, char *input, bool reset );
 
 void shell_initTrack (TIDs tids, char *input);
-void shell_initTrain (TIDs tids, char *input);
+void shell_initTrain (TIDs tids, char *input, int id, TrainMode mode );
 
 /**
  * Given an input command, error check it and execute it.
@@ -254,14 +254,13 @@ void shell_initTrack (TIDs tids, char *input) {
 	}
 }
 
-void shell_initTrain (TIDs tids, char *input) {
+void shell_initTrain (TIDs tids, char *input, int id, TrainMode mode ) {
 	RPRequest 	 rpReq;
 	RPShellReply rpRpl;
 	TrainInit 	 trInit;
 
-	output ("Train Id: ");
-	shell_inputData(tids, input, true );
-	trInit.id = atoi((const char**)&input);
+	trInit.id = id;
+	trInit.mode = mode;
 
 	output ("Current Sensor: " );
 	shell_inputData(tids, input, true );
@@ -480,9 +479,14 @@ void shell_exec( char *command, TIDs tids ) {
 			rpReq.nodeIdx1 = rpRpl.idx;
 			rpCmd ( &rpReq, tids.rp );
 		}
-	} else if( sscanf(command, "go") >= 0 ) {
+	// go
+	} else if( sscanf(command, "go %d", &tmpInt) >= 0 ) {
 		// Initialize the first train.
-		shell_initTrain (tids, command);
+		shell_initTrain (tids, command, tmpInt, NORMAL);
+	// cal
+	} else if( sscanf(command, "cal %d", &tmpInt) >= 0 ) {
+		// Initialize the first train.
+		shell_initTrain (tids, command, tmpInt, CALIBRATION);
     // Help
 	} else if( sscanf(command, "h") >=0 ) {
 		for( i = 0; i < (sizeof( commands ) / sizeof( char * )); i++ ) {
