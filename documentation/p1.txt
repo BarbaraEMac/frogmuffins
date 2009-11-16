@@ -35,27 +35,265 @@ algorithms - how they work
 
 	Model
 	=====
+	We decided to use the model provided on the course webpage to store the track
+	graph. We did this because the track data was already measured and stored in
+	a useable format.
 
-	How it is stored (data structure)
+		Model Data Structure
+		====================
+		Here are the structs we use to store the model:
 
-	When parsed 
+		typedef enum {
+			SWITCH_STRAIGHT = 0,
+			SWITCH_CURVED = 1
+		} SwitchDir;
 
-	Who owns / uses it
+		typedef struct {
+			int dest;
+			int distance;
+		} Edge;
 
-	Accuracy
+		typedef struct {
+			Edge 		ahead[2]; // (curved, straight)
+			Edge 		behind;
+			SwitchDir set;
+		} Switch;
 
+		typedef struct {
+			Edge ahead;
+			Edge behind;
+			Edge filler[1];
+			char trig_forward, trig_back;
+		} Sensor;
+
+		typedef struct {
+			Edge ahead;
+			Edge filler[2];
+		} Stop;
+
+		typedef struct {
+			enum {
+				NODE_SWITCH = 3,
+				NODE_SENSOR = 2,
+				NODE_STOP = 1,
+			} type;
+			char name[NODE_NAME_LEN];
+			int id, idx;
+			union {
+				Switch sw;
+				Sensor se;
+				Stop st;
+				Edge edges[3];
+			};
+			int reserved;
+			int x, y; // location (for ui)
+		} Node;
+
+		typedef struct {
+			int 	num_nodes;
+			Node 	nodes[MAX_NUM_NODES];
+			int 	sensor_nodes[NUM_SENSORS];
+		} TrackModel;
+
+		This is essentially taken from the course webpage with a few minor adjustments:
+			1. The names were change to use camel case.
+			2. Each Node now stores its index in the TrackModel's nodes array.
+			3. Each node has a reserved flag. If the flag is 1, this node is reserved.
+
+		Parse & Ownership
+		=================
+		The model data is hardcoded into the model.c file as a string. This string
+		can be parsed with sscanf to build the model data structure at any time.
+		Since the model is quite large and memory intensive, we've decided to only
+		let the Track Server and Route Planner parse and store the model.
+
+		We decided against parsing the model once and passing it as a message
+		to each task since the model is large. We will pay the parse time cost
+		during initialization.
+
+		Therefore, only the Route Planner and Track Server use and own the model.
+
+		Once we have a track reservation system implemented, these two use tasks will
+		need to share data about the model.
+
+		Data Accuracy
+		=============
+		We are accepting the data in the track files as being accurate. Chery confirmed
+		that she measured some of the distances in the previous term.
 
 	Route Planner
 	=============
+	A train will query the route planner to determine its route. It is able to
+	determine the shortest path between any two nodes, distance between any two
+	nodes, make predictions about the next sensors along a path, determine which
+	switches will need to be set and to which directions, determine if a train
+	needs to turn around / reverse, and more.
 
-	shortest path alg
+		Route Planner Data Structure
+		============================
+		The Route Planner is a private struct of the following form:
+			int 			 distances[num_nodes][num_nodes];
+			int 			 paths    [num_nodes][num_nodes];
+			TrackModel		*model;
+			Reservations	*reservations;
 
+		It stores the minimum distance between any two nodes, the shortest path between
+		any two nodes, a model of the track, and the track reservations.
 
+		The tack reservations are not currently used. (See comment below)
+		
+		Shortest Path Algorithm
+		=======================
+		To be able to determine the shortest distance between any two nodes in 
+		O(1) time, we run Floyd-Warshall's All-Pairs Shortest Path algorithm
+		once during initialization and store the results. Here is the algorithm:
 
+		Let dists be the distances matirx.
+		Let paths be the path parents matrix.
 
+		Initialize matrices:
+			dists[i][j] = 0 		if i == j
+						  cost(i,j) if i and j are neighbours
+						  Infinity  otherwise
+			path[i][j] = -1
+
+		for ( k = 0; k < n; k ++ ) {
+			for ( i = 0; i < n; i ++ ) {
+				for ( j = 0; j < n; j ++ ) {
+					if (dists[i][j] > dists[i][k] + dists[k][j]) {
+						dists[i][j] = dists[i][k] + dists[k][j];
+
+						paths[i][j] = k;
+					}
+				}
+			}
+		}
+
+		This algorithm computes the shortest distance between any two nodes in
+		the graph and stores them in a distances matrix. It runs in time O(n^3).
+
+		The cost function returns the distance in mm between two consecutive,
+		neighbouring nodes. Thus, our algorithm will find the shortest distance in mm
+		between any two nodes. Note that if a train needs to reverse along this path, 
+		it may take longer to reach the destination than if the train had taken a longer
+		route (distance-wise) that required it to only drive straight. We decided 
+		that we are fine with using the shortest distance to determine the shortest
+		path for now.
+
+		The shortest path from node i to node j  can be recovered in the following
+		manner:
+
+		outputPath( path, i, j ) {
+			if ( path[i][j] == -1 ) {
+				Display node i.
+			}
+			else {
+				outputPath(path, i, path[i][j]);
+				outputPath(path, path[i][j], j);
+			}
+		}
+
+		The function uses recursion to follow the links stored during Floyd-Warshall
+		to determine the path. The depth of the recursion is at most O(length of path).
+
+		Why Do We Use Floyd-Warshall?
+		=============================
+		Floyd-Warshall allows us to cache our shortest paths results. We only run this
+		algorithm once and can compute distances and paths from those stored results
+		very quickly. We choose to pay a larger cost up front to save time when the 
+		trains are running.
+
+		Simple tweaks to the cost function between neighbour nodes will allow us to 
+		reserve lengths of the track when two or more trains are running together.
+
+		Route Planner to Train API
+		==========================
+		Currently, only the command prompt (shell) and rain talk to the Route Planner.
+		Since the shell is specialized for testing, we've created special handlers
+		for shell messages.
+
+		When the train talks to the Route Planner, it communicates using sensor ids.
+		Each sensor has a unique id within the sensor_nodes array of the model. We
+		can use this id to determine the location of the train and direction it is
+		g.
+
+		When the Route Planner talks to the train, it sends sensor ids as predictions,
+		distances in mm to particular landmarks, and switch settings/directions. 
+
+		The train does not know anything about the model. We felt that the train
+		should not need to know about nodes or need to parse the model for it to
+		drive. We consider our train to be drien by either a blind engineer or one
+		without a map. The Route Planner simply tells the train a distance to travel,
+		driection, and switch settings. Thus, the train can focus on calibration
+		instead of complex details about nodes and making sure it is travelling along
+		a set path.
+
+		Shortest Distance
+		=================
+		To get the shortest distance between any two nodes, we simply look up the
+		coresponding entry in the distances matrix and return it to the train.
+
+		Shortest Path
+		=============
+		To computer the shortest distance between any two nodes, we recurse on the
+		path to build a list of landmarks. The list and length of the list are
+		returned.
+
+		Turn Around
+		===========
+		Since sensors give a direction and the train tells the Route Planner when 
+		it triggers a sensor, we can easily tell if the train needs to reverse.
+
+		Switch Settings
+		===============
+		Given a desired path and the last hit sensor, it is easy to determine the next 
+		few switches a train will encounter and the direction they need to be set.
+		When the Route Planner tells the train it has a valid path, it also returns
+		some switch settings.
+		
+		SwitchSettings is a struct of the following form:
+			int distanceToSwitch;
+			int switchId;
+			SwitchDirection dir;
+
+		The train will receive a list of these settings and can flip switches 
+		immediately before it needs to. Thus, when more trains are on the track, they
+		will not interfere when switching switches.
+		
+		Predictions
+		===========
+		Given a desired path and the last hit sensor, the Route Planner is able to 
+		predict which sensors the train should hit next.
+
+		If the train is facing forewardss, we follow the path in the desired direction
+		and build a list of the first sensors it could hit. If the path reaches a switch,
+		we follow in both directions in case the switch is not set correctly.
+
+		If the train is facing backwards, we tack on a list of all sensors it is facing
+		in case it does not turn around correctly. This way we make a prediction for ANY
+		route the train could take. If a sensor is hit and it is not a member of this list,
+		we disregard the trigger since it is not possible for this train to have triggered 
+		it.
+
+		These predictions are given to the train. The train bundles the sensors and an 
+		estimated trigger time range to send to the Detective. The Detective handles the
+		trigger from there.
+
+		Reservations
+		===========
+		For project 2, we will be implementing a full reservation system so that 
+		multiple trains ca run on the track simultaneously. This system has not yet
+		been fully implemented.
+
+		Thus, the single train does not reserve any part of the tracks for this
+		project.
+	
 	Detective
 	=========
+	
+	notifiers
 
+	why do we do everything with sensors? ROBUST FTW
 	
 	Track Server
 	============
@@ -68,7 +306,14 @@ algorithms - how they work
 	UI / Shell
 	==========
 
+	
+	Error Codes
+	===========
+	what they are 
 
+	how we handle them
+
+	how we error check
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
@@ -85,7 +330,42 @@ algorithms - how they work
 	
 	Here are all of the files we are submitting:
 
+	.:
+	Makefile       include        task           
+	arch           lib            server        
+	documentation  main           src            train
 
+	./arch:
+	blank.c     drivers.c   ep93xx.c    requests.c  switch.S    switch.c
 
+	./documentation:
+	k1.txt       k2.txt       k4.txt       syscall.txt
+	k2.out       k3.txt       p1.txt
+
+	./include:
+	buffer.h        fifo.h          model.h         string.h        trackserver.h
+	bwio.h          gameplayer.h    requests.h      switch.h        train.h
+	debug.h         gameserver.h    routeplanner.h  syscalls.h      ts7200.h
+	drivers.h       globals.h       servers.h       task.h          ui.h
+	error.h         math.h          shell.h         td.h
+
+	./lib:
+	libbuffer.a  libbwio.a    libdebug.a   libmath.a    libstring.a
+
+	./main:
+	main.c      orex.ld     syscalls.c  td.c
+
+	./server:
+	clockserver.c  nameserver.c   serialio.c
+
+	./src:
+	Makefile  buffer.c  bwio.c    debug.c   fifo.c    math.c    string.c
+
+	./task:
+	gameplayer.c  gameserver.c  shell.c       task.c
+
+	./train:
+	detective.c     routeplanner.c  train.c
+	model.c         trackserver.c   ui.c
 
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
