@@ -143,7 +143,7 @@ int ts_init( TS *ts ) {
 	ts_start( ts );
 	
 	memoryset ( ts->speeds, 0, NUM_TRNS );
-	ts_switchSetAll( ts, SWITCH_CURVED );
+	ts_switchSetAll( ts, SWITCH_STRAIGHT );
 	
 	err = Create( 4, &det_run );
 	if( err < NO_ERROR ) return err;

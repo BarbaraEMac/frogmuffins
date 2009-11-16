@@ -18,7 +18,7 @@
 #include "trackserver.h"
 #include "train.h"
 
-#define	SPEED_HIST				20
+#define	SPEED_HIST				10
 #define PREDICTION_WINDOW 		1000
 
 // Private Stuff
@@ -38,9 +38,10 @@ typedef struct {
 	int 	    speedSet;		// The current speed setting
 	Speed		velocity;		// The actuall current speed (in mm/s)
 	
-	int 		rpTid;			// Id of the Route Planner
-	int 		tsTid;			// Id of the Track Server
-	int			deTid;			// Id of the Detective
+	TID 		rpTid;			// Id of the Route Planner
+	TID 		tsTid;			// Id of the Track Server
+	TID			deTid;			// Id of the Detective
+	TID			csTid;			// Id of the Clock Server
 
 	int			ticks;
 	Speed		histBuf[SPEED_HIST];
@@ -48,7 +49,7 @@ typedef struct {
 } Train;
 
 int speed( Speed sp ) {
-	if( sp.ms == 0 ) sp.ms = -1;
+	if( sp.ms == 0 ) return 0;
 	return (sp.mm * 1000) / sp.ms;
 }
 
@@ -84,12 +85,19 @@ void train_run () {
 	while ( tr.currSensor != tr.dest ) {
 		// Ask the Route Planner for an efficient route!
 		rpReply = train_planRoute ( &tr );
-		debug ("train: has a route ERROR=%d stopDist=%d\r\n",
-				rpReply.err, rpReply.stopDist);
+		debug ("train: has a route stopDist=%d\r\n", rpReply.stopDist);
+
+		if_error( rpReply.err, "Route Planner failed" );
+		if( rpReply.err < NO_ERROR ) {
+			rpReply.stopDist = 500; // TODO this is a hack to be replaced with locate
+
+			rpReply.switches[0].id = -1;
+			rpReply.nextSensors.len = 0;
+		}
 
 		// If you should reverse / are backwards, turn around.
 		if( rpReply.stopDist < 0 ) {
-			train_reverse(&tr);
+			//train_reverse(&tr);
 			rpReply.stopDist = -rpReply.stopDist;
 		}
 		
@@ -129,6 +137,7 @@ void train_init ( Train *tr ) {
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
 	tr->deTid = WhoIs (TRACK_DETECTIVE_NAME);
+	tr->csTid = WhoIs (CLOCK_NAME);
 	assert( tr->deTid >= NO_ERROR );
 	
 	// Initialize the calibration data
@@ -136,6 +145,7 @@ void train_init ( Train *tr ) {
 	memoryset( (char *) tr->histBuf, 0, sizeof(tr->histBuf) );
 	tr->velocity.mm = 0;
 	tr->velocity.ms = 0;
+	tr->ticks = Time( tr->csTid );
 
 //	RegisterAs ("Train");;
 }
@@ -237,7 +247,7 @@ RPReply train_planRoute( Train *tr ) {
 	req.trainId		= tr->id;
 	req.lastSensor	= tr->currSensor;
 	req.destIdx		= tr->dest;
-	req.avgSpeed	= speed( tr->velocity );
+	req.avgSpeed	= min( speed( tr->velocity ), 0 );
 
 	Send (tr->rpTid, (char*) &req,   sizeof(RPRequest),
 			 		 (char*) &reply, sizeof(RPReply));
