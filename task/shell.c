@@ -235,8 +235,9 @@ void shell_initTrack (TIDs tids, char *input) {
 	} else if ( board_id() == 0x9224c1a8 ) {
 		input[0] = 'B';
 	} else {
-		input[0] = '\0';
+		input[0] = 0;
 	}
+	input[1] = 0;
 
 	output ("Track: ");
 	shell_inputData(tids, input, false );
