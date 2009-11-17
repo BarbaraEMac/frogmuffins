@@ -11,8 +11,7 @@
 #define SERIALIO1_NAME  "IOServer1"
 #define SERIALIO2_NAME  "IOServer2"
 
-#define NUM_ENTRIES		256
-#define ENTRY_LEN		80
+#define ENTRY_LEN		256
 #define NUM_NS_ENTRIES	256
 #define IO_REQUEST_SIZE (sizeof(IORequest) - ENTRY_LEN)
 #define MS_IN_TICK		10

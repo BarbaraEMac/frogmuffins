@@ -15,14 +15,15 @@
 #include "servers.h"
 
 #define AWAITBUF_LEN	1
+#define BUFFER_SIZE		1024
 
 //-----------------------------------------------------------------------------
 // Private members & Forward Declarations
 
 typedef struct {
-	char sendBuffer[NUM_ENTRIES];
-	char recvBuffer[NUM_ENTRIES];
-	int waitBuffer[NUM_ENTRIES];	// Array of waiting tids (for a char)
+	char sendBuffer[BUFFER_SIZE];
+	char recvBuffer[BUFFER_SIZE];
+	int waitBuffer[BUFFER_SIZE];	// Array of waiting tids (for a char)
 
 	RB	send;
 	RB	recv;
