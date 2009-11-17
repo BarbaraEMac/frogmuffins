@@ -55,7 +55,7 @@ int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
 
 void rp_predictSensors  (RoutePlanner *rp, SensorsPred *p, int sensorId );
-void rp_predictSensorHelper(RoutePlanner *rp, SensorsPred *p, Node *n, int prevIdx);
+void rp_predictSensorHelper(RoutePlanner *rp, SensorsPred *p, Node *n, int prevIdx, int startIdx);
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
@@ -186,8 +186,8 @@ void rp_run() {
 				} else {
 					printf ("Sensors: ");
 					for ( i = 0; i < pred.len; i ++ ) {
-						printf ("%c%d, ", sensor_bank(pred.idxs[i]), 
-								sensor_num(pred.idxs[i]) );
+						printf ("%c%d (dist=%d), ", sensor_bank(pred.idxs[i]), 
+								sensor_num(pred.idxs[i]), pred.dists[i] );
 					}
 					printf("\r\n");
 				}
@@ -601,11 +601,11 @@ void rp_predictSensors (RoutePlanner *rp, SensorsPred *pred, int sensorId ) {
 	n = &rp->model.nodes[e->dest]; 
 
 	// Fill the "path" with sensor ids
-	rp_predictSensorHelper ( rp, pred, n, idx );
+	rp_predictSensorHelper ( rp, pred, n, idx, idx );
 }
 
 void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
-							  Node *n, int prevIdx ) {
+							  Node *n, int prevIdx, int startIdx ) {
 	Node *n1, *n2;
 	
 	switch ( n->type ) {
@@ -617,20 +617,20 @@ void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, pred, n1, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
 			
 			} else if ( n->sw.ahead[1].dest == prevIdx ) {
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, pred, n1, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
 			} else { //behind
 				n1 = &rp->model.nodes[n->sw.ahead[0].dest]; 
 				n2 = &rp->model.nodes[n->sw.ahead[1].dest]; 
 				
 				// Recurse on these next nodes
-				rp_predictSensorHelper ( rp, pred, n1, n->idx );
-				rp_predictSensorHelper ( rp, pred, n2, n->idx );
+				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
+				rp_predictSensorHelper ( rp, pred, n2, n->idx, startIdx );
 			}
 			break;
 		
@@ -640,7 +640,10 @@ void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
 			if ( n->se.ahead.dest == prevIdx ) {
 				pred->idxs[pred->len] += 1;
 			}
-
+			
+			// Store the distance from start node to here.
+			pred->dists[pred->len] = rp->dists[startIdx][n->idx];
+				
 			// Advance length of the "path"
 			pred->len ++;
 			break;
