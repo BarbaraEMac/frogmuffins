@@ -72,6 +72,7 @@ void idleTask () {
 
 void bootstrap ( ) {
 	TIDs tids;
+	char input[INPUT_LEN];
 
 	// Create the name server
 	// Create the Serial I/O server
@@ -99,6 +100,13 @@ void bootstrap ( ) {
 	// Create the idle task
 	tids.idle = Create (9, &idleTask);
 
+	// Initialize the track we want to use.
+	shell_initTrack (tids, input);
+	
+	// Create the first train!
+	tids.tr1Tid = Create ( 5, &train_run );
+	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
+
 	output("Running on board %08x. \r\n", board_id() );
 
 	// Run the shell
@@ -115,9 +123,6 @@ void shell_run ( TIDs tids ) {
 
 	input = history[h++];
 
-	// Initialize the track we want to use.
-	shell_initTrack (tids, input);
-	
 	output ("Type 'h' for a list of commands.\r\n");
     
 	time = Time(tids.cs)/2;
@@ -279,10 +284,6 @@ void shell_initTrain (TIDs tids, char *input, int id, TrainMode mode ) {
 	rpRpl = rpCmd ( &rpReq, tids.rp );
 	
 	trInit.dest = rpRpl.idx;
-
-	// Create the first train!
-	tids.tr1Tid = Create ( 5, &train_run );
-	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
 
 	// Tell the train its init info.
 	Send ( tids.tr1Tid, (char*)&trInit, sizeof(TrainInit),
