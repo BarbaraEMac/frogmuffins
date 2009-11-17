@@ -161,7 +161,7 @@ int cs_init (Sleeper **sleepersQ) {
 	RegisterAs (CLOCK_NAME);
 	
 	// Spawn a notifying helper task
-	err = Create( 1, &notifier_run );
+	err = Create( NOTIFIER_PRTY, &notifier_run );
 	if_error (err, "Cannot create the clock notifier.");
 
 	// No tasks are currently waiting

@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -24,8 +24,11 @@
 #define INPUT_HIST  1
 #define IO			tids.ios2
 
-#define output(args...) cprintf(IO, "\033[36m"); cprintf(IO, args); cprintf(IO, "\033[37m")
-
+						//cprintf(IO, "\033[22;24r");
+#define output(args...) cprintf(IO, "\033[36m"); \
+						cprintf(IO, "\033[40B"); \
+						cprintf(IO, args); \
+						cprintf(IO, "\033[37m")
 // Private Stuff
 // ----------------------------------------------------------------------------
 typedef struct {
@@ -73,35 +76,35 @@ void idleTask () {
 void bootstrap ( ) {
 	TIDs tids;
 	char input[INPUT_LEN];
+	
+	// Create the idle task
+	tids.idle = Create (IDLE_PRTY, &idleTask);
 
 	// Create the name server
 	// Create the Serial I/O server
-	tids.ns   = Create (2, &ns_run);
-	tids.ios1 = Create (2, &ios1_run);
-    tids.ios2 = Create (2, &ios2_run);
+	tids.ns   = Create (HW_SERVER_PRTY, &ns_run);
+	tids.ios1 = Create (HW_SERVER_PRTY, &ios1_run);
+    tids.ios2 = Create (HW_SERVER_PRTY, &ios2_run);
 	output ("Initializing the name and serial io servers. \r\n");
-	
-	// Create the clock server
-	tids.cs = Create (2, &cs_run);
-	output ("Initializing the clock server. \r\n");
 
-	// Create the train controller
-	tids.ts = Create (2, &ts_run);
-	output ("Initializing the train controller. \r\n");
+	// Create the clock server
+	tids.cs = Create (HW_SERVER_PRTY, &cs_run);
+	output ("Initializing the clock server. \r\n");
 	
 	// Create the routeplanner
-	tids.rp = Create (7, &rp_run);
+	tids.rp = Create (LOW_SERVER_PRTY, &rp_run);
 	output ("Initializing the route planner. \r\n");
-	
+
 	// Create the ui 
-//	tids.ui = Create (5, &ui_displayTrack);
-//	output ("Initializing the UI. \r\n");
-
-	// Create the idle task
-	tids.idle = Create (9, &idleTask);
-
+	tids.ui = Create (OTH_SERVER_PRTY, &ui_run);
+	output ("Initializing the UI. \r\n");
+	
 	// Initialize the track we want to use.
 	shell_initTrack (tids, input);
+
+	// Create the train controller
+	tids.ts = Create (OTH_SERVER_PRTY, &ts_run);
+	output ("Initializing the track server. \r\n");
 	
 	// Create the first train!
 	tids.tr1Tid = Create ( 5, &train_run );
@@ -123,13 +126,12 @@ void shell_run ( TIDs tids ) {
 
 	input = history[h++];
 
-	output ("Type 'h' for a list of commands.\r\n");
+	output ("\rType 'h' for a list of commands.");
     
 	time = Time(tids.cs)/2;
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
-	cprintf(tids.ios2, "%s", "\033F");
 	output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 	
 	i=0;
@@ -146,14 +148,13 @@ void shell_run ( TIDs tids ) {
 
 		switch ( ch ) {
 			case '\r': // Enter was pressed
-				output( "\n\r" );
+				//output( "\n\r" );
 				shell_exec(input, tids);
 				
 				// Clear the input for next line
 				/*input = history[h++];
 				h %= INPUT_HIST;*/
 				i = 0;
-				cprintf(tids.ios2, "%s", "\033F");
 				output ("\r%02d:%02d:%01d> ", mins, secs, tens);
 				break;
 			case '\b': // Backspace was pressed
@@ -246,14 +247,16 @@ void shell_initTrack (TIDs tids, char *input) {
 	output ("Track: ");
 	shell_inputData(tids, input, false );
 
+	// Tell the UI which track we are using
+	Send (tids.ui, (char*)&input[0], sizeof(char),
+				   (char*)&err, 	 sizeof(int));
+
+	debug ("returned from, the UI\r\n");
 	// Tell the Route Planner which track we are using
 	Send (tids.rp, (char*)&input[0], sizeof(char),
 				   (char*)&err, 	 sizeof(int));
 	
-	// Tell the UI which track we are using
-//	Send (tids.ui, (char*)&input[0], sizeof(char),
-//				   (char*)&err, 	 sizeof(int));
-
+	debug ("RETURNED FROM ROUTE PLANNER\r\n");
 	if ( err < NO_ERROR ) {
 		output ("Invalid Track ID. Using Track B.\r\n");
 	}
@@ -284,6 +287,10 @@ void shell_initTrain (TIDs tids, char *input, int id, TrainMode mode ) {
 	rpRpl = rpCmd ( &rpReq, tids.rp );
 	
 	trInit.dest = rpRpl.idx;
+
+	// Create the first train!
+	tids.tr1Tid = Create (TRAIN_PRTY, &train_run );
+	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
 
 	// Tell the train its init info.
 	Send ( tids.tr1Tid, (char*)&trInit, sizeof(TrainInit),
@@ -405,7 +412,7 @@ void shell_exec( char *command, TIDs tids ) {
 		cache_off();
 	// path
 	} else if( sscanf(command, "path %s %s", tmpStr1, tmpStr2) >= 0 ) {
-		rpReq.type = CONVERT_IDX;
+		rpReq.type = CONVERT_SENSOR;
 		strncpy(rpReq.name, (const char*)tmpStr1, 5);
 		rpRpl = rpCmd ( &rpReq, tids.rp );
 
@@ -419,9 +426,9 @@ void shell_exec( char *command, TIDs tids ) {
 			 (tmpInt == INVALID_NODE_NAME) || (rpRpl.err == INVALID_NODE_NAME) ) {
 			output ("Invalid node name.\r\n");
 		} else {
-			rpReq.type = DISPLAYROUTE;
-			rpReq.nodeIdx1 = tmpInt;
-			rpReq.nodeIdx2 = rpRpl.idx;
+			rpReq.type       = DISPLAYROUTE;
+			rpReq.lastSensor = tmpInt;
+			rpReq.destIdx    = rpRpl.idx;
 			output ("Displaying from %d to %d\r\n", tmpInt, rpRpl.idx);
 			rpCmd ( &rpReq, tids.rp );
 		}

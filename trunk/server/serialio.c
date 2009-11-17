@@ -187,7 +187,7 @@ void ios_init (SerialIOServer *s, UART *uart) {
 	int notifierEvt = (uart == UART1) ? INT_UART1 : INT_UART2;
 
 	// Create the notifier
-	if ( (tid = Create (1, &ionotifier_run)) < NO_ERROR) {
+	if ( (tid = Create (NOTIFIER_PRTY, &ionotifier_run)) < NO_ERROR) {
 		error (tid, "Cannot make IO notifier.\r\n");
 	}
 	
