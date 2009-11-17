@@ -107,7 +107,7 @@ void bootstrap ( ) {
 	output ("Initializing the track server. \r\n");
 	
 	// Create the first train!
-	tids.tr1Tid = Create ( 5, &train_run );
+	tids.tr1Tid = Create ( TRAIN_PRTY, &train_run );
 	output ("Creating the first train! (%d)\r\n", tids.tr1Tid);
 
 	output("Running on board %08x. \r\n", board_id() );
