@@ -16,7 +16,7 @@
 #include "servers.h"
 #include "ui.h"
 
-#define NUM_DISP_SENSORS		5
+#define NUM_DISP_SENSORS	4	
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -71,14 +71,12 @@ void ui_run () {
 		Receive( &senderTid, (char*)&req, sizeof(UIRequest) );
 //		debug ("ui: received from %d\r\n", senderTid);
 
-
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
 
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-
 				//ui_displayTimeAt( ui.ios2Tid, 65, 7, time );
 				break;
 			
@@ -213,7 +211,9 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 }
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist) {
-
+	printf( "\033[15;30H%c%d:%dmm\033[24;0H", 
+			sensor_bank( idx ),
+			sensor_num( idx ), dist );
 }
 
 void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
