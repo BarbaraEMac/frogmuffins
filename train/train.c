@@ -83,6 +83,9 @@ void 		train_init    		( Train *tr );
 Speed 		train_speed			( Train *tr );
 void 		train_predictSpeed	( Train *tr, int mm );
 
+// Shell Commands
+void 		train_getPurpose	( Train *tr );
+
 // Route Planner Commands
 RPReply		train_planRoute 	( Train *tr );
 int 		train_distance		( Train *tr ); // in mm
@@ -107,63 +110,54 @@ void train_run () {
 
 	// Initialize this train
 	train_init ( &tr );
-	
-	// Until you've reached your destination:
-	while ( tr.currSensor != tr.dest ) {
-		// Ask the Route Planner for an efficient route!
-		rpReply = train_planRoute ( &tr );
-		debug ("train: has a route stopDist=%d\r\n", rpReply.stopDist);
 
-		if_error( rpReply.err, "Route Planner failed" );
-		if( rpReply.err < NO_ERROR ) {
-			rpReply.stopDist = 500; // TODO this is a hack to be replaced with locate
+	// Locate the train
+	// TODO
 
-			rpReply.switches[0].id = -1;
-			rpReply.nextSensors.len = 0;
-		}
+
+	FOREVER {
+		// Ask for a destination
+		train_getPurpose( &tr );
 		
-		// If you should reverse / are backwards, turn around.
-		if( rpReply.stopDist < 0 ) {
-			train_reverse(&tr);
-			rpReply.stopDist = -rpReply.stopDist;
+		// Until you've reached your destination:
+		while ( tr.currSensor != tr.dest ) {
+			// Ask the Route Planner for an efficient route!
+			rpReply = train_planRoute ( &tr );
+			debug ("train: has a route stopDist=%d\r\n", rpReply.stopDist);
+
+			if_error( rpReply.err, "Route Planner failed" );
+			if( rpReply.err < NO_ERROR ) {
+				rpReply.stopDist = 0; 
+				rpReply.switches[0].id = -1;
+				rpReply.nextSensors.len = 0;
+			}
+			
+			// If you should reverse / are backwards, turn around.
+			if( rpReply.stopDist < 0 ) { // TODO this might not be the best way
+				train_reverse(&tr);			// to do this
+				rpReply.stopDist = -rpReply.stopDist;
+			}
+			
+			// Flip the switches along the path.
+			train_flipSwitches (&tr, &rpReply);
+
+		assert( tr.deTid == 9 );
+			// Set the speed to an appropriate setting
+			train_predictSpeed (&tr, rpReply.stopDist);
+
+		assert( tr.deTid == 9 );
+			// Tell the detective about your predicted sensors
+			train_wait(&tr, &rpReply);
 		}
-		
-		// Flip the switches along the path.
-		train_flipSwitches (&tr, &rpReply);
 
-	assert( tr.deTid == 9 );
-		// Set the speed to an appropriate setting
-		train_predictSpeed (&tr, rpReply.stopDist);
-
-	assert( tr.deTid == 9 );
-		// Tell the detective about your predicted sensors
-		train_wait(&tr, &rpReply);
 	}
 
-	Exit(); // When you've reached your destination
+	Exit();  // Train task never exits
 }
 
 void train_init ( Train *tr ) {
-	int shellTid;
-	TrainInit init;
-	
-	// Get the train number from shell
-	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
 
-	// Copy the data to the train
-	tr->id      	= init.id;
-	tr->currSensor 	= init.currLoc;
-	tr->dest   		= init.dest;
-	tr->speedSet	= 6;
-	tr->mode 		= init.mode;
-
-	debug ("Train %d is at sensor %d going to destidx %d\r\n",
-			tr->id, tr->currSensor, tr->dest);
-
-	// Reply to the shell
-	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
-
-	// determine destination from shell
+	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
 	tr->deTid = WhoIs (TRACK_DETECTIVE_NAME);
@@ -276,6 +270,32 @@ void train_update( Train *tr, DeReply *rpl ) {
 }
 
 //-----------------------------------------------------------------------------
+//-------------------------- Shell Commands -----------------------------------
+//-----------------------------------------------------------------------------
+
+void train_getPurpose( Train *tr ) {
+	int shellTid;
+	TrainInit init;
+	
+	// Get the train number from shell
+	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
+	
+	// Copy the data to the train
+	tr->id      	= init.id;
+	tr->currSensor 	= init.currLoc;
+	tr->dest   		= init.dest;
+	tr->speedSet	= 6;
+	tr->mode 		= init.mode;
+
+	debug ("Train %d is at sensor %d going to destidx %d\r\n",
+			tr->id, tr->currSensor, tr->dest);
+
+	// Reply to the shell
+	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
+}
+
+
+//-----------------------------------------------------------------------------
 //-------------------------- Route Planner Commands ---------------------------
 //-----------------------------------------------------------------------------
 
@@ -331,7 +351,9 @@ void train_wait( Train *tr, RPReply *rep ) {
 	assert( req.numEvents < array_size( req.events ) );
 	for( i = 0; i < req.numEvents ; i ++ ) {
 		req.events[i].sensor = rep->nextSensors.idxs[i];
-		req.events[i].start  = tr->ticks;//train_time ( tr->velocity, tr ) - (PREDICTION_WINDOW/2);
+		req.events[i].start  = tr->ticks;
+		// TODO replace this with speed calibrates estimate
+		//train_time ( tr->velocity, rep->nextSensors. ) - (PREDICTION_WINDOW/2);
 		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
 		
 	}
@@ -470,6 +492,7 @@ void watchman( ) {
 	int			len;
 	int			distance = 0;
 	int			ticks = 0;
+	bool		savedTheDay = false;
 	
 	Create( 3, &heart ); // watchman has a heart - awwwwwww
 
@@ -486,10 +509,12 @@ void watchman( ) {
 					sensor_bank( disaster.sensor ),
 					sensor_num( disaster.sensor ), distance );
 			// Stop the train if needed
-			if( (disaster.crashDist - distance) < disaster.minDist ) {
+			if( (disaster.crashDist - distance) < disaster.minDist 
+					&& !savedTheDay) {
 				error ( TIMEOUT, "EMERGENCY TRAIN STOP" );
 				train_drive( tsTid, disaster.id, 0 );
-				// prevent this from happening again
+				// prevent the watchman from being too heroic happening again
+				savedTheDay = false;
 				disaster.velocity.mm = 0;
 			}
 
@@ -497,6 +522,7 @@ void watchman( ) {
 			assert( len == sizeof( Disaster ));
 			ticks = disaster.ticks;
 			distance = 0;
+			savedTheDay = false;
 			debug( "watchmen: got disaster update" );
 		}
 	}
