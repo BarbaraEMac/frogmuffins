@@ -8,6 +8,29 @@
 #ifndef __UI_H__
 #define __UI_H__
 
+#define STR_LEN		15
+#define UI_NAME		"UI_SERVER"
+
+enum UIRequestType{
+	CLOCK = 1,
+	TRACK_SERVER,
+	SHELL,
+	DETECTIVE,
+	TRAIN
+};
+
+typedef struct {
+	enum UIRequestType type;
+
+	union {
+		int time;
+		int dist;
+	};
+	int  idx;
+	char state;
+	char fmt[STR_LEN];
+	char str[STR_LEN];
+} UIRequest;
 
 typedef enum {
 	BLACK_FC = 30,
@@ -33,8 +56,5 @@ typedef enum {
 	DEFAULT_BC = 49
 } BackColour;
 
-void ui_displayTrack();
-
-void ui_printAt (int ios2Tid, int x, int y, char ch, 
-				 ForeColour fc, BackColour bc );
+void ui_run();
 #endif
