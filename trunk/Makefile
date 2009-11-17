@@ -14,7 +14,7 @@ CFLAGS  = -c -fPIC -Wall -I. -Iinclude -mcpu=arm920t -msoft-float
 ASFLAGS	= -mcpu=arm920t -mapcs-32
 # -mapcs: always generate a complete stack frame
 
-LDFLAGS = -init main -Map main/main.map -N  -T main/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
+LDFLAGS = -init main -Map kern/main.map -N  -T kern/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
 		  #arch/drivers.o \
 # NOTE: the first file must not be oprimized or we lose the loader data
@@ -23,9 +23,9 @@ OBJECTS = arch/blank.o \
 		  arch/requests.o \
 		  arch/switch.o \
 		  arch/ep93xx.o \
-		  main/syscalls.o \
-		  main/main.o \
-		  main/td.o \
+		  kern/syscalls.o \
+		  kern/main.o \
+		  kern/td.o \
 		  server/clockserver.o \
 		  server/nameserver.o \
 		  server/serialio.o \
@@ -42,7 +42,7 @@ OBJECTS = arch/blank.o \
 
 HEADERS = include/*.h
 
-all: main/main.elf 
+all: kern/main.elf 
 
 .PRECIOUS: arch/blank.s
 arch/blank.s: arch/blank.c $(HEADERS)
@@ -65,21 +65,22 @@ arch/blank.s: arch/blank.c $(HEADERS)
 libraries: 
 	cd src && make && cd ..
 
-main/main.elf: libraries $(OBJECTS) 
+kern/main.elf: libraries $(OBJECTS) 
 	$(LD) $(LDFLAGS) -o $@ $(OBJECTS) -lbwio -ldebug -lstring -lmath -lbuffer -lgcc 
 
 arch/switch.o: arch/switch.S
 	$(AS) $(ASFLAGS) -o arch/switch.o arch/switch.S
 	
 clean:
-	rm -f main/main.elf main/main.map
+	rm -f kern/main.elf kern/main.map
 	find . -name '*.[so]' -print | xargs rm -f
 	find . -name '*~' -print | xargs rm -f
 
 
 upload: 
-	cp main/main.elf /u/cs452/tftpboot/ARM/dgoc/main.elf
+	cp kern/main.elf /u/cs452/tftpboot/ARM/dgoc/main.elf
+	cp kern/main.elf /u/cs452/tftpboot/ARM/dgoc/m
 	chmod a+rx -R /u/cs452/tftpboot/ARM/dgoc
 
 copy:
-	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo.elf
+	cp kern/main.elf /u/cs452/tftpboot/ARM/becmacdo.elf
