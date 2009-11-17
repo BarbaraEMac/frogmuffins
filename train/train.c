@@ -21,6 +21,8 @@
 #define	SPEED_HIST				10
 #define PREDICTION_WINDOW 		(1000 /MS_IN_TICK)
 #define	BLANK_RECORD_DIVISOR	2
+#define	HEARTBEAT				(200 /MS_IN_TICK)
+#define WATCHMAN_PRIORITY		3
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -31,6 +33,16 @@ typedef struct {
 } Speed;
 
 typedef struct {
+	int			ticks;			// used by the heartbeat
+	int			id;				// Identifyin train number
+	int			sensor;			// last landmark
+	int			crashDist;		// in mm
+	int			minDist;		// in mm
+	Speed		velocity;		// The actual current speed (in mm/s)
+
+} Disaster;
+
+typedef struct {
 	int  		id;				// Identifying number
 	int  		currSensor;		// Current Location
 	int	 		prevSensor;		// Previous Location
@@ -39,12 +51,13 @@ typedef struct {
 		
 	int 	    speedSet;		// The current speed setting
 	bool		speedChanged;	// Has the speed changed
-	Speed		velocity;		// The actuall current speed (in mm/s)
+	Speed		velocity;		// The actual current speed (in mm/s)
 	
 	TID 		rpTid;			// Id of the Route Planner
 	TID 		tsTid;			// Id of the Track Server
 	TID			deTid;			// Id of the Detective
 	TID			csTid;			// Id of the Clock Server
+	TID			waTid;			// Id of the Watchman
 
 	int			ticks;
 	int			sd;				// Standard deviation
@@ -52,14 +65,21 @@ typedef struct {
 	RB			hist;	
 } Train;
 
-int speed( Speed sp ) {
+inline int speed( Speed sp ) { // in mm/s
 	if( sp.ms == 0 ) return 0;
 	return (sp.mm * 1000) / sp.ms;
 }
 
+inline int	speed_time( Speed sp, int mm ) { // in ms
+	return (sp.ms * mm) / sp.mm;
+}
+
+inline int speed_dist( Speed sp, int ms ) { // in mm
+	return (sp.mm * ms) / sp.ms;
+}
+
 
 void 		train_init    		( Train *tr );
-int			train_time			( Train *tr, int mm );
 Speed 		train_speed			( Train *tr );
 void 		train_predictSpeed	( Train *tr, int mm );
 
@@ -76,6 +96,9 @@ void 		train_reverse		( Train *tr );
 void 		train_drive  		( Train *tr, int speedSet );
 void		train_flipSwitches	( Train *tr, RPReply *rpReply );
 SwitchDir	train_dir			( Train *tr, int sw );
+
+// Watchman
+void		watchman			();
 // ----------------------------------------------------------------------------
 
 void train_run () {
@@ -108,9 +131,11 @@ void train_run () {
 		// Flip the switches along the path.
 		train_flipSwitches (&tr, &rpReply);
 
+	assert( tr.deTid == 9 );
 		// Set the speed to an appropriate setting
 		train_predictSpeed (&tr, rpReply.stopDist);
 
+	assert( tr.deTid == 9 );
 		// Tell the detective about your predicted sensors
 		train_wait(&tr, &rpReply);
 	}
@@ -156,6 +181,9 @@ void train_init ( Train *tr ) {
 	tr->ticks = Time( tr->csTid );
 	tr->speedChanged = false;
 
+	// Create a watchman
+	tr->waTid = Create( WATCHMAN_PRIORITY, &watchman ); 
+	
 //	RegisterAs ("Train");;
 }
 
@@ -186,11 +214,6 @@ Speed train_speed( Train *tr ) {
 	return total;
 }
 
-int	train_time (Train *tr, int mm) {
-	Speed avg = train_speed( tr );
-
-	return (avg.ms * mm) / avg.mm;
-}
 
 void train_predictSpeed( Train *tr, int mm ) {
 
@@ -246,9 +269,10 @@ void train_update( Train *tr, DeReply *rpl ) {
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, last, avg, tr->sd, diff);
 
-	
+		
 	tr->ticks = rpl->ticks;
 	tr->velocity = sp;
+
 }
 
 //-----------------------------------------------------------------------------
@@ -300,19 +324,21 @@ void train_wait( Train *tr, RPReply *rep ) {
 	DeRequest	req;
 	int 		i;
 
+	assert( tr->deTid == 9 );
 	req.type      = WATCH_FOR;
 	req.numEvents = rep->nextSensors.len;
 
+	assert( req.numEvents < array_size( req.events ) );
 	for( i = 0; i < req.numEvents ; i ++ ) {
 		req.events[i].sensor = rep->nextSensors.idxs[i];
-		req.events[i].start  = tr->ticks;//train_time ( tr ) - (PREDICTION_WINDOW/2);
+		req.events[i].start  = tr->ticks;//train_time ( tr->velocity, tr ) - (PREDICTION_WINDOW/2);
 		req.events[i].end    = req.events[i].start + PREDICTION_WINDOW;
 		
 	}
 
 	req.expire = tr->ticks 
 					+ 1000
-					+ train_time( tr, rep->stopDist ) / MS_IN_TICK;
+					+ speed_time( tr->velocity, rep->stopDist ) / MS_IN_TICK;
 
 	assert( tr->deTid == 9 );
 	// Tell the detective about the Route Planner's prediction.
@@ -336,6 +362,17 @@ void train_wait( Train *tr, RPReply *rep ) {
 	}
 
 	train_update( tr, &rpl );
+
+	Disaster	disaster;
+
+	disaster.ticks 		= tr->ticks;
+	disaster.id			= tr->id;
+	disaster.sensor 	= tr->currSensor;
+	disaster.crashDist 	= rep->stopDist;
+	disaster.minDist	= 300; // TODO this should be calibrated
+	disaster.velocity 	= tr->velocity;
+	Send( tr->waTid, (char *) &disaster, sizeof( Disaster ), 0, 0 );
+
 }
 
 //-----------------------------------------------------------------------------
@@ -385,6 +422,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			req.sw   = ss->id;
 			req.dir  = ss->dir;
 
+			assert( tr->deTid == 9 );
 			assert( tr->tsTid == 8 );
 			Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
 							 (char *)&reply, sizeof(TSReply) );
@@ -403,6 +441,60 @@ SwitchDir train_dir( Train *tr, int sw ) {
 	Send( tr->tsTid, (char *)&req,	  sizeof(TSRequest), 
 					  (char *)&reply, sizeof(TSReply) );
 	return reply.dir;
+}
+
+
+//-----------------------------------------------------------------------------
+//--------------------------------- Watchman ----------------------------------
+//-----------------------------------------------------------------------------
+//-- Question: Who watches the watchman? --------------------------------------
+
+void heart() {
+	TID parent	= MyParentTid();
+	TID csTid 	= WhoIs( CLOCK_NAME );
+	int	ticks;
+	
+	FOREVER {
+		ticks = Delay( HEARTBEAT, csTid );
+		// Heart beat to the watchman
+		Send( parent, (char *) &ticks, sizeof(int), 0, 0 );
+	}
+}
+
+void watchman( ) {
+	debug( "who watches the watchman?\r\n" );
+
+	Disaster 	disaster = { 0, 0, 0, 0, 0, {0, 0} };
+	TID			tid;
+	int			len;
+	int			distance = 0;
+	int			ticks = 0;
+	
+	Create( 3, &heart ); // watchman has a heart - awwwwwww
+
+	FOREVER {
+		// Wait until we learn about a disaster
+		len = Receive( &tid, (char *) &disaster, sizeof( Disaster ) );
+		Reply ( tid, 0, 0 );
+
+		if( len == sizeof( int ) ) { //heartbeat
+			distance = speed_dist( disaster.velocity, disaster.ticks - ticks );
+			// TODO replace with a call to UI
+			printf( "\033[10;30H%c%d:%dmm\033[24;0H", 
+					sensor_bank( disaster.sensor ),
+					sensor_num( disaster.sensor ), ticks );
+			// Stop the train if needed
+			if( (disaster.crashDist - distance) < disaster.minDist ) {
+				error ( TIMEOUT, "EMERGENCY TRAIN STOP" );
+			}
+
+		} else {	// update disaster
+			assert( len == sizeof( Disaster ));
+			ticks = disaster.ticks;
+			distance = 0;
+			debug( "watchmen: got disaster update" );
+		}
+	}
 }
 
 
