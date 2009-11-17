@@ -145,7 +145,7 @@ int ts_init( TS *ts ) {
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	ts_switchSetAll( ts, SWITCH_STRAIGHT );
 	
-	err = Create( 4, &det_run );
+	err = Create(OTH_SERVER_PRTY, &det_run );
 	if( err < NO_ERROR ) return err;
 	err = RegisterAs( TRACK_SERVER_NAME );
 	return err;

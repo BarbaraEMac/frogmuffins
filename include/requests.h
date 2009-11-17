@@ -16,9 +16,20 @@
 #define FRAME_SIZE 	15
 
 // KERNEL SPECIFIC CONSTANTS
-#define NS_TID 		1
+#define NS_TID 		2
 #define NAME_LEN	12
 #define UNUSED_TID	-1
+
+#define NUM_USER_PRIORITIES	10
+#define HW_SERVER_PRTY 		1
+#define NOTIFIER_PRTY 		HW_SERVER_PRTY - 1
+#define OTH_SERVER_PRTY		3
+#define OTH_NOTIFIER_PRTY	OTH_SERVER_PRTY - 1
+#define	IDLE_PRTY			NUM_USER_PRIORITIES - 1
+#define SHELL_PRTY			IDLE_PRTY - 1
+
+#define TRAIN_PRTY			5
+#define LOW_SERVER_PRTY		7
 
 typedef char TaskName[NAME_LEN];
 
