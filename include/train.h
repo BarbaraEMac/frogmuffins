@@ -16,8 +16,6 @@ typedef enum _train_mode {
 } TrainMode;
 
 typedef struct {
-	int  id;			// Identifying number
-	int  currLoc;		// Current Location
 	int  dest;			// Desired End Location
 	TrainMode mode;	// whether we're running calibration
 } TrainInit;
