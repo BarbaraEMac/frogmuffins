@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 #include <string.h>
 
 #include "debug.h"
@@ -94,38 +94,39 @@ int Destroy (TID tid) {
 }
 
 int Delay (int ticks, TID csTid) {
-	int		  err;
-	int		  currentTime;
+	int		  time;
 	CSRequest req;
 	
 	req.type  = DELAY;
 	req.ticks = ticks;
 	
-	err = Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &currentTime, 			   sizeof(int));
-	return err;
+	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	
+	return time;
 }
 
 int Time (TID csTid) {
 	int time;
 	CSRequest req;
+
 	req.type  = TIME;
 	req.ticks = 0;
-	Send(csTid, (char*)&req, sizeof(CSRequest), (char*)&time, sizeof(int));
+
+	Send(csTid, (char*)&req, sizeof(CSRequest), (char*) &time, sizeof(int));
 
 	return time;
 }
 
 int DelayUntil (int ticks, TID csTid) {
-	int		  err;
-	int 	  currentTime;
+	int 	  time;
 	CSRequest req;
 	
 	req.type  = DELAYUNTIL;
 	req.ticks = ticks;
 	
-	err = Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &currentTime,
-		 	   sizeof(int));
-	return err;
+	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+
+	return time;
 }
 
 int Getc (TID iosTid) {
