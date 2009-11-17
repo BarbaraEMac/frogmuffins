@@ -9,4 +9,5 @@ dg	*	rewrite serialio requests so as not to send 80 chars every time
 bm	*	create a generic fifo structure
 dg	* 	create a generic buffer structure
 	*	wake up the tasks waiting on the sendQ of an exited task (with erro code)
+	*	idle task calculate cpu usage
 	*	get 100 in course
