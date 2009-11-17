@@ -1,7 +1,7 @@
 /*
  * CS 452: Track Detective User Task
  */
-#define DEBUG 		1
+#define DEBUG 1		
 
 #include <string.h>
 #include <buffer.h>
@@ -15,6 +15,7 @@
 #include "string.h"
 #include "task.h"
 #include "trackserver.h"
+#include "ui.h"
 
 #define NUM_REQUESTS	64
 #define	NUM_STRAY		256
@@ -58,6 +59,8 @@ void det_run () {
 	debug ("det_run: The Track Server is about to start. \r\n");	
 	Det 		det;
 	int			senderTid;
+	int			uiTid;
+	UIRequest   uiReq;
 	DeRequest 	req;
 	DeReply		reply;
 	int			i, k, len, sensor;
@@ -66,6 +69,12 @@ void det_run () {
 
 	// Initialize the Track Server
 	if_error( det_init (&det), "Initializing Track Server failed.");
+
+	// Init UI Stuff
+	debug ("detective: doing UI stuff %d\r\n", MyTid());
+	uiTid = WhoIs ( UI_NAME );
+	uiReq.type = DETECTIVE;
+	debug ("detective: done ui stuff\r\n");
 
 	FOREVER {
 		// Receive a server request
@@ -82,7 +91,17 @@ void det_run () {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
-		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
+		
+							// Send to the UI Server
+							debug ("Detective: sending to the ui server\r\n");
+							uiReq.time = req.ticks;
+							uiReq.idx  = sensor;
+							
+							// Tell the UI about the triggered sensor
+							Send( uiTid, (char*)&uiReq, sizeof(UIRequest), 
+									 	 (char*)&uiReq.time, sizeof(int) );
+							
+							//printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
 							// Update the history
 							det.sensorHist[sensor] = req.ticks;
 							// Wake up any tasks waiting for this event
@@ -163,9 +182,9 @@ int det_init( Det *det ) {
 		req->type = UNUSED_REQ;
 	}
 
-	err =  Create( 3, &poll );
+	err =  Create( OTH_NOTIFIER_PRTY, &poll );
 	if( err < NO_ERROR ) return err;
-	err = Create( 3, &watchDog );
+	err = Create( OTH_NOTIFIER_PRTY, &watchDog );
 	if( err < NO_ERROR ) return err;
 	return RegisterAs( TRACK_DETECTIVE_NAME );
 }
@@ -196,7 +215,7 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 	}
 	foreach( req, det->requests ) {
 		if( req->type == GET_STRAY ) {
-				det_reply( req, sensor, ticks );
+			det_reply( req, sensor, ticks );
 		}
 	}
 	return woken;

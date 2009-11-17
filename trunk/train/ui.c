@@ -22,10 +22,15 @@
 // ----------------------------------------------------------------------------
 
 typedef struct {
-	int sensorsBuf[NUM_DISP_SENSORS]; // High 15 bits = idx ; low 15 bits = time
-	RB  sensors;
-	TrackModel model;
-	int ios2Tid;
+	int time;
+	int idx;
+} SensorData;
+
+typedef struct {
+	SensorData 	sensorsBuf[NUM_DISP_SENSORS]; 
+	RB  	   	sensors;
+	TrackModel 	model;
+	TID 		ios2Tid;
 } UI;
 
 void ui_init(UI *ui);
@@ -36,7 +41,7 @@ void ui_drawMap (int ios2Tid, TrackModel *model);
 void ui_updateSensor( UI *ui, int idx, int time );
 void ui_displayPrompt( int ios2Tid, char *fmt, char *str );
 void ui_updateMap( UI *ui, int idx, int state );
-void ui_displayTime( int ios2Tid, int time );
+void ui_displayTimeAt( int ios2Tid, int x, int y, int time );
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist);
 
@@ -50,28 +55,31 @@ void uiclk_run();
 // ----------------------------------------------------------------------------
 
 void ui_run () {
-	debug ("ui: run\r\n");
 	UI  ui;
 	int senderTid;
 	UIRequest req;
 	char ch;
-	
 
 	// Initialize the UI
 	ui_init (&ui);
 
-	
+	// Turn off cursor
+	cprintf (ui.ios2Tid, "\033[?25l");
 			
 	FOREVER {
 		// Receive a message
 		Receive( &senderTid, (char*)&req, sizeof(UIRequest) );
+//		debug ("ui: received from %d\r\n", senderTid);
+
+
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
 
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				ui_displayTime( ui.ios2Tid, req.time );
+
+				//ui_displayTimeAt( ui.ios2Tid, 65, 7, time );
 				break;
 			
 			case TRACK_SERVER:
@@ -100,8 +108,17 @@ void ui_init (UI *ui) {
 	int  track;
 	int	 err = NO_ERROR;
 	int  uiclkTid;
+	int i;
 
+	// Init private members
 	ui->ios2Tid = WhoIs(SERIALIO2_NAME);
+	
+	rb_init (&(ui->sensors), ui->sensorsBuf );
+	for ( i = 0; i < NUM_DISP_SENSORS; i ++ ) {
+		ui->sensorsBuf[i].time = 0;
+		ui->sensorsBuf[i].idx  = -1;
+	}
+	
 	//ui_splashScreen(ui->ios2Tid);
 	
 	// Get the model from the shell
@@ -109,53 +126,64 @@ void ui_init (UI *ui) {
 	if ( ch != 'A' && ch != 'a' && ch != 'B' && ch != 'b' ) {
 		err = INVALID_TRACK;
 	}
-	Reply  (shellTid,  (char*)&err, sizeof(int));
-
+	
 	// Parse the model
 	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
 	parse_model( track, &ui->model );
-
-	// Create the timer notifier
-	debug ("ui: creating notifier\r\n");
-	uiclkTid = Create ( 2, &uiclk_run );
-	Send( uiclkTid, (char*)&ch, sizeof(char), 
-					(char*)&ch, sizeof(char) );
-	debug ("ui: notifier is done\r\n");
-
+	
 	// Start Drawing the ui
 	ui_clearScreen( ui->ios2Tid );
-	//Getc(iosTid);
-	ui_clearScreen( ui->ios2Tid );
 
-	ui_drawMap( ui->ios2Tid, &ui->model );
+	// Draw the map on the screen
+//	ui_drawMap( ui->ios2Tid, &ui->model );
+	
+	ui_strPrintAt (ui->ios2Tid, 1, 20, "Sensors: ", RED_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 1, 21, "Prompt: ", BLUE_FC, BLACK_BC);
 
-	// Register with the Name Server
+	// CREATE THE TIMER NOTIFIER
+	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
+	Send( uiclkTid, (char*)&ch, sizeof(char),
+					(char*)&ch, sizeof(char) );
+
+	// REGISTER WITH THE NAME SERVER
 	RegisterAs( UI_NAME );
+	
+	// Reply to the shell
+	Reply  (shellTid,  (char*)&err, sizeof(int));
 }
 
 void ui_updateSensor( UI *ui, int idx, int time ) {
-	char *name;
+	char  bank[2];
+	char  num;
 	int   i;
-	int   len;
-	int   k = 0;
-	int   t = 0;
-	int   val;
+	int   x[] = {10, 23, 36, 49};
 
-	// Package the new entry
-	val = (idx << 15) & time;
-
+	SensorData data = { time, idx };
+	
 	// Store the new data in the buffer
-	rb_force ( &ui->sensors, &val );
+	rb_force ( &ui->sensors, &data );
+	
+	// Erase to the right
+	cprintf( ui->ios2Tid, "\033[20;1H\033[0K");
 
-	for ( i = 0; i < NUM_DISP_SENSORS - 1; i ++ ) {
-		k = (ui->sensorsBuf[i] >> 15);
-		t = ((ui->sensorsBuf[i] << 15) >> 15);
+	for ( i = 0; i < NUM_DISP_SENSORS  - 1; i ++ ) {
+		if ( ui->sensorsBuf[i].idx == -1 ) {
+			return;
+		}
+
+		ui_displayTimeAt( ui->ios2Tid, x[i], 20,
+						  ui->sensorsBuf[i].time );
 		
-		name = ui->model.nodes[k].name;
-		len = strlen (name);
+		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
+		bank[1] = '\0';
+		
+		ui_strPrintAt( ui->ios2Tid, x[i]+8, 20, bank,
+					   WHITE_FC, BLACK_BC );
 
-		ui_strPrintAt (ui->ios2Tid, 5*i, 20, name, RED_FC, WHITE_BC);
-		ui_intPrintAt (ui->ios2Tid, (5*i)+len, 20, "%d", t, RED_FC, WHITE_BC);
+		num = sensor_num ( ui->sensorsBuf[i].idx );
+		
+		ui_intPrintAt( ui->ios2Tid, x[i]+9, 20, "%d", num,
+					   WHITE_FC, BLACK_BC );
 	}
 }
 
@@ -188,15 +216,15 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist) {
 
 }
 
-void ui_displayTime( int ios2Tid, int time ) {
+void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
 	int tens, mins, secs;
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	
-	ui_intPrintAt (ios2Tid, 65, 7, "%02d:", mins, GREEN_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, 68, 7, "%02d:", secs, CYAN_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, 71, 7, "%01d", tens, RED_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, RED_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, RED_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, RED_FC, BLACK_BC);
 }
 
 void ui_clearScreen (int ios2Tid) {
@@ -271,20 +299,18 @@ char frog[][100] = {
 
 void ui_drawMap (int ios2Tid, TrackModel *model) {
 	
-	cprintf (ios2Tid, "\033(0");
-	
-	cprintf (ios2Tid, "lkmjqxn~utvw");
-
+//	cprintf (ios2Tid, "lkmjqxn~utvw");
 	int  i;
 	char q[] = "q";
 
 	for ( i = 0; i < 80; i ++ ) {
 		int j;
 		for ( j = 0; j < 20; j ++ ) {
+//	cprintf (ios2Tid, "\033(0");
 			ui_strPrintAt (ios2Tid, i, j, q, BLACK_FC, GREEN_BC);
+//	cprintf (ios2Tid, "\033(B");
 		}
 	}
-	cprintf (ios2Tid, "\033(B");
 	
 	for ( i = 0; i < model->num_nodes; i ++ ) {
 		char ch[2];
