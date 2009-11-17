@@ -69,7 +69,7 @@ typedef struct {
 	TID 		tid;
 	union {
 		char 		rawSensors[NUM_SENSOR_BANKS*2];
-		SensorWatch events[4];
+		SensorWatch events[8];
 	};
 	union {
 		int			ticks;
