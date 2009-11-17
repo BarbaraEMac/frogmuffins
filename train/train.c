@@ -93,7 +93,7 @@ void 		train_update		( Train *tr, DeReply *rpl );
 
 // Track Server Commands
 void 		train_reverse		( Train *tr );
-void 		train_drive  		( Train *tr, int speedSet );
+void 		train_drive			( TID tsTid, int trainId, int speedSet );
 void		train_flipSwitches	( Train *tr, RPReply *rpReply );
 SwitchDir	train_dir			( Train *tr, int sw );
 
@@ -219,17 +219,17 @@ void train_predictSpeed( Train *tr, int mm ) {
 
 	//Speed current = train_speed( tr );
 	// TODO: PLACE calibration here
-	//tr->speedSet  = 6;
+	tr->speedSet  = 6;
 	if( mm < 10 ) { 
 
 		tr->speedChanged = true;
 
 		tr->speedSet = 0;
-		train_drive (tr, 0);
+		//train_drive (tr, 0);
 		debug("train: Reached it's destination.");
 		Exit ();
 	}
-	//train_drive(tr, tr->speedSet);
+	train_drive( tr->tsTid, tr->id, tr->speedSet);
 
 }
 
@@ -337,7 +337,7 @@ void train_wait( Train *tr, RPReply *rep ) {
 	}
 
 	req.expire = tr->ticks 
-					+ 1000
+					+ 100
 					+ speed_time( tr->velocity, rep->stopDist ) / MS_IN_TICK;
 
 	assert( tr->deTid == 9 );
@@ -394,17 +394,17 @@ void train_reverse( Train *tr ) {
 					 (char *)&reply, sizeof(TSReply) );
 }
 
-void train_drive( Train *tr, int speedSet ) {
+void train_drive( TID tsTid, int trainId, int speedSet ) {
 	TSRequest req;
 	TSReply	  reply;
 
 	req.type = TR;
-	req.train = tr->id;
+	req.train = trainId;
 	req.speed = speedSet;
 
-	assert( tr->tsTid == 8 );
-	Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
-					 (char *)&reply, sizeof(TSReply) );
+	assert( tsTid == 8 );
+	Send( tsTid, (char *)&req,   sizeof(TSRequest),
+				 (char *)&reply, sizeof(TSReply) );
 }
 
 void train_flipSwitches( Train *tr, RPReply *rpReply ) {
@@ -466,6 +466,7 @@ void watchman( ) {
 
 	Disaster 	disaster = { 0, 0, 0, 0, 0, {0, 0} };
 	TID			tid;
+	TID			tsTid = WhoIs( TRACK_SERVER_NAME );
 	int			len;
 	int			distance = 0;
 	int			ticks = 0;
@@ -478,14 +479,18 @@ void watchman( ) {
 		Reply ( tid, 0, 0 );
 
 		if( len == sizeof( int ) ) { //heartbeat
-			distance = speed_dist( disaster.velocity, disaster.ticks - ticks );
+			distance = speed_dist( disaster.velocity, 
+					(disaster.ticks - ticks) * MS_IN_TICK );
 			// TODO replace with a call to UI
 			printf( "\033[10;30H%c%d:%dmm\033[24;0H", 
 					sensor_bank( disaster.sensor ),
-					sensor_num( disaster.sensor ), ticks );
+					sensor_num( disaster.sensor ), distance );
 			// Stop the train if needed
 			if( (disaster.crashDist - distance) < disaster.minDist ) {
 				error ( TIMEOUT, "EMERGENCY TRAIN STOP" );
+				train_drive( tsTid, disaster.id, 0 );
+				// prevent this from happening again
+				disaster.velocity.mm = 0;
 			}
 
 		} else {	// update disaster
