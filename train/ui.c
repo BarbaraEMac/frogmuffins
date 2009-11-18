@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -101,6 +101,7 @@ void ui_run () {
 }
 
 void ui_init (UI *ui) {
+	debug ("ui_init\r\n");
 	char ch;
 	int  shellTid;
 	int  track;
@@ -133,15 +134,15 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Draw the map on the screen
-//	ui_drawMap( ui->ios2Tid, &ui->model );
+	ui_drawMap( ui->ios2Tid, &ui->model );
 	
 	ui_strPrintAt (ui->ios2Tid, 1, 20, "Sensors: ", RED_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 1, 21, "Prompt: ", BLUE_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
-	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
-	Send( uiclkTid, (char*)&ch, sizeof(char),
-					(char*)&ch, sizeof(char) );
+//	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
+//	Send( uiclkTid, (char*)&ch, sizeof(char),
+//					(char*)&ch, sizeof(char) );
 
 	// REGISTER WITH THE NAME SERVER
 	RegisterAs( UI_NAME );
@@ -210,10 +211,10 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	}
 }
 
-void ui_updateTrainLocation( UI *ui, int idx, int dist) {
-	printf( "\033[15;30H%c%d:%dmm\033[24;0H", 
-			sensor_bank( idx ),
-			sensor_num( idx ), dist );
+void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
+//	printf( "\033[15;30H%c%d:%dmm\033[24;0H", 
+//			sensor_bank( idx ),
+//			sensor_num( idx ), dist );
 }
 
 void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
@@ -271,45 +272,63 @@ void ui_intPrintAt (int ios2Tid, int x, int y, char *fmt, int value,
 
 void ui_splashScreen(int ios2Tid) {
 char frog[][100] = {
-"					 _    _", 			
-"					/ \\  / \\",      		
+"				     _    _", 	        
+"                    / \\  / \\",              
 "                   |@|  |@|",             
-"				   _\\_/__\\_/_",          	
-"				  /          \\",                  
+"                   _\\_/__\\_/_",              
+"                  /          \\",                  
 "           __    /            \\    __",        
 "          /  \\   \\ \\        / /   /  \\",           
 "         /    \\  /\\ \\______/ /\\  /    \\",          
-"        /      \\/  \\________/  \\/      \\",        	
-"       /   /\\  /   /        \\   \\  /\\   \\",       	
-"      /   /  \\/   /          \\   \\/  \\   \\",      	
-" ____/   /    \\   \\          /   /    \\   \\____", 	
-"/___    /      \\   \\        /   /      \\    ___\\",	
-"   / /\\ \\      /    \\______/    \\      / /\\ \\",   	
-"  / /  \\/     /      \\    /      \\     \\/  \\ \\",  	
-"  \\/         / /\\  /\\ \\  / /\\  /\\ \\         \\/",  	
-"             \\/  \\/  \\/  \\/  \\/  \\/             	" };
+"        /      \\/  \\________/  \\/      \\",            
+"       /   /\\  /   /        \\   \\  /\\   \\",           
+"      /   /  \\/   /          \\   \\/  \\   \\",          
+" ____/   /    \\   \\          /   /    \\   \\____",     
+"/___    /      \\   \\        /   /      \\    ___\\",    
+"   / /\\ \\      /    \\______/    \\      / /\\ \\",       
+"  / /  \\/     /      \\    /      \\     \\/  \\ \\",      
+"  \\/         / /\\  /\\ \\  / /\\  /\\ \\         \\/",      
+"             \\/  \\/  \\/  \\/  \\/  \\/                 " };
 
-	int i;
-	for ( i = 0; i < 20; i ++ ) {
-		ui_strPrintAt( ios2Tid, 1, i+5,
-				    (char*)frog[i], GREEN_FC, BLACK_BC );
+    int i;
+    for ( i = 0; i < 20; i ++ ) {
+        ui_strPrintAt( ios2Tid, 1, i+5,
+        		    (char*)frog[i], GREEN_FC, BLACK_BC );
 	}
 
 }
 
 void ui_drawMap (int ios2Tid, TrackModel *model) {
-	
-//	cprintf (ios2Tid, "lkmjqxn~utvw");
-	int  i;
-	char q[] = "q";
+	//TODO: Due to terminal issue!
+	Delay( 200 / MS_IN_TICK, WhoIs(CLOCK_NAME) );
+	char mapA[][90] = {	
+"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
+"             x         lqqj                                            x    ",
+"tqqqqqqqqwqqqj     lqqqvqqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk   x    ",
+"         x         x                 x             x               x   mqk  ",
+"tqqqqqqqqj         x                 x             x               mqk   x  ",
+"              lqqqqj                 mqqk       lqqj                 mqqqvk ",
+"              x                         x   w   x                         x ",
+"              x                         mqk x lqj                         x ",
+"              x                           mqnqj                           x ",
+"              x                           lqnqk                           x ",
+"              x                         lqj x mqk                         x ",
+"              x                         x   v   x                         x ",
+"              mqqqqk                 lqqj       mqqk                 lqqqwj ",
+"tqqqqqqqqk         x                 x             x               lqj   x  ",
+"         x         x                 x             x               x   lqj  ",
+"tqqqqqqqqvqqqk     mqqqwqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqj   x    ",
+"             x         x                                               x    ",
+"tqqqqqqqqqqqqvqqqk     mqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
+"                 x          mqqk                      lqqj                  ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
+"                                                                            "};
+    int  i;
 
-	for ( i = 0; i < 80; i ++ ) {
-		int j;
-		for ( j = 0; j < 20; j ++ ) {
-//	cprintf (ios2Tid, "\033(0");
-			ui_strPrintAt (ios2Tid, i, j, q, BLACK_FC, GREEN_BC);
-//	cprintf (ios2Tid, "\033(B");
-		}
+	for ( i = 0; i < 20; i ++ ) {
+		cprintf (ios2Tid, "\033(0");
+		ui_strPrintAt (ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC);
+		cprintf (ios2Tid, "\033(B");
 	}
 	
 	for ( i = 0; i < model->num_nodes; i ++ ) {
@@ -318,24 +337,18 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 
 		switch (model->nodes[i].type) {
 			case NODE_STOP:
-				*ch = 'e';
-				break;
 			case NODE_SENSOR:
-				*ch = 'a';
 				break;
 			case NODE_SWITCH:
 				*ch = 's';
+				ui_strPrintAt (ios2Tid, 
+					model->nodes[i].x, 
+					model->nodes[i].y, 
+					ch,
+					BLUE_FC, GREEN_BC);
 				break;
 		}
-		
-		ui_strPrintAt (ios2Tid, 
-					5 + model->nodes[i].x/8, 
-					2 + model->nodes[i].y/17, 
-					ch,
-					BLUE_FC, RED_BC);
 	}
-
-	cprintf (ios2Tid, "\033(B");
 }
 
 
