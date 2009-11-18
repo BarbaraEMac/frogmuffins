@@ -45,14 +45,16 @@ enum ERROR {
 	INVALID_UART_ADDR,		// The addres passed in is not a UART
 	TIMEOUT,				// A timeout has occured
 	DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
-	INVALID_NODE_NAME,		// Invalid node name
+	DET_NO_MATCH,			// No match was found
 	// --9970
+	DET_RETRACTED,			// The request was retracted
+	INVALID_NODE_NAME,		// Invalid node name
 	INVALID_NODE_IDX,		// Invalid node index
 	RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
 	INVALID_SENSOR_IDX,		// Invalid sensor index
+	// --9965
 	INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
 	INVALID_TRACK			// Invalid track identifier
-	// --9965
 } error;
 
 #endif
