@@ -276,6 +276,7 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
+	rpReq.type = CONVERT_IDX;
 	rpRpl = rpCmd( &rpReq, tids->rp );
 	
 	cmd.dest = rpRpl.idx;
