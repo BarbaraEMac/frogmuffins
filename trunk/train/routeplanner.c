@@ -228,6 +228,7 @@ void rp_run() {
 			
 			case PLANROUTE:
 				// Determine the shortest path 
+				// Make a route
 //				debug ("determining the shortest path from %d (%d) to %d\r\n", 
 //						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
 				rp_planRoute (&rp, &trReply, &req);
@@ -408,8 +409,11 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	Path p;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
+	debug ("GOING TO %s (%d)\r\n", rp->model.nodes[destIdx].name, destIdx);
+
 	// Distance from current sensor to destination node
 	totalDist = rp->dists[currentIdx][req->destIdx];
+	//debug ("totalDist = %d\r\n", totalDist);
 	
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
@@ -429,7 +433,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 		trReply->stopAction = JUST_STOP;
 //		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
 	}
-	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
+//	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
 
 	// Clear the next sensor predictions
 	trReply->nextSensors.len = 0;
@@ -476,20 +480,20 @@ int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
 		return 0;
 	}
 	
-	debug ("TURNAROUND:\r\n");
+//	debug ("TURNAROUND:\r\n");
 
 	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
 	int   even   = (sensorId %2) == 0;
-	debug ("sIdx=%d idx=%d node=%s even?%d \r\n", sensorId, sIdxToIdx(sensorId), sensor->name, even);
+//	debug ("sIdx=%d idx=%d node=%s even?%d \r\n", sensorId, sIdxToIdx(sensorId), sensor->name, even);
 
-	debug ("nextNode=%d Behind=%d ahead=%d\r\n", p->path[1], sensor->se.behind.dest, sensor->se.ahead.dest);
+//	debug ("nextNode=%d Behind=%d ahead=%d\r\n", p->path[1], sensor->se.behind.dest, sensor->se.ahead.dest);
 	if ( (sensor->se.behind.dest  == p->path[1] && even) ||
 		 (sensor->se.ahead.dest == p->path[1] && !even) ) {
 		
 		return 1;
 	}
 	
-	debug (" DONE TURN AROUND\r\n");
+//	debug (" DONE TURN AROUND\r\n");
 	return 0;
 }
 
@@ -512,7 +516,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 				  (itr->sw.ahead[1].dest == path[i+1])) &&
 				 ((itr->sw.ahead[0].dest == path[i-1]) ||
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
-				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
+//				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]] + EPSILON;
 			}
 		}
@@ -761,6 +765,7 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 	
 	debug ("Path: ");
 	for ( i = 0; i < n; i ++ ) {
+//		printf ("%s> ", rp->model.nodes[p->path[i]].name);
 		debug ("%s(%d)>", p->path[i], rp->model.nodes[p->path[i]].name);
 	}
 
