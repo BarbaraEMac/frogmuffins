@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -81,6 +81,7 @@ void ui_run () {
 				break;
 			
 			case TRACK_SERVER:
+				debug ("updating hte map\r\n");
 				ui_updateMap( &ui, req.idx, req.state );
 				break;
 
@@ -194,15 +195,20 @@ void ui_displayPrompt( int ios2Tid, char *fmt, char *str ) {
 }
 
 void ui_updateMap( UI* ui, int idx, int state ) {
-	Node *n = &ui->model.nodes[idx];
+	Node *n = &ui->model.nodes[idx+39]; // you get a switch idx
+	char  ch[2];
 
+	ch[0] = (state == 1) ? 'C' : 'S';
+	ch[1] = '\0';
+
+//	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
 			ui_strPrintAt( ui->ios2Tid, 
-						   5 + n->x/8, 
-						   n->y/16, 
-						   (char*)&state,
-						   MAGENTA_FC, BLACK_BC);
+						   n->x, 
+						   n->y, 
+						   ch,
+						   BLUE_FC, GREEN_BC);
 			break;
 		case NODE_STOP:
 		case NODE_SENSOR:
@@ -340,7 +346,7 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 			case NODE_SENSOR:
 				break;
 			case NODE_SWITCH:
-				*ch = 's';
+				*ch = 'S';
 				ui_strPrintAt (ios2Tid, 
 					model->nodes[i].x, 
 					model->nodes[i].y, 

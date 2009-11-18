@@ -23,6 +23,7 @@
 #include "string.h"
 #include "task.h"
 #include "trackserver.h"
+#include "ui.h"
 
 /* FORWARD DECLARATIONS */
 
@@ -56,6 +57,10 @@ void ts_run () {
 	TSRequest 	req;
 	TSReply		reply;
 	int			speed, len;
+	TID			uiTid = WhoIs (UI_NAME);
+	UIRequest   uiReq;
+
+	uiReq.type = TRACK_SERVER;
 
 	// Initialize the Track Server
 	if_error( ts_init (&ts), "Initializing Track Server failed.");
@@ -86,6 +91,12 @@ void ts_run () {
 
 			case SW:
 				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
+
+				// Update the UI
+				uiReq.idx = req.sw;
+				uiReq.state = req.dir;
+				Send( uiTid, (char*) &uiReq, sizeof(UIRequest),
+							 (char*) &speed, sizeof(int) );
 				break;
 			
 			case TR:
