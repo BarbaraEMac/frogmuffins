@@ -414,7 +414,32 @@ TODO:
 		We have designed a task priority hierarchy for this assignment. It works
 		as follows:
 
+		#define NUM_USER_PRIORITIES	10
+		#define HW_SERVER_PRTY 		1
+		#define NOTIFIER_PRTY 		HW_SERVER_PRTY - 1
+		#define OTH_SERVER_PRTY		3
+		#define OTH_NOTIFIER_PRTY	OTH_SERVER_PRTY - 1
+		#define	IDLE_PRTY			NUM_USER_PRIORITIES - 1
+		#define SHELL_PRTY			IDLE_PRTY - 1
 
+		#define TRAIN_PRTY			5
+		#define LOW_SERVER_PRTY		7
+
+		We have 10 different priorities, ranging from 0 to 9, and they are
+		assigned as follows:
+
+		0 is used for hardware notifiers since we need to handle hardware interrupts
+		as soon as they occur.
+		1 is used for hardware servers.
+		3 is used for other servers ( UI and track server ).
+		2 is used for the notifiers of "other servers".
+		5 is used for train tasks.
+		7 is used for the only low priority server, the Route Planner.
+		8 is used for the shell.
+		9 is used for the idle task.
+
+		Notifiers must always have a higher priority than the servers they are
+		notifying.
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
