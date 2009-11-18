@@ -97,9 +97,10 @@ void ui_run () {
 			case TRAIN:
 				ui_updateTrainLocation( &ui, req.idx, req.dist );
 				break;
-		}*/
+		}
 
 		ui_restoreCursor(&ui);
+		*/
 	}
 	Exit();	// This will never be called.
 }
