@@ -19,13 +19,9 @@
 ||__|||__|||__|||__||
 |/__\|/__\|/__\|/__\|
 
-	We are currently considering 2 ideas and have not yet decided between them.
-
-	1. Track 3 trains simultaneously. This will require an aggressive reservation 
-	   strategy to ensure that the trains are not blocked and each can move from
-	   a starting position to a destination successfully. 
-
-	2. Create a PacMan-like game where the user can control one of the trains.
+	   Here is our idea for the project:
+	   
+	   Create a PacMan-like game where the user can control one of the trains.
 	   Ideally, there would be 2 computer controlled trains and 1 user controlled
 	   train. The goal of the game is for the PacMan train to touch each sensor on
 	   the track. The other trains will try to block the PacMan train using their 
@@ -36,18 +32,8 @@
 ||__|||__|||__|||__|||__|||__|||__|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
 
-	The following is a list of challenges for both ideas.
+	The following is a list of challenges for our idea:
 
-	 1
-	===
-	1. The track reservations around a train must not be too large such
-	   that they inhibit other trains from moving if it is technically possible. 
-	2. Reservations will have to be dynaically sized. For example, a non-moving
-	   train does not need a large reservation.
-	3. The trains must not be allowed to crash.
-
-	 2
-	===
 	1. The computer controlled train tasks will require some form of an intelligence.
 	   They must both have a decent strategy for detecting the PacMan train.
 	2. The trains must not be allowed to crash.
@@ -63,13 +49,6 @@
 	
 	As we work on the project, we must solve the list of challenges outlines above.
 	Here are some solutions:
-
-	 1 
-	===
-
-
-	 2 
-	===
 	1. The AI algorithms for the ghosts in PacMan was widely available on the Internet.
 	   One ghost runs around at random, one ghost always tries to go to the previous
 	   location of PacMan, and the other two try to trap PacMan into a corner.
