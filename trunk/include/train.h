@@ -12,13 +12,20 @@
 
 typedef enum _train_mode {
 	NORMAL = 1,
-	CALIBRATION = 2
+	CALIBRATION = 2,
+	INIT = 3,
+	IDLE = 4
 } TrainMode;
 
 typedef struct {
-	int  dest;			// Desired End Location
-	TrainMode mode;	// whether we're running calibration
+	int			id;
 } TrainInit;
+
+typedef struct {
+	int  		dest;			// Desired End Location
+	TrainMode 	mode;	// whether we're running calibration
+} TrainCmd;
+
 
 void train_run();
 
