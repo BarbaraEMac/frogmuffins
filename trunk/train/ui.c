@@ -100,7 +100,6 @@ void ui_run () {
 		}
 
 		ui_restoreCursor(&ui);
-		
 	}
 	Exit();	// This will never be called.
 }
@@ -130,13 +129,14 @@ void ui_init (UI *ui) {
 		ui->sensorsBuf[i].idx  = -1;
 	}
 	
-	//ui_splashScreen(ui->ios2Tid);
-	
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
 	if ( ch != 'A' && ch != 'a' && ch != 'B' && ch != 'b' ) {
 		err = INVALID_TRACK;
 	}
+	
+	//ui_clearScreen( ui->ios2Tid );
+	//ui_splashScreen(ui->ios2Tid);
 	
 	// Parse the model
 	ui->trackId = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
@@ -156,10 +156,10 @@ void ui_init (UI *ui) {
 	ui_strPrintAt (ui->ios2Tid, 23, 8 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 23, 9 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 23, 10 , " Sensor  :       ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 23, 11 , " Distance:       ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 23, 11 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 
 	ui_strPrintAt (ui->ios2Tid, 61, 8 , "Time:", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 1, 22, "Sensors:", CYAN_FC, BLACK_BC);
+	ui_strPrintAt (ui->ios2Tid, 1, 21, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
 	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
@@ -249,11 +249,12 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
 	int  num = sensor_num ( idx );
-	char bank[4];
+	char bank[5];
 	bank[0] = ' ';
 	bank[1] = ' ';
 	bank[2] = ' ';
-	bank[3] = '\0';
+	bank[3] = ' ';
+	bank[4] = '\0';
 
 	// Clear distance
 	ui_strPrintAt( ui->ios2Tid, 35, 11, bank,
@@ -289,7 +290,13 @@ void ui_strPrintAt (int ios2Tid, int x, int y, char *str,
 				 ForeColour fc, BackColour bc) {
 
 	// Set the colour
-	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
+	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm",
+			 fc, bc,
+			 y, x,
+			 str, DEFAULT_FC, DEFAULT_BC );
+
+//	cprintf (ios2Tid, "\033[%dm", bc);
+//	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
 /*	cprintf( ios2Tid, "\033[%d;%dH%s\033[%dm\033[%dm", 
 			 y, x, str, DEFAULT_FC, DEFAULT_BC );*/
 
@@ -346,7 +353,7 @@ char frog[][100] = {
 
     int i;
     for ( i = 0; i < 20; i ++ ) {
-        ui_strPrintAt( ios2Tid, 1, i+5,
+        ui_strPrintAt( ios2Tid, 1, i+20,
         		    (char*)frog[i], GREEN_FC, BLACK_BC );
 	}
 
