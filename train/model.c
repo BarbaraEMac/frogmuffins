@@ -596,91 +596,91 @@ char * track[] = {
 39 E15 sensor 39 290 50 2 \
   52 ahead 230 \
   32 behind 203 \
-40 SW1 switch 1 140 255 curved 3 \
+40 SW1 switch 1 16 16 curved 3 \
   5 straight 245 \
   4 curved 210 \
   41 behind 191 \
-41 SW2 switch 2 180 275 curved 3 \
+41 SW2 switch 2 17 18 curved 3 \
   40 straight 191 \
   3 curved 211 \
   42 behind 182 \
-42 SW3 switch 3 230 285 curved 3 \
+42 SW3 switch 3 23 20 curved 3 \
   2 straight 216 \
   41 curved 182 \
   19 behind 145 \
-43 SW4 switch 4 140 20 straight 3 \
+43 SW4 switch 4 16 30 straight 3 \
   7 straight 260 \
   6 curved 215 \
   51 behind 185 \
-44 SW5 switch 5 375 285 curved 3 \
+44 SW5 switch 5 60 20 curved 3 \
   17 straight 226 \
   46 curved 334 \
   57 behind 187 \
-45 SW6 switch 6 245 260 straight 3 \
+45 SW6 switch 6 34 18 straight 3 \
   23 straight 223 \
   57 curved 338 \
   18 behind 79 \
-46 SW7 switch 7 447 260 straight 3 \
+46 SW7 switch 7 63 18 straight 3 \
   29 straight 220 \
   44 curved 334 \
   37 behind 65 \
-47 SW8 switch 8 570 166 curved 3 \
+47 SW8 switch 8 76 13 curved 3 \
   28 straight 291 \
   36 curved 215 \
   48 behind 193 \
-48 SW9 switch 9 570 111 curved 3 \
+48 SW9 switch 9 76 6 curved 3 \
   27 straight 290 \
   26 curved 213 \
   47 behind 193 \
-49 SW10 switch 10 445 35 straight 3 \
+49 SW10 switch 10 57 3 straight 3 \
   25 straight 223 \
   33 curved 220 \
   34 behind 74 \
-50 SW11 switch 11 220 11 curved 3 \
+50 SW11 switch 11 33 1 curved 3 \
   51 straight 190 \
   53 curved 445 \
   22 behind 60 \
-51 SW12 switch 12 16 1 curved 3 \
+51 SW12 switch 14 19 1 curved 3 \
   0 straight 218 \
   43 curved 185 \
   50 behind 190 \
-52 SW13 switch 13 245 35 straight 3 \
+52 SW13 switch 13 43 3 straight 3 \
   10 straight 214 \
   39 curved 230 \
   21 behind 140 \
-53 SW14 switch 14 150 70 curved 3 \
+53 SW14 switch 14 30 3 curved 3 \
   50 straight 445 \
   21 curved 314 \
   1 behind 62 \
-54 SW15 switch 15 150 200 curved 3 \
+54 SW15 switch 15 30 16 curved 3 \
   18 straight 411 \
   20 curved 305 \
   15 behind 70 \
-55 SW16 switch 16 245 235 straight 3 \
+55 SW16 switch 16 43 16 straight 3 \
   8 straight 225 \
   9 curved 220 \
   20 behind 146 \
-56 SW17 switch 17 445 235 straight 3 \
+56 SW17 switch 17 57 16 straight 3 \
   30 straight 225 \
   31 curved 230 \
   38 behind 62 \
-57 SW18 switch 18 315 285 curved 3 \
+57 SW18 switch 18 37 20 curved 3 \
   19 straight 215 \
   45 curved 338 \
   44 behind 187 \
-61 SW switch 0x99 345 155 curved 3 \
+61 SW99 switch 0x99 49 9 curved 3 \
   62 straight 230 \
   16 curved 228 \
   58 behind 24 \
-58 SW9A switch 0x9a 345 145 straight 3 \
+58 SW9A switch 0x9a 51 9 straight 3 \
   61 straight 24 \
   14 curved 224 \
   60 behind 32 \
-59 SW9B switch 0x9b 345 120 straight 3 \
+59 SW9B switch 0x9b 51 10 straight 3 \
   63 straight 247 \
   24 curved 227 \
   60 behind 24 \
-60 SW9C switch 0x9c 345 130 curved 3 \
+60 SW9C switch 0x9c 49 10 curved 3 \
   59 straight 24 \
   32 curved 222 \
   58 behind 32 \
