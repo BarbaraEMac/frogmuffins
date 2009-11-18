@@ -31,13 +31,16 @@ typedef struct {
 	RB  	   	sensors;
 	TrackModel 	model;
 	TID 		ios2Tid;
+	int 		trackId;
 } UI;
 
 void ui_init(UI *ui);
+void ui_saveCursor(UI *ui);
+void ui_restoreCursor(UI *ui);
 void ui_clearScreen (int ios2Tid);
 void ui_splashScreen(int ios2Tid);
 
-void ui_drawMap (int ios2Tid, TrackModel *model);
+void ui_drawMap (UI *ui);
 void ui_updateSensor( UI *ui, int idx, int time );
 void ui_displayPrompt( int ios2Tid, char *fmt, char *str );
 void ui_updateMap( UI *ui, int idx, int state );
@@ -71,6 +74,8 @@ void ui_run () {
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
 
+		ui_saveCursor(&ui);
+
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
@@ -93,15 +98,24 @@ void ui_run () {
 				ui_updateTrainLocation( &ui, req.idx, req.dist );
 				break;
 		}
+
+		ui_restoreCursor(&ui);
 	}
 	Exit();	// This will never be called.
+}
+
+void ui_saveCursor(UI *ui) {
+	cprintf (ui->ios2Tid, "\0337");
+}
+
+void ui_restoreCursor (UI *ui) {
+	cprintf (ui->ios2Tid, "\0338");
 }
 
 void ui_init (UI *ui) {
 	debug ("ui_init\r\n");
 	char ch;
 	int  shellTid;
-	int  track;
 	int	 err = NO_ERROR;
 	int  uiclkTid;
 	int i;
@@ -124,8 +138,8 @@ void ui_init (UI *ui) {
 	}
 	
 	// Parse the model
-	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
-	parse_model( track, &ui->model );
+	ui->trackId = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
+	parse_model( ui->trackId, &ui->model );
 	
 	// Start Drawing the ui
 	ui_clearScreen( ui->ios2Tid );
@@ -136,7 +150,7 @@ void ui_init (UI *ui) {
 	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
-	ui_drawMap( ui->ios2Tid, &ui->model );
+	ui_drawMap( ui );
 		
 	ui_strPrintAt (ui->ios2Tid, 23, 8 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 23, 9 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
@@ -159,7 +173,7 @@ void ui_init (UI *ui) {
 }
 
 void ui_updateSensor( UI *ui, int idx, int time ) {
-	char  bank[2];
+	char  bank[4];
 	char  num;
 	int   i;
 	int   x[] = {10, 23, 36, 49};
@@ -169,9 +183,6 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 	// Store the new data in the buffer
 	rb_force ( &ui->sensors, &data );
 	
-	// Erase to the right
-	cprintf( ui->ios2Tid, "\033[21;1H\033[0K");
-
 	for ( i = 0; i < NUM_DISP_SENSORS; i ++ ) {
 		if ( ui->sensorsBuf[i].idx == -1 ) {
 			return;
@@ -181,7 +192,9 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 						  ui->sensorsBuf[i].time );
 		
 		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
-		bank[1] = '\0';
+		bank[1] = ' ';
+		bank[2] = ' ';
+		bank[3] = '\0';
 		
 		ui_strPrintAt( ui->ios2Tid, x[i]+8, 21, bank,
 					   WHITE_FC, BLACK_BC );
@@ -235,15 +248,23 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
 	int  num = sensor_num ( idx );
-	char bank[2];
-	bank[0] = sensor_bank( idx );
-	bank[1] = '\0';
-		
-	ui_strPrintAt( ui->ios2Tid, 35, 10, bank,
+	char bank[4];
+	bank[0] = ' ';
+	bank[1] = ' ';
+	bank[2] = ' ';
+	bank[3] = '\0';
+
+	// Clear distance
+	ui_strPrintAt( ui->ios2Tid, 35, 11, bank,
 				   BLUE_FC, WHITE_BC );
 
+	bank[0] = sensor_bank( idx );
+	ui_strPrintAt( ui->ios2Tid, 35, 10, bank,
+				   BLUE_FC, WHITE_BC );
+	
 	ui_intPrintAt( ui->ios2Tid, 36, 10, "%d", num,
 				   BLUE_FC, WHITE_BC );
+	
 	ui_intPrintAt( ui->ios2Tid, 35, 11, "%d", dist,
 				   BLUE_FC, WHITE_BC );
 }
@@ -329,9 +350,10 @@ char frog[][100] = {
 
 }
 
-void ui_drawMap (int ios2Tid, TrackModel *model) {
+void ui_drawMap( UI *ui ) {
 	//TODO: Due to terminal issue!
 	Delay( 200 / MS_IN_TICK, WhoIs(CLOCK_NAME) );
+	
 	char mapA[][90] = {	
 "tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
 "             x         lqqj                                            x    ",
@@ -354,12 +376,41 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 "                 x          mqqk                      lqqj                  ",
 "tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
 "                                                                            "};
-    int  i;
-
-	for ( i = 0; i < 20; i ++ ) {
-		cprintf (ios2Tid, "\033(0");
-		ui_strPrintAt (ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC);
-		cprintf (ios2Tid, "\033(B");
+    char mapB[][90] = {	
+"tqqqqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
+"             lqqj          lqqj                                        x    ",
+"tqqqqqqqqqqqqn         lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqk   x    ",
+"             x         x                x             x            x   mqk  ",
+"         lqqqj         x                x             x            mqk   x  ",
+"         x        lqqqqj                mqqk       lqqj              mqqqvk ",
+"         x        x                        x   w   x                      x ",
+"         x        x                        mqk x lqj                      x ",
+"         x        x                          mqnqj                        x ",
+"         x        x                          lqnqk                        x ",
+"         x        x                        lqj x mqk                      x ",
+"         x        x                        x   v   x                      x ",
+"         x        mqqqqk                lqqj       mqqk              lqqqwj ",
+"         mqqqk         x                x             x            lqj   x  ",
+"             x         x                x             x            x   lqj  ",
+"tqqqqqqqqqqqqn         mqqqwqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqj   x    ",
+"             mk            x                                           x    ",
+"tqqqqqqqqqqqqqvqqk         mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqj    ",
+"                 mqqk          mqqk                      lqqj               ",
+"tqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu      ",
+"                                                                            "};
+	int  i;
+	if ( ui->trackId == TRACK_A ) {
+		for ( i = 0; i < 20; i ++ ) {
+			cprintf( ui->ios2Tid, "\033(0" );
+			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC );
+			cprintf( ui->ios2Tid, "\033(B" );
+		}
+	} else {
+		for ( i = 0; i < 20; i ++ ) {
+			cprintf( ui->ios2Tid, "\033(0" );
+			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], BLACK_FC, GREEN_BC );
+			cprintf( ui->ios2Tid, "\033(B" );
+		}
 	}
 }
 
