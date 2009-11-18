@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -77,11 +77,10 @@ void ui_run () {
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				//ui_displayTimeAt( ui.ios2Tid, 65, 7, time );
+				ui_displayTimeAt( ui.ios2Tid, 60, 9, req.time );
 				break;
 			
 			case TRACK_SERVER:
-				debug ("updating hte map\r\n");
 				ui_updateMap( &ui, req.idx, req.state );
 				break;
 
@@ -137,13 +136,13 @@ void ui_init (UI *ui) {
 	// Draw the map on the screen
 	ui_drawMap( ui->ios2Tid, &ui->model );
 	
-	ui_strPrintAt (ui->ios2Tid, 1, 20, "Sensors: ", RED_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 1, 21, "Prompt: ", BLUE_FC, BLACK_BC);
+	ui_strPrintAt (ui->ios2Tid, 61, 8 , "Time:", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 1, 21, "Sensors:", BLUE_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
-//	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
-//	Send( uiclkTid, (char*)&ch, sizeof(char),
-//					(char*)&ch, sizeof(char) );
+	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
+	Send( uiclkTid, (char*)&ch, sizeof(char),
+					(char*)&ch, sizeof(char) );
 
 	// REGISTER WITH THE NAME SERVER
 	RegisterAs( UI_NAME );
@@ -171,18 +170,18 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 			return;
 		}
 
-		ui_displayTimeAt( ui->ios2Tid, x[i], 20,
+		ui_displayTimeAt( ui->ios2Tid, x[i], 21,
 						  ui->sensorsBuf[i].time );
 		
 		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
 		bank[1] = '\0';
 		
-		ui_strPrintAt( ui->ios2Tid, x[i]+8, 20, bank,
+		ui_strPrintAt( ui->ios2Tid, x[i]+8, 21, bank,
 					   WHITE_FC, BLACK_BC );
 
 		num = sensor_num ( ui->sensorsBuf[i].idx );
 		
-		ui_intPrintAt( ui->ios2Tid, x[i]+9, 20, "%d", num,
+		ui_intPrintAt( ui->ios2Tid, x[i]+9, 21, "%d", num,
 					   WHITE_FC, BLACK_BC );
 	}
 }
@@ -195,13 +194,23 @@ void ui_displayPrompt( int ios2Tid, char *fmt, char *str ) {
 }
 
 void ui_updateMap( UI* ui, int idx, int state ) {
+	if ( idx == 153 ) {
+		idx = 22;
+	} else if ( idx == 154 ) {
+		idx = 19;
+	} else if ( idx == 155 ) {
+		idx = 20;
+	} else if ( idx == 156 ) {
+		idx = 21;
+	}
+
 	Node *n = &ui->model.nodes[idx+39]; // you get a switch idx
 	char  ch[2];
 
 	ch[0] = (state == 1) ? 'C' : 'S';
 	ch[1] = '\0';
 
-//	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
+	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
 			ui_strPrintAt( ui->ios2Tid, 
@@ -229,9 +238,9 @@ void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	
-	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, RED_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, RED_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, RED_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, BLUE_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, BLUE_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, BLUE_FC, BLACK_BC);
 }
 
 void ui_clearScreen (int ios2Tid) {
@@ -336,7 +345,7 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 		ui_strPrintAt (ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC);
 		cprintf (ios2Tid, "\033(B");
 	}
-	
+/*	
 	for ( i = 0; i < model->num_nodes; i ++ ) {
 		char ch[2];
 		ch[1] = '\0';
@@ -355,6 +364,7 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 				break;
 		}
 	}
+	*/
 }
 
 
@@ -373,7 +383,7 @@ void uiclk_run () {
 		// Wait a bit
 		Delay( 100 / MS_IN_TICK, clockTid );
 		// Grab the new time
-		req.time = Time( clockTid );
+		req.time = Time( clockTid ) / (100 / MS_IN_TICK);
 		
 		// Tell the server!
 		Send( uiTid, (char*)&req,	   sizeof(UIRequest),
