@@ -24,11 +24,10 @@
 #define INPUT_HIST  1
 #define IO			5	// harcoded in this file as it actually creates it
 
-						//cprintf( IO, "\033[22;24r" );
-#define output(args...)	cprintf( IO, "\033[36m" ); \
-						/*	cprintf( IO, "\033[40B" ); \*/\
-							cprintf( IO, args ); \
-							cprintf( IO, "\033[37m" )
+#define output(args...)	cprintf( IO, "\033[36m\0338" ); \
+						cprintf( IO, args ); \
+						cprintf( IO, "\033[37m\0337" )
+
 // Private Stuff
 // ----------------------------------------------------------------------------
 typedef struct {
@@ -86,31 +85,31 @@ void bootstrap(  ) {
 	tids.ios1 = Create( HW_SERVER_PRTY, &ios1_run );
     tids.ios2 = Create( HW_SERVER_PRTY, &ios2_run );
 	assert( IO == tids.ios2 );
-	output( "Running on board %08x. \r\n", board_id(  ) );
-	output( "Initializing the name and serial io servers. \r\n" );
+//	output( "Running on board %08x. \r\n", board_id(  ) );
+//	output( "Initializing the name and serial io servers. \r\n" );
 
 	// Create the clock server
 	tids.cs = Create( HW_SERVER_PRTY, &cs_run );
-	output( "Initializing the clock server. \r\n" );
+//	output( "Initializing the clock server. \r\n" );
 	
 	// Create the routeplanner
 	tids.rp = Create( LOW_SERVER_PRTY, &rp_run );
-	output( "Initializing the route planner. \r\n" );
+//	output( "Initializing the route planner. \r\n" );
 
 	// Create the ui 
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
-	output( "Initializing the UI. \r\n" );
+//	output( "Initializing the UI. \r\n" );
 	
 	// Initialize the track we want to use.
 	shell_initTrack( &tids );
 
 	// Create the train controller
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
-	output( "Initializing the track server. \r\n" );
+//	output( "Initializing the track server. \r\n" );
 	
 	// Create the first train!
 	tids.tr1Tid = Create( TRAIN_PRTY, &train_run );
-	output( "Creating the first train!\r\n" );
+//	output( "Creating the first train!\r\n" );
 
 	// Initialize the fist train
 	shell_initTrain( &tids );
@@ -129,7 +128,7 @@ void shell_run( TIDs *tids ) {
 
 	input = history[h++];
 
-	output( "\rType 'h' for a list of commands." );
+//	output( "Type 'h' for a list of commands." );
     
 	time = Time( tids->cs )/2;
 	tens = time % 10;
@@ -248,19 +247,18 @@ void shell_initTrack( TIDs *tids ) {
 	}
 	input[1] = 0;
 
-	output( "Track: " );
+
+	output( "\033[24;1HTrack: " );
 	shell_inputData( input, false );
 
 	// Tell the UI which track we are using
 	Send( tids->ui, (char *) &input[0], sizeof( char ),
-				 (char *) &err, 	 sizeof( int ) );
+				    (char *) &err, 	 sizeof( int ) );
 
-	debug( "returned from, the UI\r\n" );
 	// Tell the Route Planner which track we are using
 	Send( tids->rp, (char *) &input[0], sizeof( char ),
 				 (char *) &err, 	 sizeof( int ) );
 	
-	debug( "RETURNED FROM ROUTE PLANNER\r\n" );
 	if( err < NO_ERROR ) {
 		output( "Invalid Track ID. Using Track B.\r\n" );
 	}
@@ -299,7 +297,7 @@ void shell_initTrain 	( TIDs *tids ) {
 	int			id;
 
 	FOREVER {
-		output( "Train Id: " );
+		output( "\033[24;1HTrain Id: " );
 		shell_inputData( input, true );
 		if( sscanf( input, "%d", &init.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
@@ -310,7 +308,7 @@ void shell_initTrain 	( TIDs *tids ) {
 	input[1] = 0;
 
 	FOREVER {
-		output( "Train Gear: " );
+		output( "\033[24;1HTrain Gear: " );
 		shell_inputData( input, false );
 		// only take in valid train speeds
 		if( sscanf( input, "%d", &init.gear ) >= 0
