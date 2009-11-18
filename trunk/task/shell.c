@@ -119,45 +119,44 @@ void bootstrap(  ) {
 }
 
 void shell_run( TIDs *tids ) {
-    debug( "shell_run\r\n" );
-
-	// Initialize variables
-    char ch, *input, history[INPUT_HIST][INPUT_LEN];
-    int i = 0, h = 0;
-	int	time, tens, secs, mins;
-
-	input = history[h++];
-
-//	output( "Type 'h' for a list of commands." );
-    
-	time = Time( tids->cs )/2;
-	tens = time % 10;
-	secs =( time / 10 )% 60;
-	mins = time / 600;
-	output( "\r%02d:%02d:%01d> ", mins, secs, tens );
+    int   h = 0;
+    char *input, history[INPUT_HIST][INPUT_LEN];
 	
-	i=0;
-	// Main loop
-    FOREVER {
+	input    = history[h++];
+	input[0] = '\0';
 
-        input[i] = 0;						// Clear the next character
+//	output( "\r\nType 'h' for a list of commands.\r\n" );
+	output ("\r\n> ");
+
+	FOREVER {
+		shell_inputData( input, true );
+		shell_exec( tids, input );
+	
+		/*input = history[h++];
+		h %= INPUT_HIST;*/
+    }
+}
+
+void shell_inputData( char *input, bool reset ) {
+	char ch;
+	int i = 0;
+	if( reset ) {
+		input[0] = '\0';
+	}
+	
+	// Print out the default value
+	while( input[i] ) {
+		output( "%c", input[i++] );
+	}
+
+	FOREVER {
+        input[i] = 0;	// Clear the next character
 		ch = Getc( IO );
-
-		time = Time( tids->cs )/( 100 / MS_IN_TICK );
-		tens = time % 10;
-		secs =( time / 10 )% 60;
-		mins = time / 600;
 
 		switch( ch ) {
 			case '\r': // Enter was pressed
-				//output( "\n\r" );
-				shell_exec( tids, input );
-				
-				// Clear the input for next line
-				/*input = history[h++];
-				h %= INPUT_HIST;*/
-				i = 0;
-				output( "\r%02d:%02d:%01d> ", mins, secs, tens );
+				output( "\r\n> " );
+				return;
 				break;
 			case '\b': // Backspace was pressed
 			case 127:
@@ -166,6 +165,7 @@ void shell_run( TIDs *tids ) {
 					i --;
 				}
 				break;
+			/*
 			case '\033': // Escape sequence
 				ch = Getc( IO );	// read the '['
 				if( ch != '[' )break;
@@ -179,49 +179,7 @@ void shell_run( TIDs *tids ) {
 
 						break;
 				}
-
-				break;
-
-			default:	// Update the position in the command string
-				output( "%c", ch );
-				if( ch < 32 || ch > 126 ) {
-					output( "%d", input[i] );
-				}
-				input[i++] = ch;
-				break;
-		}
-        if( i == INPUT_LEN - 1 ) {	i-- ; output( "\b" );}
-    }
-}
-
-void shell_inputData( char *input, bool reset ) {
-	char ch;
-	if( reset ) input[0] = 0;
-    int i = 0;
-	
-	// Print out the default value
-	while( input[i] ) {
-		output( "%c", input[i++] );
-	}
-
-	FOREVER {
-        input[i] = 0;	// Clear the next character
-		ch = Getc( IO );
-
-		switch( ch ) {
-			case '\r': // Enter was pressed
-				
-				output( "\n\r" );
-				return;
-				break;
-			case '\b': // Backspace was pressed
-			case 127:
-				if( i > 0 ) {
-					output( "\b \b" );
-					i --;
-				}
-				break;
-
+			*/
 			default:	// Update the position in the command string
 				output( "%c", ch );
 				if( ch < 32 || ch > 126 ) {
@@ -246,7 +204,6 @@ void shell_initTrack( TIDs *tids ) {
 		input[0] = 0;
 	}
 	input[1] = 0;
-
 
 	output( "\033[24;1HTrack: " );
 	shell_inputData( input, false );
