@@ -73,7 +73,7 @@ void ui_run () {
 
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
-
+/*
 		ui_saveCursor(&ui);
 
 		// Display the information at the correct location
@@ -97,7 +97,7 @@ void ui_run () {
 			case TRAIN:
 				ui_updateTrainLocation( &ui, req.idx, req.dist );
 				break;
-		}
+		}*/
 
 		ui_restoreCursor(&ui);
 	}
@@ -288,9 +288,9 @@ void ui_strPrintAt (int ios2Tid, int x, int y, char *str,
 				 ForeColour fc, BackColour bc) {
 
 	// Set the colour
-	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm", 
+/*	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm", 
 			 fc, bc, y, x, str, DEFAULT_FC, DEFAULT_BC );
-
+*/
 //	cprintf (ios2Tid, "\033[%dm", bc);
 
 	// Move the cursor

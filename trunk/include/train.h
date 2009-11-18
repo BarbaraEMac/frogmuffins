@@ -11,14 +11,17 @@
 #include "requests.h"
 
 typedef enum _train_mode {
-	NORMAL = 1,
-	CALIBRATION = 2,
-	INIT = 3,
-	IDLE = 4
+	INIT_LOC = 1, 	// First go to a particular place
+	INIT_DIR,		// then turn around to go around the loop in proper dir
+	CAL_SPEED,		// Run around a bunch of times until speed is nice
+	CAL_STOP,		// Calubrate stopping distance
+	IDLE,			// Ready for input
+	NORMAL			// Going from place A to place B
 } TrainMode;
 
 typedef struct {
 	int			id;
+	int			gear;
 } TrainInit;
 
 typedef struct {
