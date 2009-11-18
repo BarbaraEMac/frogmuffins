@@ -358,7 +358,11 @@
 
 		Stopping Distances
 		==================
-		TODO
+		As of know, after calibrating the speed, thr train stops the next time it goes past
+		E11. This is convenient as there are markings on the track that allows us to easily gage
+		what the stopping distance is and input it into the train's prompt.
+		The stopping distance is fairly reproducible, and so it is used for the duration of the
+		run.
 
 		Locating the train
 		==================
