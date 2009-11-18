@@ -294,13 +294,13 @@ void ui_strPrintAt (int ios2Tid, int x, int y, char *str,
 //			 y, x,
 //			 str, DEFAULT_FC, DEFAULT_BC );
 
+//  cprintf (ios2Tid, "\033[%dm", bc);
 //	cprintf (ios2Tid, "\033[%dm", bc);
-//	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
 /*	cprintf( ios2Tid, "\033[%d;%dH%s\033[%dm\033[%dm", 
 			 y, x, str, DEFAULT_FC, DEFAULT_BC );*/
 
 	// Set the colour
-	cprintf (ios2Tid, "\033[%dm", bc);
+	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
 
 	// Move the cursor
 	cprintf (ios2Tid, "\033[%d;%dH", y, x);
