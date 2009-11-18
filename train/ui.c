@@ -146,9 +146,9 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Limit the scroll range of the shell
-//	cprintf( ui->ios2Tid , "\033[22;24r" );
+	cprintf( ui->ios2Tid , "\033[22;24r" );
 	// Turn off cursor
-//	cprintf( ui->ios2Tid, "\033[?25l");
+	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
 	ui_drawMap( ui );
