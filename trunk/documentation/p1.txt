@@ -28,11 +28,8 @@
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
 
-algorithms - how they work
-			- why we chose them
-			error codes
-			data structures
-
+	The following is a description of our train application.
+	
 	Model
 	=====
 	We decided to use the model provided on the course webpage to store the track
@@ -260,6 +257,9 @@ algorithms - how they work
 		The train will receive a list of these settings and can flip switches 
 		immediately before it needs to. Thus, when more trains are on the track, they
 		will not interfere when switching switches.
+
+		Right now, the train will flip switches that are not near it. This will change
+		as we have more trains running on the track.
 		
 		Predictions
 		===========
@@ -302,6 +302,11 @@ algorithms - how they work
 
 	Train
 	=====
+
+		how does calibration work?
+		Why did we chose to do it this way?
+
+		how do we keep track of dynamic train/track info?
 
 		Watchman
 		========
@@ -346,6 +351,9 @@ algorithms - how they work
 			}
 		}
 
+		The UI task is kept as simple as possible. It has quite a few functions
+		that can send special escaped character sequences to the terminal.
+
 		Layout
 		======
 		The track map prints at the top of the screen. The switch settings are
@@ -376,6 +384,22 @@ algorithms - how they work
 
 		The Shell is the only user task that will display text itself, other
 		than the UI in our production code.
+
+		Efficiency
+		==========
+		There are many calls to cprintf within the UI server. These calls could 
+		be merged together to create more efficient output. This will be 
+		strongly considered for future projects.
+
+		Advantages
+		==========
+		All of the formatting is stored within one simply user task. If we need to 
+		change how a particular gadget is displayed, this will be very simple.
+
+		Limitations
+		===========
+		Each element that is drawn to the screen needs to be sent via a message to
+		the UI. This can be very costly time-wise.
 
 	Error Codes
 	===========
