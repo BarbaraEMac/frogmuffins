@@ -348,35 +348,72 @@ algorithms - how they work
 
 		Layout
 		======
-		The track map prints at the top of the screen. The se
+		The track map prints at the top of the screen. The switch settings are
+		displayed over the map. 'S' indicates the switch is straight and 'C' 
+		indicates the switch is curved. The train location is displayed inside
+		the left-most loop and the current time (in ms) is displayed in the
+		right-most loop.
 
+		The last triggered sensors, triggered by a train or a malicious TA, will
+		display below the map. We will show the last 4 triggered sensors. 
+
+		The shell prompt will display at the very bottom and can show 3 lines
+		worth of scrolling data.
+
+		We realize that the map is very large and will be modifying it in future
+		iterations of this project.
 
 		Shell
 		=====
-		Since the shell prompt is a specialize
-		more robust 
-		scrolling for free
-		needs to print before ui starts
-	
+		The shell does not print itself via the UI server for the following
+		reasons:
+			1. We've been using the shell since A0 so we know it works. The UI
+			   is new code which may have bugs. Hence, the shell is more robust
+			   and we can count on it to display properly.
+			2. We need to be able to scroll to see error and debug data. The 
+			   shell does this for free.
+			3. We need to use the shell before the UI starts.
 
-
+		The Shell is the only user task that will display text itself, other
+		than the UI in our production code.
 
 	Error Codes
 	===========
-	what they are 
+	We created the following error codes for this assignment:
+		TIMEOUT,				// A timeout has occured
+		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
+		INVALID_NODE_NAME,		// Invalid node name
+		INVALID_NODE_IDX,		// Invalid node index
+		RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
+		INVALID_SENSOR_IDX,		// Invalid sensor index
+		INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
+		INVALID_TRACK			// Invalid track identifier
 
-	how we handle them
-
-	how we error check
+	Whenever a server request is made, we always check for these error values
+	in the reply. If there is an error, the user task should attempt to handle
+	it.
 
 	Neat Things
 	===========
+	We did some neat things for this assignment. Here's a brief discussion of
+	some of them.
 
 		Optimization
 		============
+		We were the first group to figure out how to compile in optimized mode.
+
+TODO: How does this work?
+
+		The code speed increased by 2 - 3 times with O2 optimization on.
+
+		We chose to use O2 instead of O3 optimization because ...
+TODO:
 
 		Task Priorities
 		===============
+		We have designed a task priority hierarchy for this assignment. It works
+		as follows:
+
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
