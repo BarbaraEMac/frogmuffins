@@ -224,14 +224,14 @@
 		should not need to know about nodes or need to parse the model for it to
 		drive. We consider our train to be driven by either a blind engineer or one
 		without a map. The Route Planner simply tells the train a distance to travel,
-		driection, and switch settings. Thus, the train can focus on calibration
+		direction, and switch settings. Thus, the train can focus on calibration
 		instead of complex details about nodes and making sure it is travelling along
 		a set path.
 
 		Shortest Distance
 		=================
 		To get the shortest distance between any two nodes, we simply look up the
-		coresponding entry in the distances matrix and return it to the train.
+		corresponding entry in the distances matrix and return it to the train.
 
 		Shortest Path
 		=============
@@ -327,7 +327,7 @@
 		the train will disregard sensors triggered by other trains, for later assignments.
 
 
-		The detective also keeps a buffer of unnacounted for sensor triggers, but they are
+		The detective also keeps a buffer of unaccounted for sensor triggers, but they are
 		not used at this time.
 	
 	Track Server
@@ -352,7 +352,7 @@
 		when we know the train is not accelerating (and decellerating). This gives us a
 		base speed to use in our calculations for current speed.
 		This approach is robust against the train losing speed over time and does not 
-		require hardoded speed profiles per train. It also has the advantage of not having
+		require hardcoded speed profiles per train. It also has the advantage of not having
 		to figure these out ahead of time as this time-costly, at the expense of little extra
 		calibration time at each run.
 
@@ -362,8 +362,8 @@
 
 		Locating the train
 		==================
-		Whenver the train loses its position, it calls the locate subroutine. 
-		Using a slow speed setting, that is unlikely to damage the train we do the folliwing:
+		Whenever the train loses its position, it calls the locate subroutine. 
+		Using a slow speed setting, that is unlikely to damage the train we do the following:
 
 			timeout = 1 sec
 			FOREVER {
@@ -392,7 +392,7 @@
 		Watchman
 		========
 		The watchman is a safekeeping task that makes sure the train does not crash,
-		using the stop distance as given by the routeplanner and passed by the train.
+		using the stop distance as given by the Route Planner and passed by the train.
 		It also updates the train's predicted position in the UI, using the last known speed
 		and sensor passed in by the train, and the time elapsed since the the sensor was 
 		triggered.
@@ -495,7 +495,7 @@
 	Error Codes
 	===========
 	We created the following error codes for this assignment:
-		TIMEOUT,				// A timeout has occured
+		TIMEOUT,				// A timeout has occurred
 		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
 		INVALID_NODE_NAME,		// Invalid node name
 		INVALID_NODE_IDX,		// Invalid node index
