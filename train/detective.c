@@ -120,7 +120,7 @@ void det_run () {
 				Reply ( senderTid, 0, 0 );
 				//debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
 				if( det.lstPoll < req.ticks ) {
-					error( TIMEOUT, "ts: Polling timed out. Retrying." );
+//					error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					// Don't tell me for another 5 seconds
 					det.lstPoll = req.ticks + POLL_GRACE;
 					PutStr( POLL_STR, sizeof(POLL_STR), det.iosTid );
