@@ -3,7 +3,7 @@
 * becmacdo
 * dgoc
 */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -153,7 +153,7 @@ void train_run () {
 			debug( "train: has a route stopDist=%d\r\n", rpReply.stopDist );
 
 			if( rpReply.err < NO_ERROR ) {
-				eprintf( "Route Planner failed (%d).\r\n", rpReply.err );
+				//eprintf( "Route Planner failed (%d).\r\n", rpReply.err );
 				rpReply.stopDist = 0; 
 				rpReply.switches[0].id = -1;
 				rpReply.nextSensors.len = 0;
@@ -257,7 +257,7 @@ Speed train_speed( Train *tr ) {
 	if( tr->mode == CAL_SPEED 
 			&& (tr->sd < ( mean / SD_THRESHOLD ) 
 				|| tr->cal_loops >= CAL_LOOPS ) ) {
-		printf( "train: finished calibration with sd=%d\r\n", tr->sd );
+		printf( "Train: finished calibration with sd=%d\r\n", tr->sd );
 		tr->mode = CAL_STOP;
 	}
 	return total;
@@ -450,7 +450,7 @@ void train_locate( Train *tr ) {
 
 	FOREVER {
 		req.expire = timeout + Time( tr->csTid );
-		eprintf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
+		//eprintf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
 		// Try again
 		Send( tr->deTid, (char *) &req, sizeof(DeRequest),
 						 (char *) &rpl, sizeof(TSReply) );
@@ -503,7 +503,7 @@ void train_wait( Train *tr, RPReply *rep ) {
 
 	// Did not predict properly
 	if( rpl.sensor < NO_ERROR ) {
-		eprintf( "Train Missed a sensor.\r\n" );
+		//eprintf( "Train Missed a sensor.\r\n" );
 
 		assert( Time( tr->csTid ) > req.expire );
 
@@ -567,7 +567,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			err = Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
 									 (char *)&reply, sizeof(TSReply) );
 			if( err < NO_ERROR ) {
-				eprintf( "Track Server did not flip switch. (%d)\r\n", err );
+				//eprintf( "Track Server did not flip switch. (%d)\r\n", err );
 			}
 		} else {
 			break;
@@ -641,7 +641,7 @@ void watchman( ) {
 				// Stop the train if needed
 				if( (disaster.crashDist - distance) < disaster.minDist ) {
 					if ( !stopped ) {
-		printf ( "\033[41m wathchman stopping %dmm \033[49m\r\n", 
+	//	printf ( "\033[41m wathchman stopping %dmm \033[49m\r\n", 
 						disaster.crashDist - distance );
 						// Reverse the train if needed
 						train_drive( tsTid, disaster.id, 0 ); 
