@@ -3,7 +3,7 @@
 * becmacdo
 * dgoc
 */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -17,6 +17,7 @@
 #include "servers.h"
 #include "trackserver.h"
 #include "train.h"
+#include "ui.h"
 
 #define	SPEED_HIST				10
 #define PREDICTION_WINDOW 		(1000 /MS_IN_TICK)
@@ -550,8 +551,13 @@ void watchman( ) {
 	int			distance = 0;
 	int			ticks = 0;
 	bool		savedTheDay = false;
-	
-	Create( 3, &heart ); // watchman has a heart - awwwwwww
+	TID			uiTid = WhoIs( UI_NAME );
+
+	UIRequest 	uiReq;
+	uiReq.type = TRAIN;
+
+	// TODO: change this priority
+	Create( TRAIN_PRTY - 1, &heart ); // watchman has a heart - awwwwwww
 
 	FOREVER {
 		// Wait until we learn about a disaster
@@ -561,6 +567,15 @@ void watchman( ) {
 		if( len == sizeof( int ) ) { //heartbeat
 			distance = speed_dist( disaster.velocity, 
 					(disaster.ticks - ticks) * MS_IN_TICK );
+			
+			// Send this information to the UI
+			uiReq.idx  = disaster.sensor;
+			uiReq.dist = distance;
+
+			Send( uiTid, (char*)&uiReq, sizeof(UIRequest), 
+						 (char*)&distance, sizeof(int) ); // filler ...
+
+						// Stop the train if needed
 			// TODO replace with a call to UI
 			/*printf( "\033[10;30H%c%d:%dmm\033[24;0H", 
 					sensor_bank( disaster.sensor ),
@@ -568,8 +583,8 @@ void watchman( ) {
 			// Stop the train if needed
 			if( (disaster.crashDist - distance) < disaster.minDist 
 					&& !savedTheDay) {
-				printf ( "\033[41mEMERGENCY TRAIN STOP %dmm from crash\033[49m\r\n", 
-						disaster.crashDist - distance );
+//				printf ( "\033[41mEMERGENCY TRAIN STOP %dmm from crash\033[49m\r\n", 
+//						disaster.crashDist - distance );
 				train_drive( tsTid, disaster.id, 0 );
 				// prevent the watchman from being too heroic happening again
 				savedTheDay = true;
