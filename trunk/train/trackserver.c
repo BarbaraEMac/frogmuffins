@@ -46,7 +46,7 @@ int	ts_stop			( TS *ts );
 int	ts_init			( TS *ts );
 int	ts_trainSet		( TS *ts, int train, int speed );
 int	ts_switchSet	( TS *ts, int sw, SwitchDir dir );
-int	ts_switchSetAll	( TS *ts, SwitchDir dir );
+int	ts_switchSetAll	( TS *ts, SwitchDir *dirLow, SwitchDir *dirHigh );
 int	checkTrain		( int train );
 
 /* ACTUAL CODE */
@@ -127,7 +127,10 @@ void ts_run () {
 
 int ts_init( TS *ts ) {
 	debug ("ts_init: track server=%x \r\n", ts);
+	int i;
 	int err = NO_ERROR;
+	SwitchDir dirLow[NUM_SWTS - 4];
+	SwitchDir dirHigh[4];
 
 	ts->lstSensor  = -1;
 	ts->lstSensorUpdate = 0;
@@ -139,14 +142,27 @@ int ts_init( TS *ts ) {
 	
 	// Stop the trains
 	int trains[] = {12, 22,  24, 49, 52};
-	int *i;
-	foreach( i, trains ) {
-		ts_trainSet( ts, *i, 0 );
+	int *k;
+	foreach( k, trains ) {
+		ts_trainSet( ts, *k, 0 );
 	}
 
 	// Reset the switches
 	memoryset ( ts->speeds, 0, NUM_TRNS );
-	ts_switchSetAll( ts, SWITCH_STRAIGHT );
+	
+	for ( i = 0; i < NUM_SWTS - 4; i ++ ) {
+		if ( i == 11 ) {
+			dirLow[i] = SWITCH_CURVED;
+		} else {
+			dirLow[i] = SWITCH_STRAIGHT;
+		}
+	}
+	
+	for ( i = 0; i < 4; i ++ ) {
+		dirHigh[i] = SWITCH_CURVED;	
+	}
+	
+	ts_switchSetAll( ts, dirLow, dirHigh );
 	
 	err = Create(OTH_SERVER_PRTY, &det_run );
 	if( err < NO_ERROR ) return err;
@@ -223,15 +239,15 @@ int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
 }
 
 // set all the switches to given direction
-int ts_switchSetAll( TS *ts, SwitchDir dir ) {
+int ts_switchSetAll( TS *ts, SwitchDir *dirLow, SwitchDir *dirHigh ) {
     int err = 0;
 
 	int i;
     for( i = 1; i <= 18; i ++ ) {
-		err |= ts_switchSet( ts, i, dir );
+		err |= ts_switchSet( ts, i, dirLow[i] );
 	}
     for( i = 153; i <= 156; i ++ ) {
-		err |= ts_switchSet( ts, i, dir );
+		err |= ts_switchSet( ts, i, dirHigh[i] );
 	}
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
