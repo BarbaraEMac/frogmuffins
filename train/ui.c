@@ -289,17 +289,17 @@ void ui_clearScreen (int ios2Tid) {
 void ui_strPrintAt (int ios2Tid, int x, int y, char *str, 
 				 ForeColour fc, BackColour bc) {
 
-	// Set the colour
-	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm",
-			 fc, bc,
-			 y, x,
-			 str, DEFAULT_FC, DEFAULT_BC );
+//	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm",
+//			 fc, bc,
+//			 y, x,
+//			 str, DEFAULT_FC, DEFAULT_BC );
 
 //	cprintf (ios2Tid, "\033[%dm", bc);
 //	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
 /*	cprintf( ios2Tid, "\033[%d;%dH%s\033[%dm\033[%dm", 
 			 y, x, str, DEFAULT_FC, DEFAULT_BC );*/
 
+	// Set the colour
 	cprintf (ios2Tid, "\033[%dm", bc);
 
 	// Move the cursor
