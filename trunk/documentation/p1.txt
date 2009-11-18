@@ -138,7 +138,7 @@
 		It stores the minimum distance between any two nodes, the shortest path between
 		any two nodes, a model of the track, and the track reservations.
 
-		The tack reservations are not currently used. (See comment below)
+		The track reservations are not currently used. (See comment below)
 		
 		Shortest Path Algorithm
 		=======================
@@ -201,8 +201,10 @@
 		very quickly. We choose to pay a larger cost up front to save time when the 
 		trains are running.
 
-		Simple tweaks to the cost function between neighbour nodes will allow us to 
-		reserve lengths of the track when two or more trains are running together.
+		Even with the reservation system, having the shortest path between any two nodes
+		will collapse the graph for any sections that are not reserved, speeding up
+		a Dijkstra or any other algorithm we might use to compute the paths using the
+		reservation system.
 
 		Route Planner to Train API
 		==========================
@@ -220,7 +222,7 @@
 
 		The train does not know anything about the model. We felt that the train
 		should not need to know about nodes or need to parse the model for it to
-		drive. We consider our train to be drien by either a blind engineer or one
+		drive. We consider our train to be driven by either a blind engineer or one
 		without a map. The Route Planner simply tells the train a distance to travel,
 		driection, and switch settings. Thus, the train can focus on calibration
 		instead of complex details about nodes and making sure it is travelling along
@@ -266,11 +268,11 @@
 		Given a desired path and the last hit sensor, the Route Planner is able to 
 		predict which sensors the train should hit next.
 
-		If the train is facing forewardss, we follow the path in the desired direction
+		If the train is facing forward, we follow the path in the desired direction
 		and build a list of the first sensors it could hit. If the path reaches a switch,
 		we follow in both directions in case the switch is not set correctly.
 
-		If the train is facing backwards, we tack on a list of all sensors it is facing
+		If the train is facing backward, we tack on a list of all sensors it is facing
 		in case it does not turn around correctly. This way we make a prediction for ANY
 		route the train could take. If a sensor is hit and it is not a member of this list,
 		we disregard the trigger since it is not possible for this train to have triggered 
@@ -291,26 +293,115 @@
 	
 	Detective
 	=========
-	
-	notifiers
+	The detective handles polling and allows trains to wait for a set of sensors to
+	trigger. There is a expire time associated with each such request and if the request 
+	expires, the train is notified and expected to recover.
 
-	why do we do everything with sensors? ROBUST FTW
+		Notifiers
+		=========
+		The detective spawns two helper tasks - a polling task that tries to poll the 
+		train box as often as possible, and a watchdog that makes sure the poller does not
+		time out. Having an extra task for the watchdog allows our project to be really
+		robust, even against such events as temporarily severing the train box connection.
+		
+		Any time the polling task returns its data (more than 1 sensor can be returned)
+		we go through it and match against any outstanding requests. The poller notifier was
+		originally a part of the track server, but to improve latency, we decided it should
+		report directly to the detective.
+
+		After getting a watchdog notify, we check for requests that have expired and reply 
+		to them.
+
+		WATCH_FOR
+		=========
+		This is the most useful request (from the train's POV) of the detective. It allows 
+		the train to only wait on a specific set of sensor triggers, disregarding erroneous
+		sensor data. Provided the train can predict the potential trigger windows accurately
+		one would have to hit the right sensors within a fraction of a second to confuse 
+		the train.
+
+		GET_STRAY
+		=========
+		In the event WATCH_FOR fails, the trains can resort to GET_STRAY. 
+		This request will return the next (unmatched by WATCH_FOR) event. This way the train
+		the train will disregard sensors triggered by other trains, for later assignments.
+
+
+		The detective also keeps a buffer of unnacounted for sensor triggers, but they are
+		not used at this time.
 	
 	Track Server
 	============
-
+	The track server is largely unchanged from the K4 code, with the exception of the
+	polling task now talking directly to the detective, and the detective passing on the
+	values to the track server itself.
+	We also added extra error checking, and printing through the UI task.
 
 	Train
 	=====
 
-		how does calibration work?
-		Why did we chose to do it this way?
+		The train only uses one speed at this time (plus 0 & 15 the stopping & reversing
+		speeds). This could be extended for future projects, but given the time constraint
+		of 168 hours per week we did not feel like it was important to implement this
+		feature at this time. 
 
-		how do we keep track of dynamic train/track info?
+		Speed Calibration
+		=================
+		The train keeps a buffer of the last 20 track section speeds and calculates the
+		mean and standard deviation of this sample. Data is only added to the buffer
+		when we know the train is not accelerating (and decellerating). This gives us a
+		base speed to use in our calculations for current speed.
+		This approach is robust against the train losing speed over time and does not 
+		require hardoded speed profiles per train. It also has the advantage of not having
+		to figure these out ahead of time as this time-costly, at the expense of little extra
+		calibration time at each run.
+
+		Stopping Distances
+		==================
+		TODO
+
+		Locating the train
+		==================
+		Whenver the train loses its position, it calls the locate subroutine. 
+		Using a slow speed setting, that is unlikely to damage the train we do the folliwing:
+
+			timeout = 1 sec
+			FOREVER {
+				sensor = get_stray_sensor( timeout )
+				
+			  if( isValid( sensor ) ) break;
+				train_reverse;
+				timeout *= 2;
+			}
+
+		Since the timeout doubles every time, this is guaranteed to return the train location
+		eventually assuming the train is actually moving.
+
+		This subroutine is called at the beginning of train init to locate the train, 
+		any time the usual sensor prediction goes horribly awry.
+
+		Keeping train location
+		======================
+		The route planner provides us with a list of senors the train could possibly hit
+		if it continues travelling forwards (or backward) and their respective distances from
+		the last sensor hit. This is combined with the time the last sensor hit and the current
+		speed estimate to predict when the sensors are going to be triggered, and ask
+		the detective the notify is if/when they do. If this fails the train will look for the
+		next stray sensor, eventually resorting to the locate routine.
 
 		Watchman
 		========
+		The watchman is a safekeeping task that makes sure the train does not crash,
+		using the stop distance as given by the routeplanner and passed by the train.
+		It also updates the train's predicted position in the UI, using the last known speed
+		and sensor passed in by the train, and the time elapsed since the the sensor was 
+		triggered.
 
+		The watchman has a heart - a helper tasks that send back to it at predetermined
+		interval. 
+
+		'But, who watches the watchman?' you ask; nobody, the watchman and train is perfect 
+		metaphor for the accountability of unquestioned authority in the world. Now you know. 
 	
 	UI / Shell
 	==========
@@ -425,13 +516,19 @@
 		Optimization
 		============
 		We were the first group to figure out how to compile in optimized mode.
-
-TODO: How does this work?
+		Virtually all our code is compiled with 02 optimizations on, there is one
+		little file with two tiny functions that never get called that is not 
+		optimized to fool the compiler into loading function pointer properly.
+		Inside the kernel, the volatile modifier is carefully used to ensure memory
+		reads/writes do not get optimized away in places that they do not need to.
+		Furthermore, our context switch assumes the number of registers saved by 
+		the request call primitives. This has changed with the optimization on, 
+		and the appropriate number had to be updated.
 
 		The code speed increased by 2 - 3 times with O2 optimization on.
-
-		We chose to use O2 instead of O3 optimization because ...
-TODO:
+	
+		We do not particularly feel like debugging gcc optimization bugs at this time
+		and so we chose to use the stable O2 optimization instead of O3.
 
 		Task Priorities
 		===============
