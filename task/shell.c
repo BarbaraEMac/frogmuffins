@@ -526,6 +526,7 @@ void shell_exec( TIDs *tids, char *command ) {
 		}
 	// Nothing was entered
 	} else if( command[0] == '\0' ) {
+		output( "\r\n" );
 	// Unknown command
 	} else {
 		output( "Unknown command: '%s'\r\n", command );
