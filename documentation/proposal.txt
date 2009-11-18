@@ -14,7 +14,6 @@
 		88~~~   88`8b   88    88 88~~~   88    88   `Y8b. 88~~~88 88      
 		88      88 `88. `8b  d8' 88      `8b  d8' db   8D 88   88 88booo. 
 		88      88   YD  `Y88P'  88       `Y88P'  `8888Y' YP   YP Y88888P 
-
  ____ ____ ____ ____ 
 ||I |||d |||e |||a ||
 ||__|||__|||__|||__||
@@ -32,7 +31,6 @@
 	   the track. The other trains will try to block the PacMan train using their 
 	   reservations. If the PacMan can no longer move forward, the game is lost.
 	   If the PacMan train hits every sensor, then the the game is won.
-
  ____ ____ ____ ____ ____ ____ ____ ____ 
 ||P |||r |||o |||b |||l |||e |||m |||s ||
 ||__|||__|||__|||__|||__|||__|||__|||__||
@@ -43,19 +41,72 @@
 	 1
 	===
 	1. The track reservations around a train must not be too large such
-	that they inhibit other trains from moving if it is technically possible. 
+	   that they inhibit other trains from moving if it is technically possible. 
 	2. Reservations will have to be dynaically sized. For example, a non-moving
-	train does not need a large reservation.
+	   train does not need a large reservation.
 	3. The trains must not be allowed to crash.
-
 
 	 2
 	===
 	1. The computer controlled train tasks will require some form of an intelligence.
-	They must both have a decent strategy for detecting the PacMan train.
+	   They must both have a decent strategy for detecting the PacMan train.
 	2. The trains must not be allowed to crash.
 	3. We must devise some game logic.
 	4. The user interface will be a challenge. We will have to redesign how the user 
-	interracts with the train controller so that actions are fluid and intuitive.
+	   interracts with the train controller so that actions are fluid and intuitive.
 	5. If this is a game, it should probably be fun and challenging. Games with
-	trivial solutions are not particularly interesting. 
+	   trivial solutions are not particularly interesting. 
+ ____ ____ ____ ____ ____ ____ ____ ____ ____ 
+||S |||o |||l |||u |||t |||i |||o |||n |||s ||
+||__|||__|||__|||__|||__|||__|||__|||__|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+	
+	As we work on the project, we must solve the list of challenges outlines above.
+	Here are some solutions:
+
+	 1 
+	===
+
+
+	 2 
+	===
+	1. The AI algorithms for the ghosts in PacMan was widely available on the Internet.
+	   One ghost runs around at random, one ghost always tries to go to the previous
+	   location of PacMan, and the other two try to trap PacMan into a corner.
+
+	   It would not be much work to set the destination location for 1 train to the 
+	   previous location of the PacMan train and set another train running around the
+	   track and picking random destination points.
+	2. A good reservation system will prevent the trains from crashing.
+	3. It should not be too difficult to construct some win/lose logic for the trains.
+	   If the PacMan train cannot get a valid route to any node from the Route Planner,
+	   then the ghost trains have won.
+
+	   If the PacMan train always has a route and passes all of the required sensors,
+	   then the game is won.
+	4. We must make aggressive track reservations so that the trains can get cloe to
+	   each other without crashing. 
+
+	   The ghost trains must also have good AI so that the PacMan cannot easily avoid them.
+ ____ ____ ____ ____ ____ ____ ____ ____ 
+||T |||h |||o |||u |||g |||h |||t |||s ||
+||__|||__|||__|||__|||__|||__|||__|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|
+
+	The PacMan type game can be abstracted away into the following type of game:
+
+	A single train must reach certain destinations before it can win.
+	There are multiple other trains who are trying to stop it from winning.
+	If the single train cannot make a valid move, the other trains have won.
+
+	We can devise many interesting stories to fit with this abstract game.
+
+	For example:
+	You are the lone survivor of a zombie apocalypse - OR SO YOU THINK.
+
+	Your goal is to reach certain destinations to pick up valuable survival items.
+	For example, guns, ammo, food, etc.
+
+	Unfortunately, the town is crawling with zombies. There are different kinds
+	of zombies with different intelligences. If zombies corner you, you will die
+	(despite whether you picked up the gun and ammo).
