@@ -38,6 +38,7 @@ typedef struct {
     SwitchDir 	switches [NUM_SWTS];
 	TID 	 	iosTid;
 	TID  		csTid;
+	TID			uiTid;
 } TS;
 
 int	ts_start		( TS *ts );
@@ -57,11 +58,7 @@ void ts_run () {
 	TSRequest 	req;
 	TSReply		reply;
 	int			speed, len;
-	TID			uiTid = WhoIs (UI_NAME);
-	UIRequest   uiReq;
-
-	uiReq.type = TRACK_SERVER;
-
+	
 	// Initialize the Track Server
 	if_error( ts_init (&ts), "Initializing Track Server failed.");
 
@@ -91,12 +88,6 @@ void ts_run () {
 
 			case SW:
 				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
-
-				// Update the UI
-				uiReq.idx = req.sw;
-				uiReq.state = req.dir;
-				Send( uiTid, (char*) &uiReq, sizeof(UIRequest),
-							 (char*) &speed, sizeof(int) );
 				break;
 			
 			case TR:
@@ -142,7 +133,8 @@ int ts_init( TS *ts ) {
 	ts->lstSensorUpdate = 0;
 	ts->csTid = WhoIs( CLOCK_NAME );
 	ts->iosTid = WhoIs( SERIALIO1_NAME );
-
+	ts->uiTid = WhoIs (UI_NAME);
+	
 	ts_start( ts );
 	
 	// Stop the trains
@@ -203,7 +195,10 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
     debug ("ts: switchSet: sw=%d dir=%c\r\n", sw, switch_dir (dir) );
 	int ret = NO_ERROR;
+	UIRequest uiReq;
+	
 	if ( sw < 0 || sw >= NUM_SWTS ) return INVALID_SWITCH;
+	
 	if ( dir == SWITCH_STRAIGHT || dir == SWITCH_CURVED ) {
 		// TODO wait?
 		char bytes[3] = { 33 + dir, (char) sw, 32 };// 32 TURNS OFF SOLENOID
@@ -213,6 +208,13 @@ int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
 		
 		// Store the new direction
 		ts->switches[sw] = dir;    
+		
+		// Update the UI
+		uiReq.type  = TRACK_SERVER;
+		uiReq.idx   = sw;
+		uiReq.state = (int)dir;
+		Send( ts->uiTid, (char*) &uiReq, sizeof(UIRequest),
+		  			 (char*) &sw, sizeof(int) );
 	} else {
 		ret = INVALID_DIR;
 		error( ret, "TrackServer received invalid direction.");
