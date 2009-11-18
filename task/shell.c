@@ -26,7 +26,7 @@
 
 						//cprintf( IO, "\033[22;24r" );
 #define output(args...)	cprintf( IO, "\033[36m" ); \
-							cprintf( IO, "\033[40B" ); \
+						/*	cprintf( IO, "\033[40B" ); \*/\
 							cprintf( IO, args ); \
 							cprintf( IO, "\033[37m" )
 // Private Stuff
@@ -197,7 +197,7 @@ void shell_run( TIDs *tids ) {
 
 void shell_inputData( char *input, bool reset ) {
 	char ch;
-	if( reset )input[0] = 0;
+	if( reset ) input[0] = 0;
     int i = 0;
 	
 	// Print out the default value
@@ -298,6 +298,19 @@ void shell_initTrain 	( TIDs *tids ) {
 		shell_inputData( input, true );
 		if( sscanf( input, "%d", &init.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
+	}
+
+	// gear 8 is default
+	input[0] = '8';
+	input[1] = 0;
+
+	FOREVER {
+		output( "Train Gear: " );
+		shell_inputData( input, false );
+		// only take in valid train speeds
+		if( sscanf( input, "%d", &init.gear ) >= 0
+			&& init.gear > 0 && init.gear <= 14 ) break;
+		output( "Invalid train gear. Try again.\r\n" );
 	}
 
 	// Tell the train its init info.
@@ -502,7 +515,7 @@ void shell_exec( TIDs *tids, char *command ) {
 		shell_cmdTrain( tids, tmpStr1, 0, NORMAL );
 	// cal
 	} else if( sscanf( command, "cal %s", tmpStr1 )>= 0 ) {
-		shell_cmdTrain( tids, tmpStr1, 0, CALIBRATION );
+		shell_cmdTrain( tids, tmpStr1, 0, CAL_STOP );
     // Help
 	} else if( sscanf( command, "h" )>=0 ) {
 		for( i = 0; i <( sizeof( commands )/ sizeof( char * ) ); i++ ) {
