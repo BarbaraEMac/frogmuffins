@@ -247,7 +247,7 @@ int ts_switchSetAll( TS *ts, SwitchDir *dirLow, SwitchDir *dirHigh ) {
 		err |= ts_switchSet( ts, i, dirLow[i] );
 	}
     for( i = 153; i <= 156; i ++ ) {
-		err |= ts_switchSet( ts, i, dirHigh[i] );
+		err |= ts_switchSet( ts, i, dirHigh[i-153] );
 	}
 
 	return ( err < NO_ERROR ) ? CANNOT_INIT_SWITCHES : NO_ERROR;
