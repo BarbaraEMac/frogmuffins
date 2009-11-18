@@ -63,9 +63,6 @@ void ui_run () {
 	// Initialize the UI
 	ui_init (&ui);
 
-	// Turn off cursor
-	cprintf (ui.ios2Tid, "\033[?25l");
-			
 	FOREVER {
 		// Receive a message
 		Receive( &senderTid, (char*)&req, sizeof(UIRequest) );
@@ -133,11 +130,21 @@ void ui_init (UI *ui) {
 	// Start Drawing the ui
 	ui_clearScreen( ui->ios2Tid );
 
+	// Limit the scroll range of the shell
+	cprintf( ui->ios2Tid , "\033[22;24r" );
+	// Turn off cursor
+	cprintf( ui->ios2Tid, "\033[?25l");
+
 	// Draw the map on the screen
 	ui_drawMap( ui->ios2Tid, &ui->model );
-	
+		
+	ui_strPrintAt (ui->ios2Tid, 23, 8 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 23, 9 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 23, 10 , " Sensor  :       ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 23, 11 , " Distance:       ", CYAN_FC, WHITE_BC);
+
 	ui_strPrintAt (ui->ios2Tid, 61, 8 , "Time:", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 1, 21, "Sensors:", BLUE_FC, BLACK_BC);
+	ui_strPrintAt (ui->ios2Tid, 1, 22, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
 	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
@@ -163,9 +170,9 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 	rb_force ( &ui->sensors, &data );
 	
 	// Erase to the right
-	cprintf( ui->ios2Tid, "\033[20;1H\033[0K");
+	cprintf( ui->ios2Tid, "\033[21;1H\033[0K");
 
-	for ( i = 0; i < NUM_DISP_SENSORS  - 1; i ++ ) {
+	for ( i = 0; i < NUM_DISP_SENSORS; i ++ ) {
 		if ( ui->sensorsBuf[i].idx == -1 ) {
 			return;
 		}
@@ -227,9 +234,18 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 }
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
-//	printf( "\033[15;30H%c%d:%dmm\033[24;0H", 
-//			sensor_bank( idx ),
-//			sensor_num( idx ), dist );
+	int  num = sensor_num ( idx );
+	char bank[2];
+	bank[0] = sensor_bank( idx );
+	bank[1] = '\0';
+		
+	ui_strPrintAt( ui->ios2Tid, 35, 10, bank,
+				   BLUE_FC, WHITE_BC );
+
+	ui_intPrintAt( ui->ios2Tid, 36, 10, "%d", num,
+				   BLUE_FC, WHITE_BC );
+	ui_intPrintAt( ui->ios2Tid, 35, 11, "%d", dist,
+				   BLUE_FC, WHITE_BC );
 }
 
 void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
@@ -238,9 +254,9 @@ void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	
-	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, BLUE_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, BLUE_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, BLUE_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, CYAN_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, CYAN_FC, BLACK_BC);
+	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, CYAN_FC, BLACK_BC);
 }
 
 void ui_clearScreen (int ios2Tid) {
@@ -345,28 +361,9 @@ void ui_drawMap (int ios2Tid, TrackModel *model) {
 		ui_strPrintAt (ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC);
 		cprintf (ios2Tid, "\033(B");
 	}
-/*	
-	for ( i = 0; i < model->num_nodes; i ++ ) {
-		char ch[2];
-		ch[1] = '\0';
-
-		switch (model->nodes[i].type) {
-			case NODE_STOP:
-			case NODE_SENSOR:
-				break;
-			case NODE_SWITCH:
-				*ch = 'S';
-				ui_strPrintAt (ios2Tid, 
-					model->nodes[i].x, 
-					model->nodes[i].y, 
-					ch,
-					BLUE_FC, GREEN_BC);
-				break;
-		}
-	}
-	*/
 }
 
+// ----------------------------------------------------------------------------
 
 void uiclk_run () {
 	char 		ch;
