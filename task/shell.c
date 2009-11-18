@@ -46,8 +46,9 @@ typedef struct {
 // Use this function to grab a line of data before the shell starts.
 void shell_inputData 	( char *input, bool reset );
 
-void shell_initTrack	( TIDs *tids, char *input );
-void shell_initTrain 	( TIDs *tids, const char *dest, int id, TrainMode mode );
+void shell_initTrack	( TIDs *tids );
+void shell_cmdTrain 	( TIDs *tids, const char *dest, int id, TrainMode mode );
+void shell_initTrain 	( TIDs *tids );
 
 /**
  * Given an input command, error check it and execute it.
@@ -75,8 +76,7 @@ void idleTask(  ) {
 
 void bootstrap(  ) {
 	TIDs tids;
-	char input[INPUT_LEN];
-	
+
 	// Create the idle task
 	tids.idle = Create( IDLE_PRTY, &idleTask );
 
@@ -86,6 +86,7 @@ void bootstrap(  ) {
 	tids.ios1 = Create( HW_SERVER_PRTY, &ios1_run );
     tids.ios2 = Create( HW_SERVER_PRTY, &ios2_run );
 	assert( IO == tids.ios2 );
+	output( "Running on board %08x. \r\n", board_id(  ) );
 	output( "Initializing the name and serial io servers. \r\n" );
 
 	// Create the clock server
@@ -101,7 +102,7 @@ void bootstrap(  ) {
 	output( "Initializing the UI. \r\n" );
 	
 	// Initialize the track we want to use.
-	shell_initTrack( &tids, input );
+	shell_initTrack( &tids );
 
 	// Create the train controller
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
@@ -109,9 +110,10 @@ void bootstrap(  ) {
 	
 	// Create the first train!
 	tids.tr1Tid = Create( TRAIN_PRTY, &train_run );
-	output( "Creating the first train!( %d )\r\n", tids.tr1Tid );
+	output( "Creating the first train!\r\n" );
 
-	output( "Running on board %08x. \r\n", board_id(  ) );
+	// Initialize the fist train
+	shell_initTrain( &tids );
 
 	// Run the shell
 	shell_run( &tids );
@@ -233,8 +235,9 @@ void shell_inputData( char *input, bool reset ) {
     }
 }
 
-void shell_initTrack( TIDs *tids, char *input ) {
-	int err;
+void shell_initTrack( TIDs *tids ) {
+	int 	err;
+	char 	input[INPUT_LEN];
 	
 	if( board_id(  )== 0x9224e4a1 ) {
 		input[0] = 'A';
@@ -263,25 +266,45 @@ void shell_initTrack( TIDs *tids, char *input ) {
 	}
 }
 
-void shell_initTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
+void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 	RPRequest		rpReq;
 	RPShellReply	rpRpl;
-	TrainInit		trInit;
+	TrainCmd		cmd;
 	int				tmpId;
 
-	trInit.mode = mode;
+	cmd.mode = mode;
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
 	rpRpl = rpCmd( &rpReq, tids->rp );
 	
-	trInit.dest = rpRpl.idx;
+	cmd.dest = rpRpl.idx;
+
+	// Tell the train its command info.
+	Send( tids->tr1Tid, (char *) &cmd, 	sizeof( TrainCmd ),
+						(char *) &tmpId, sizeof( int ) );
+
+	// TODO actually use the train id
+	//assert( tmpId == id );
+}
+
+void shell_initTrain 	( TIDs *tids ) {
+	TrainInit	init;
+	char 		input[INPUT_LEN];
+	int			id;
+
+	FOREVER {
+		output( "Train Id: " );
+		shell_inputData( input, true );
+		if( sscanf( input, "%d", &init.id ) >= 0 ) break;
+		output( "Invalid train id. Try again.\r\n" );
+	}
 
 	// Tell the train its init info.
-	Send( tids->tr1Tid, (char *) &trInit, sizeof( TrainInit ),
-						 (char *) &tmpId, sizeof( int ) );
+	Send( tids->tr1Tid, (char *) &init, sizeof( TrainInit ),
+						(char *) &id, sizeof( int ) );
 
-	//assert( tmpId == id );
+	assert( id == init.id );
 }
 
 // Execute a train command
@@ -476,10 +499,10 @@ void shell_exec( TIDs *tids, char *command ) {
 		}
 	// go
 	} else if( sscanf( command, "go %s", tmpStr1 )>= 0 ) {
-		shell_initTrain( tids, tmpStr1, tmpInt, NORMAL );
+		shell_cmdTrain( tids, tmpStr1, 0, NORMAL );
 	// cal
 	} else if( sscanf( command, "cal %s", tmpStr1 )>= 0 ) {
-		shell_initTrain( tids, tmpStr1, tmpInt, CALIBRATION );
+		shell_cmdTrain( tids, tmpStr1, 0, CALIBRATION );
     // Help
 	} else if( sscanf( command, "h" )>=0 ) {
 		for( i = 0; i <( sizeof( commands )/ sizeof( char * ) ); i++ ) {

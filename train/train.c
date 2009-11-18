@@ -23,8 +23,9 @@
 #define	BLANK_RECORD_DIVISOR	2
 #define	HEARTBEAT				(200 /MS_IN_TICK)
 #define WATCHMAN_PRIORITY		3
-#define CALIBRATION_DEST		74 //E11 - coming from D9 (56)
+#define CALIBRATION_DEST		37 //E11 - coming from D9 (56)
 #define LOCATE_TIMEOUT			(1000 /MS_IN_TICK)
+#define	INIT_GRACE				(10000 /MS_IN_TICK)
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -114,32 +115,30 @@ void train_run () {
 	// Initialize this train
 	train_init ( &tr );
 
-
-	// Get the train Id
-	//char	input[80];
-	//printf("Train Id:");
-	//shell_inputData( input, true );
-	//sscanf( input, "%d", &tr.id );
-	tr.id =12; 
-
 	// Locate the train
 	train_locate( &tr );
 
-	train_drive( tr.tsTid, tr.id, 0 );
+
+	tr.dest = CALIBRATION_DEST;
+	debug( "train: found itself at %c%d\r\n", 
+			sensor_bank(tr.currSensor), sensor_num(tr.currSensor) );
 
 	FOREVER {
+
 		// Ask for a destination
-		debug("train: awaiting purpose\r\n");
-		train_getPurpose( &tr );
+		if( tr.mode == IDLE ) {
+			debug("train: awaiting purpose\r\n");
+			train_getPurpose( &tr );
+		}
 		
 		// Until you've reached your destination:
-		while ( tr.currSensor != tr.dest ) {
+		while ( tr.mode != IDLE ) { // TODO fix this
 			// Ask the Route Planner for an efficient route!
 			rpReply = train_planRoute ( &tr );
 			debug ("train: has a route stopDist=%d\r\n", rpReply.stopDist);
 
-			if_error( rpReply.err, "Route Planner failed" );
 			if( rpReply.err < NO_ERROR ) {
+				eprintf( "Route Planner failed (%d).\r\n", rpReply.err );
 				rpReply.stopDist = 0; 
 				rpReply.switches[0].id = -1;
 				rpReply.nextSensors.len = 0;
@@ -173,6 +172,18 @@ void train_run () {
 
 void train_init ( Train *tr ) {
 
+	int shellTid;
+	TrainInit init;
+	
+	// Get the train number from shell
+	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
+	
+	// Copy the data to the train
+	tr->id   		= init.id;
+
+	// Reply to the shell
+	Reply   ( shellTid, (char*)&tr->id, sizeof(int) );
+
 	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
@@ -183,6 +194,11 @@ void train_init ( Train *tr ) {
 	assert( tr->deTid >= NO_ERROR );
 	assert( tr->csTid >= NO_ERROR );
 	
+	// Initialize internal variables
+	tr->mode = INIT;
+	tr->currSensor = 0;
+	tr->prevSensor = 0;
+
 	// Initialize the calibration data
 	rb_init( &(tr->hist), tr->histBuf );
 	memoryset( (char *) tr->histBuf, 0, sizeof(tr->histBuf) );
@@ -237,6 +253,8 @@ void train_predictSpeed( Train *tr, int mm ) {
 		tr->speedSet = 0;
 		//train_drive (tr, 0);
 		debug("train: Reached it's destination.\r\n");
+
+		tr->mode = IDLE;
 	}
 	train_drive( tr->tsTid, tr->id, tr->speedSet);
 
@@ -292,15 +310,15 @@ void train_update( Train *tr, DeReply *rpl ) {
 
 void train_getPurpose( Train *tr ) {
 	int shellTid;
-	TrainInit init;
+	TrainCmd cmd;
 	
 	// Get the train number from shell
-	Receive ( &shellTid, (char*)&init, sizeof(TrainInit) );
+	Receive ( &shellTid, (char*)&cmd, sizeof(TrainCmd) );
 	
 	// Copy the data to the train
-	tr->dest   		= init.dest;
+	tr->dest   		= cmd.dest;
 	tr->speedSet	= 6;
-	tr->mode 		= init.mode;
+	tr->mode 		= cmd.mode;
 
 	debug ("Train %d is at sensor %d going to destidx %d\r\n",
 			tr->id, tr->currSensor, tr->dest);
@@ -325,7 +343,7 @@ int train_distance( Train *tr ) {
 	Send( tr->rpTid, (char*) &req,  sizeof(RPRequest),
 			 		 (char*) &dist, sizeof(int) );
 	
-	if_error( dist, "train: distance returned an error" );
+	eprintf( "train: distance returned an error (%d) \r\n", dist );
 	return dist;
 }
 
@@ -361,17 +379,17 @@ void train_locate( Train *tr ) {
 
 	train_drive( tr->tsTid, tr->id, 6 );
 
-	do {
-		error( rpl.sensor, "Train is lost, trying to find itself." );
+	FOREVER {
 		req.expire = timeout + Time( tr->csTid );
+		eprintf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
 		// Try again
 		Send( tr->deTid, (char *) &req, sizeof(DeRequest),
 						 (char *) &rpl, sizeof(TSReply) );
-
+	  if( rpl.sensor >= NO_ERROR ) break;
 		train_reverse( tr );
 		// try for a longer time next time
-		timeout <<= 1;
-	} while ( rpl.sensor < NO_ERROR );
+		timeout *= 2;
+	}
 
 	train_update( tr, &rpl );
 }
@@ -398,14 +416,20 @@ void train_wait( Train *tr, RPReply *rep ) {
 					+ 200
 					+ speed_time( tr->velocity, rep->stopDist ) / MS_IN_TICK;
 
+	if( tr->mode == INIT ) {
+		req.expire += INIT_GRACE;
+	}
+
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->deTid, (char *) &req, sizeof(DeRequest),
 					 (char *) &rpl, sizeof(TSReply) );
 
 	// Did not predict properly
 	if( rpl.sensor < NO_ERROR ) {
-		error( rpl.sensor, "Train Missed a sensor." );
+		eprintf( "Train Missed a sensor.\r\n" );
 
+		train_locate( tr );
+		/*
 		assert( Time( tr->csTid ) > req.expire );
 		// Reverse the train if needed
 		if( rep->stopAction == STOP_AND_REVERSE ) {
@@ -415,11 +439,10 @@ void train_wait( Train *tr, RPReply *rep ) {
 		req.type = GET_STRAY;
 		// Try again
 		Send( tr->deTid, (char *) &req, sizeof(DeRequest),
-						 (char *) &rpl, sizeof(TSReply) );
+						 (char *) &rpl, sizeof(TSReply) );*/
+	} else {
+		train_update( tr, &rpl );
 	}
-
-	train_update( tr, &rpl );
-
 	// Disaster prevention
 	Disaster	disaster;
 
@@ -467,6 +490,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 	TSRequest		req;
 	TSReply			reply;
 	SwitchSetting  *ss;
+	int				err;
 
 	if( tr->mode == CALIBRATION ) return;
 
@@ -478,9 +502,11 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			req.sw   = ss->id;
 			req.dir  = ss->dir;
 
-			Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
-							 (char *)&reply, sizeof(TSReply) );
-			if_error( reply.ret, "Track Server did not flip switch.");
+			err = Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
+									 (char *)&reply, sizeof(TSReply) );
+			if( err < NO_ERROR ) {
+				eprintf( "Track Server did not flip switch. (%d)\r\n", err );
+			}
 		} else {
 			break;
 		}
@@ -536,9 +562,9 @@ void watchman( ) {
 			distance = speed_dist( disaster.velocity, 
 					(disaster.ticks - ticks) * MS_IN_TICK );
 			// TODO replace with a call to UI
-			printf( "\033[10;30H%c%d:%dmm\033[24;0H", 
+			/*printf( "\033[10;30H%c%d:%dmm\033[24;0H", 
 					sensor_bank( disaster.sensor ),
-					sensor_num( disaster.sensor ), distance );
+					sensor_num( disaster.sensor ), distance );*/
 			// Stop the train if needed
 			if( (disaster.crashDist - distance) < disaster.minDist 
 					&& !savedTheDay) {
@@ -546,7 +572,7 @@ void watchman( ) {
 						disaster.crashDist - distance );
 				train_drive( tsTid, disaster.id, 0 );
 				// prevent the watchman from being too heroic happening again
-				savedTheDay = false;
+				savedTheDay = true;
 				disaster.velocity.mm = 0;
 			}
 
