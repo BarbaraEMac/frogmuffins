@@ -88,7 +88,7 @@ void det_run () {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
-//		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
+		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
 
 							// Send to the UI Server
 							debug ("Detective: sending to the ui server\r\n");

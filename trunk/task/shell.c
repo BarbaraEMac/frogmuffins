@@ -278,7 +278,11 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 	strncpy( rpReq.name, dest, 5 );
 	rpReq.type = CONVERT_IDX;
 	rpRpl = rpCmd( &rpReq, tids->rp );
-	
+
+	if( rpRpl.idx < NO_ERROR ) {
+		output("Destination not found." );
+		return;
+	}
 	cmd.dest = rpRpl.idx;
 
 	// Tell the train its command info.
@@ -302,7 +306,7 @@ void shell_initTrain 	( TIDs *tids ) {
 	}
 
 	// gear 8 is default
-	input[0] = '8';
+	input[0] = '6';
 	input[1] = 0;
 
 	FOREVER {
