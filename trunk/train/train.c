@@ -642,7 +642,7 @@ void watchman( ) {
 				if( (disaster.crashDist - distance) < disaster.minDist ) {
 					if ( !stopped ) {
 	//	printf ( "\033[41m wathchman stopping %dmm \033[49m\r\n", 
-						disaster.crashDist - distance );
+//						disaster.crashDist - distance );
 						// Reverse the train if needed
 						train_drive( tsTid, disaster.id, 0 ); 
 
