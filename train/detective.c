@@ -84,7 +84,6 @@ void det_run () {
 		switch (req.type) {
 			case POLL:
 				Reply ( senderTid, 0, 0 );
-				//debug("det: Poll results  %s\r\n", req.channel, req.rawSensors);
 				for( i = 0; i < NUM_SENSOR_BANKS*2; i++ ) {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
