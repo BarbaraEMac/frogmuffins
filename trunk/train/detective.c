@@ -15,6 +15,7 @@
 #include "string.h"
 #include "task.h"
 #include "trackserver.h"
+#include "ui.h"
 
 #define NUM_REQUESTS	64
 #define	NUM_STRAY		256
@@ -62,10 +63,16 @@ void det_run () {
 	DeReply		reply;
 	int			i, k, len, sensor;
 	char		ch;
+	UIRequest	uiReq;
+	int 		uiTid;
 
 
 	// Initialize the Track Server
 	if_error( det_init (&det), "Initializing Track Server failed.");
+
+	// Init UI Stuff
+	uiTid = WhoIs( UI_NAME );
+	uiReq.type = DETECTIVE;
 
 	FOREVER {
 		// Receive a server request
@@ -82,7 +89,17 @@ void det_run () {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
-		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
+//		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
+
+							// Send to the UI Server
+							debug ("Detective: sending to the ui server\r\n");
+							uiReq.time = req.ticks;
+							uiReq.idx  = sensor;
+							
+							// Tell the UI about the triggered sensor
+							Send( uiTid, (char*)&uiReq, sizeof(UIRequest), 
+									 	 (char*)&uiReq.time, sizeof(int) );
+
 							// Update the history
 							det.sensorHist[sensor] = req.ticks;
 							// Wake up any tasks waiting for this event
