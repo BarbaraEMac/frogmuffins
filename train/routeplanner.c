@@ -153,7 +153,7 @@ void rp_run() {
 				// Display the total distance
 				printf ("%s\r\nDistance travelled = %d\r\n", 
 						rp.model.nodes[req.nodeIdx2].name,
-						rp.dists[req.nodeIdx1][req.nodeIdx2]);
+						rp.dists[sIdxToIdx(req.lastSensor)][req.destIdx]);
 				break;
 
 			case DISPLAYFSTSW:
@@ -228,8 +228,8 @@ void rp_run() {
 			
 			case PLANROUTE:
 				// Determine the shortest path 
-				debug ("determining the shortest path from %d (%d) to %d\r\n", 
-						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
+//				debug ("determining the shortest path from %d (%d) to %d\r\n", 
+//						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
 				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
@@ -406,28 +406,28 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  totalDist;
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	Path p;
+	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
 	// Distance from current sensor to destination node
 	totalDist = rp->dists[currentIdx][req->destIdx];
-	debug ("totalDist = %d\r\n", totalDist);
 	
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
-	rp_displayPath ( rp, &p );
+//	rp_displayPath ( rp, &p );
 	
 	// Get the distance to the next reverse
 	nextRv = rp_distToNextRv (rp, &p);
-	debug ("TotalDist=%d Reverse Distance=%d\r\n", totalDist, nextRv);
+//	debug ("TotalDist=%d Reverse Distance=%d\r\n", totalDist, nextRv);
 
 	// The stop distance is min {next reverse, total distance to travel}
 	if ( nextRv < totalDist ) {
 		trReply->stopDist = nextRv;
 		trReply->stopAction = STOP_AND_REVERSE;
-		debug ("Stop distance is a reverse. (%d)\r\n", nextRv);
+//		debug ("Stop distance is a reverse. (%d)\r\n", nextRv);
 	} else {
 		trReply->stopDist   = totalDist;
 		trReply->stopAction = JUST_STOP;
-		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
+//		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
 	}
 	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
 
@@ -448,7 +448,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
 /*	
 	debug ("Predicted Sensors: ");
-	int i;
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
 		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
 				sensor_num(trReply->nextSensors.idxs[i]) );
@@ -458,13 +457,18 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
 	
-/*	printf ("Switch settings: \r\n");
-	for ( i = 0; i < 3; i ++ ) {
+	int i;
+	for ( i = 0; i < NUM_SETTINGS; i ++ ) {
+		if ( trReply->switches[i].dist == -1 ) {
+			break;
+		}
+		printf ("Switch settings: \r\n");
+
 		printf("i=%d dist=%d id=%d dir=%d\r\n", i, 
 				trReply->switches[i].dist, trReply->switches[i].id, 
 				trReply->switches[i].dir);
 	}
-*/
+
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
@@ -551,28 +555,44 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	int n = 0;
 	int maxDist = 500;
 
+	debug ("Getting the switch settings for this path: \r\n");
+
+	int i;
+	for ( i = 0; i < p->len; i ++ ) {
+		debug ("(%d)%s>", path[i], rp->model.nodes[path[i]].name);
+	}
+	debug ("\r\n");
+
 	// Start at i=1 to skip first node
 	// Stop at len - 1 since we don't have to switch the last node if we
 	// want to stop on it
-	int i;
 	for ( i = 1; i < p->len - 1; i ++ ) {
 		prevItr = itr;
 		itr     = &rp->model.nodes[path[i]];
 		
 		if ( itr->type == NODE_SWITCH ) {
-			debug ("Switch: %s (%d), \r\n", itr->name, path[i]);
+//			debug ("Switch: %s (%d), \r\n", itr->name, path[i]);
 			// If coming from either "ahead" edges, you don't need to 
 			// change a switch direction.
 			if ( (itr->sw.ahead[0].dest == path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
-				debug ("behind=%d ahead[0]=%d ahead[1]=%d next along path=%s (%d)\r\n", 
-					itr->sw.ahead[0].dest, itr->sw.ahead[1].dest, rp->model.nodes[path[i+1]].name, path[i+1]);
+//				debug ("behind=%d ahead[0]=%d ahead[1]=%d next along path=(%d) %s\r\n", 
+//					itr->sw.behind.dest, 
+//					itr->sw.ahead[0].dest, 
+//					itr->sw.ahead[1].dest,
+//					path[i+1], 
+//					rp->model.nodes[path[i+1]].name);
 //			if ( !((() && (itr->sw.ahead[0].dest == path[i-1])) || ((itr->sw.ahead[0].dest != path[i+1]) && (itr->sw.ahead[1].dest == path[i-1]))) ) {
 //				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
 				
+//				debug ("adding this setting: \r\n");
 				settings[n].dist = rp->dists[path[0]][path[i]];
 				settings[n].id   = itr->id;
 				settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
+//				debug ("n:%d dist:%d id:%d dir:%d\r\n",
+//						n, settings[n].dist, settings[n].id, settings[n].dir);
 				n ++;
+
+				assert ( n < NUM_SETTINGS );
 			}
 		}
 
@@ -741,7 +761,7 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 	
 	debug ("Path: ");
 	for ( i = 0; i < n; i ++ ) {
-		debug ("%s> ", rp->model.nodes[p->path[i]].name);
+		debug ("%s(%d)>", p->path[i], rp->model.nodes[p->path[i]].name);
 	}
 
 	debug("\r\n");
@@ -913,18 +933,16 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 		p->len += 1;
 	}
 
-/*
 	int  k;
 	int *path = p->path;
-//	debug ( "path len %d\r\n", p->len );
+	debug ( "path len %d\r\n", p->len );
 	// path[0] == current node. Start checking after it.
 	for ( k = 0; k < p->len; k ++ ) {
 		//debug ("k=%d name=%s type=%d path=%d\r\n", k, rp->model.nodes[path[k]].name,
 		//										rp->model.nodes[path[k]].type, path[k]);
-		debug("%s> ", rp->model.nodes[path[k]].name);
+		printf("%s(%d)> ", rp->model.nodes[path[k]].name, path[k]);
 	}
 	debug ("\r\n");
-	*/
 
 }
 

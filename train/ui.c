@@ -73,7 +73,7 @@ void ui_run () {
 
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
-/*
+
 		ui_saveCursor(&ui);
 
 		// Display the information at the correct location
@@ -100,7 +100,7 @@ void ui_run () {
 		}
 
 		ui_restoreCursor(&ui);
-		*/
+		
 	}
 	Exit();	// This will never be called.
 }
@@ -146,9 +146,9 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Limit the scroll range of the shell
-	cprintf( ui->ios2Tid , "\033[22;24r" );
+//	cprintf( ui->ios2Tid , "\033[22;24r" );
 	// Turn off cursor
-	cprintf( ui->ios2Tid, "\033[?25l");
+//	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
 	ui_drawMap( ui );
@@ -289,20 +289,21 @@ void ui_strPrintAt (int ios2Tid, int x, int y, char *str,
 				 ForeColour fc, BackColour bc) {
 
 	// Set the colour
-/*	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm", 
-			 fc, bc, y, x, str, DEFAULT_FC, DEFAULT_BC );
-*/
-//	cprintf (ios2Tid, "\033[%dm", bc);
+	cprintf( ios2Tid, "\033[%dm\033[%dm", fc, bc );
+/*	cprintf( ios2Tid, "\033[%d;%dH%s\033[%dm\033[%dm", 
+			 y, x, str, DEFAULT_FC, DEFAULT_BC );*/
+
+	cprintf (ios2Tid, "\033[%dm", bc);
 
 	// Move the cursor
-//	cprintf (ios2Tid, "\033[%d;%dH", y, x);
+	cprintf (ios2Tid, "\033[%d;%dH", y, x);
 
 	// Write the character
-//	cprintf (ios2Tid, "%s", str);
+	cprintf (ios2Tid, "%s", str);
 
 	// Reset the colour
-//	cprintf (ios2Tid, "\033[%dm", DEFAULT_FC);
-//	cprintf (ios2Tid, "\033[%dm", DEFAULT_BC);
+	cprintf (ios2Tid, "\033[%dm", DEFAULT_FC);
+	cprintf (ios2Tid, "\033[%dm", DEFAULT_BC);
 }
 
 void ui_intPrintAt (int ios2Tid, int x, int y, char *fmt, int value, 
