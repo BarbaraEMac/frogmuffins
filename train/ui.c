@@ -79,7 +79,7 @@ void ui_run () {
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				ui_displayTimeAt( ui.ios2Tid, 60, 9, req.time );
+				ui_displayTimeAt( ui.ios2Tid, 58, 8, req.time );
 				break;
 			
 			case TRACK_SERVER:
@@ -146,20 +146,20 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Limit the scroll range of the shell
-	cprintf( ui->ios2Tid , "\033[22;24r" );
+	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
 	ui_drawMap( ui );
 		
-	ui_strPrintAt (ui->ios2Tid, 23, 8 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 23, 9 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 23, 10 , " Sensor  :       ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 23, 11 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 
-	ui_strPrintAt (ui->ios2Tid, 61, 8 , "Time:", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 1, 21, "Sensors:", CYAN_FC, BLACK_BC);
+	ui_strPrintAt (ui->ios2Tid, 59, 7 , "Time:", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
 	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
@@ -189,7 +189,7 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 			return;
 		}
 
-		ui_displayTimeAt( ui->ios2Tid, x[i], 21,
+		ui_displayTimeAt( ui->ios2Tid, x[i], 19,
 						  ui->sensorsBuf[i].time );
 		
 		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
@@ -197,12 +197,12 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 		bank[2] = ' ';
 		bank[3] = '\0';
 		
-		ui_strPrintAt( ui->ios2Tid, x[i]+8, 21, bank,
+		ui_strPrintAt( ui->ios2Tid, x[i]+8, 19, bank,
 					   WHITE_FC, BLACK_BC );
 
 		num = sensor_num ( ui->sensorsBuf[i].idx );
 		
-		ui_intPrintAt( ui->ios2Tid, x[i]+9, 21, "%d", num,
+		ui_intPrintAt( ui->ios2Tid, x[i]+9, 19, "%d", num,
 					   WHITE_FC, BLACK_BC );
 	}
 }
@@ -257,17 +257,17 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
 	bank[4] = '\0';
 
 	// Clear distance
-	ui_strPrintAt( ui->ios2Tid, 35, 11, bank,
+	ui_strPrintAt( ui->ios2Tid, 34, 10, bank,
 				   BLUE_FC, WHITE_BC );
 
 	bank[0] = sensor_bank( idx );
-	ui_strPrintAt( ui->ios2Tid, 35, 10, bank,
+	ui_strPrintAt( ui->ios2Tid, 34, 9, bank,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, 36, 10, "%d", num,
+	ui_intPrintAt( ui->ios2Tid, 35, 9, "%d", num,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, 35, 11, "%d", dist,
+	ui_intPrintAt( ui->ios2Tid, 34, 10, "%d", dist,
 				   BLUE_FC, WHITE_BC );
 }
 
@@ -364,58 +364,54 @@ void ui_drawMap( UI *ui ) {
 	Delay( 200 / MS_IN_TICK, WhoIs(CLOCK_NAME) );
 	
 	char mapA[][90] = {	
-"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
-"             x         lqqj                                            x    ",
-"tqqqqqqqqwqqqj     lqqqvqqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk   x    ",
-"         x         x                 x             x               x   mqk  ",
-"tqqqqqqqqj         x                 x             x               mqk   x  ",
-"              lqqqqj                 mqqk       lqqj                 mqqqvk ",
-"              x                         x   w   x                         x ",
-"              x                         mqk x lqj                         x ",
-"              x                           mqnqj                           x ",
-"              x                           lqnqk                           x ",
-"              x                         lqj x mqk                         x ",
-"              x                         x   v   x                         x ",
-"              mqqqqk                 lqqj       mqqk                 lqqqwj ",
-"tqqqqqqqqk         x                 x             x               lqj   x  ",
-"         x         x                 x             x               x   lqj  ",
-"tqqqqqqqqvqqqk     mqqqwqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqj   x    ",
-"             x         x                                               x    ",
-"tqqqqqqqqqqqqvqqqk     mqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
-"                 x          mqqk                      lqqj                  ",
+"tqqqqqqqqqqqqqwqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
+"             lj        lqqj                                            mk   ",
+"tqqqqqqqqqwqqj     lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk     mk  ",
+"         lj       lj                mk           lj               mk     x  ",
+"tqqqqqqqqj       lj                  mk    w    lj                 mk    x  ",
+"                lj                    mk   x   lj                   mqk  x  ",
+"              lqj                      mqk x lqj                      mqqn  ",
+"              x                          mqnqj                           x  ",
+"              x                          lqnqk                           x  ",
+"              mqk                      lqj x mqk                      lqqn  ",
+"                mk                    lj   x   mk                   lqj  x  ",
+"tqqqqqqqk        mk                  lj    v    mk                 lj    x  ",
+"        mk        mk                lj           mk               lj     x  ",
+"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqj     lj  ",
+"            mk         mk                                              lj   ",
+"tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
+"                mk          mqqk                      lqqj                  ",
 "tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
 "                                                                            "};
-    char mapB[][90] = {	
-"tqqqqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
-"             lqqj          lqqj                                        x    ",
-"tqqqqqqqqqqqqn         lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqk   x    ",
-"             x         x                x             x            x   mqk  ",
-"         lqqqj         x                x             x            mqk   x  ",
-"         x        lqqqqj                mqqk       lqqj              mqqqvk ",
-"         x        x                        x   w   x                      x ",
-"         x        x                        mqk x lqj                      x ",
-"         x        x                          mqnqj                        x ",
-"         x        x                          lqnqk                        x ",
-"         x        x                        lqj x mqk                      x ",
-"         x        x                        x   v   x                      x ",
-"         x        mqqqqk                lqqj       mqqk              lqqqwj ",
-"         mqqqk         x                x             x            lqj   x  ",
-"             x         x                x             x            x   lqj  ",
-"tqqqqqqqqqqqqn         mqqqwqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqj   x    ",
-"             mk            x                                           x    ",
-"tqqqqqqqqqqqqqvqqk         mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqj    ",
-"                 mqqk          mqqk                      lqqj               ",
-"tqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu      ",
+    	char mapB[][90] = {	
+"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
+"            lj         lqqj                                            mk   ",
+"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk     mk  ",
+"        lj        lj                mk           lj               mk     x  ",
+"       lj        lj                  mk    w    lj                 mk    x  ",
+"      lj        lj                    mk   x   lj                   mqk  x  ",
+"     lj       lqj                      mqk x lqj                      mqqn  ",
+"     x        x                          mqnqj                           x  ",
+"     x        x                          lqnqk                           x  ",
+"     mk       mqk                      lqj x mqk                      lqqn  ",
+"      mk        mk                    lj   x   mk                   lqj  x  ",
+"       mk        mk                  lj    v    mk                 lj    x  ",
+"        mk        mk                lj           mk               lj     x  ",
+"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqj     lj  ",
+"            mk         mk                                              lj   ",
+"tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
+"                mk          mqqk                      lqqj                  ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
 "                                                                            "};
 	int  i;
 	if ( ui->trackId == TRACK_A ) {
-		for ( i = 0; i < 20; i ++ ) {
+		for ( i = 0; i < 18; i ++ ) {
 			cprintf( ui->ios2Tid, "\033(0" );
 			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC );
 			cprintf( ui->ios2Tid, "\033(B" );
 		}
 	} else {
-		for ( i = 0; i < 20; i ++ ) {
+		for ( i = 0; i < 18; i ++ ) {
 			cprintf( ui->ios2Tid, "\033(0" );
 			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], BLACK_FC, GREEN_BC );
 			cprintf( ui->ios2Tid, "\033(B" );
