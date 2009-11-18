@@ -446,25 +446,25 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Predict the next sensors the train could hit
  	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
-	
-	printf ("Predicted Sensors: ");
+/*	
+	debug ("Predicted Sensors: ");
 	int i;
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
 		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
 				sensor_num(trReply->nextSensors.idxs[i]) );
 	}
 	printf("\r\n");
-
+*/
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
 	
-	printf ("Switch settings: \r\n");
+/*	printf ("Switch settings: \r\n");
 	for ( i = 0; i < 3; i ++ ) {
 		printf("i=%d dist=%d id=%d dir=%d\r\n", i, 
 				trReply->switches[i].dist, trReply->switches[i].id, 
 				trReply->switches[i].dir);
 	}
-
+*/
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
