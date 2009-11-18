@@ -37,7 +37,7 @@ algorithms - how they work
 	=====
 	We decided to use the model provided on the course webpage to store the track
 	graph. We did this because the track data was already measured and stored in
-	a useable format.
+	a useable format. 
 
 		Model Data Structure
 		====================
@@ -96,9 +96,10 @@ algorithms - how they work
 		} TrackModel;
 
 		This is essentially taken from the course webpage with a few minor adjustments:
-			1. The names were change to use camel case.
+			1. The names were changed to use camel case.
 			2. Each Node now stores its index in the TrackModel's nodes array.
 			3. Each node has a reserved flag. If the flag is 1, this node is reserved.
+			4. The x and y co-ordinates for the UI have been altered.
 
 		Parse & Ownership
 		=================
@@ -215,7 +216,7 @@ algorithms - how they work
 		When the train talks to the Route Planner, it communicates using sensor ids.
 		Each sensor has a unique id within the sensor_nodes array of the model. We
 		can use this id to determine the location of the train and direction it is
-		g.
+		going.
 
 		When the Route Planner talks to the train, it sends sensor ids as predictions,
 		distances in mm to particular landmarks, and switch settings/directions. 
@@ -302,11 +303,64 @@ algorithms - how they work
 	Train
 	=====
 
+		Watchman
+		========
+
 	
 	UI / Shell
 	==========
+	We have designed a unique user interface for this project. This UI shows the
+	state of the turn-outs, last 4 triggered sensors, location of the train 
+	(distance in mm from last sensor it hit), current time in ms, and the shell
+	prompt. Much of this information is overlayed on a map of the track. There 
+	are unique maps depending on the track that is loaded.
 
+		UI Implementation
+		=================
+		The UI is a server. User tasks that wish to display information send 
+		this info to the UI server. All output formatting is contained within the
+		UI server. Here is the pseudo-code:
+
+		Initialize:
+			Get the track id from the shell.
+			Parse the corresponding model.
+			Clear the screen.
+			Draw the map and other static information.
+			Create the timer notifier.
+			Register with the Name Server.
+			Reply to the shell to let other tasks run.
+
+		FOREVER {
+			Receive from a user task.
+			Reply to the user task immediately.
+
+			switch( request type ) {
+				case CLOCK:
+					Display the current time.
+				case TRACK_SERVER:
+					Update a switch setting on the map.
+				case DETECTIVE:
+					Update the last triggered sensors.
+				case TRAIN:
+					Update the train's current location.
+			}
+		}
+
+		Layout
+		======
+		The track map prints at the top of the screen. The se
+
+
+		Shell
+		=====
+		Since the shell prompt is a specialize
+		more robust 
+		scrolling for free
+		needs to print before ui starts
 	
+
+
+
 	Error Codes
 	===========
 	what they are 
@@ -314,6 +368,15 @@ algorithms - how they work
 	how we handle them
 
 	how we error check
+
+	Neat Things
+	===========
+
+		Optimization
+		============
+
+		Task Priorities
+		===============
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
