@@ -572,7 +572,86 @@
 
 	The source code is located in: /u8/becmacdonald/cs452/p1/handin.
 
+	Note that as of 8:15am on Wednesday, this assignment is not 100% 
+	finalized. There are minor tweaks we would still like to perform
+	before the demo tomorrow. Bill Cowan mentioned this would be 
+	alright so long as we let you know what the differences are.
+
 	Here are the md5 hashes for each file:
+
+	5c79ef173674f2c84130aecda39abf67  ./task/gameserver.c
+	6152327419cbef8af5e19ce843e1eca3  ./task/task.c
+	43c84644f93f6e78930acf587f491930  ./task/gameplayer.c
+	f4ea6a39240716a5009fda2e58daa6d7  ./task/shell.c
+	
+	90381c6299dd328ba7c1faba52772f69  ./include/math.h
+	3b3eb65dbecabe5b022019c7b71da57e  ./include/error.h
+	e190a73becbcbd7af79987ee8e51fd9f  ./include/servers.h
+	5efc2b57900cdd08ee04372ad606edde  ./include/syscalls.h
+	58e7ea88711ea3455cc9b65561e80c14  ./include/ts7200.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./include/bwio.h
+	8146ed251b92ea06a95351da69340699  ./include/gameserver.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./include/task.h
+	f8e7a1aa00de7f72a2f2f59fb010675e  ./include/string.h
+	660e3c8c27ef66e7e03a7f49b26f4fae  ./include/shell.h
+	9a9b2e58b88b5412afefe439cac97326  ./include/td.h
+	6942a84c156db4257045c2f4914d1c20  ./include/requests.h
+	69630bba6a52a3da4b434c201d0b1a1c  ./include/trackserver.h
+	67e70e8647557c6d928f15eab1381a49  ./include/drivers.h
+	bf3d4171c16aa8649cb07da419eb7c02  ./include/globals.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./include/debug.h
+	9979e47e3560b3a694a7fd18077019ec  ./include/model.h
+	5a51907fa830160630d2f314a6390614  ./include/buffer.h
+	5bfe6476a1f20cb28414d2858488fab1  ./include/train.h
+	11c96698a64a070905322ccb7ce68509  ./include/ui.h
+	42c65b3d05826069be4afc8b638a4664  ./include/routeplanner.h
+	88790ee55eb595666ec820418bc74378  ./include/fifo.h
+	
+	ff334fdf2ea5232f8ff3e374b69e4245  ./kern/main.c
+	4749098b4d898c025e156b3705bbb9b8  ./kern/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./kern/orex.ld
+	c4f90105275b6228dfa8c5dbe221f40d  ./kern/syscalls.c
+	
+	9a0e976c1f786d68753dce3562e882a8  ./server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./server/nameserver.c
+	a7ce6cd7ae1805395cade0bfd137a25c  ./server/serialio.c
+	
+	ab667fc308f3a868abe305dde11d7589  ./src/bwio.c
+	fe7345c32d27b7b615048b272de24c13  ./src/debug.c
+	fa44ef1727c55cc410f0844ab01586b6  ./src/string.c
+	74c148a7ff02b3b8ccc560ec8c106581  ./src/math.c
+	fa5e9c4e46d48e60b422286274aadeac  ./src/Makefile
+	4042844222d0cd3740b18f99b1c824a5  ./src/fifo.c
+	561ce06910fed4309b5f65dc401e9286  ./src/buffer.c
+	
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./documentation/k3.txt
+	f2c08a56da789e93f3595bd099122a65  ./documentation/k4.txt
+	97b94e4cf3a591094bb061c214b4b852  ./documentation/p1.txt
+	096ae198091e8f5549e7c5fe69e742c2  ./documentation/proposal.txt
+	
+	af75127f35f286928b8e16153d07f7e7  ./arch/drivers.c
+	29632b3f08e1713528c1145dab2f6388  ./arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+	e8f4ccc1966ded6e40916fe10474aa63  ./arch/blank.c
+	6cea970ca03649f6c488bf1554fe0191  ./arch/requests.c
+	
+	83688a871c398cf243cda55a2f07688c  ./train/routeplanner.c
+	2e6cad54dbdc523abc188a0dc50af856  ./train/model.c
+	99515d974476a787336690ac511c0063  ./train/trackserver.c
+	a6d81634f8ffb418ac903d0ad8b21f12  ./train/detective.c
+	ce9aea59f3c059837e30969b118769ea  ./train/train.c
+	8ab3acd5d48d6256ae80bea25a00413a  ./train/ui.c
+	
+	b713e7fce8154121fdc176acd2a9986c  ./wishlist
+	e86b84620beed56377807d31d758dc3e  ./Makefile
+	de975f7952206ab06c7233a544c0106e  ./todo.txt
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
