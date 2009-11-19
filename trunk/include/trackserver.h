@@ -43,6 +43,7 @@ typedef struct {
 		int ticks;
 		int arg2;
 	};
+	int startTicks;		// Time the request was made
 } TSRequest;
 
 
