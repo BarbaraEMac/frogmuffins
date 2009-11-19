@@ -8,7 +8,7 @@
 #define __TRACK_SERVER_H__
 
 #define TRACK_SERVER_NAME	"TrackSvr"
-#define TRACK_DETECTIVE_NAME "Watson"
+#define DETECTIVE_NAME 		"Watson"
 
 #include "requests.h"
 #include "model.h"
@@ -20,11 +20,12 @@ enum TSRequestCode {
 	TR,
 	WH,
 	POLL,
-	WATCH_DOG,	// detective only
 	START,
 	STOP,
+	WATCH_DOG,	// detective only
 	WATCH_FOR,	// detective only
-	GET_STRAY	// detective only
+	GET_STRAY,	// detective only
+	RETRACT		// detective only
 };
 
 typedef struct {
