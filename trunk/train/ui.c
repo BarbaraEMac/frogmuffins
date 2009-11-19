@@ -249,12 +249,13 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
 	int  num = sensor_num ( idx );
-	char bank[5];
+	char bank[6];
 	bank[0] = ' ';
 	bank[1] = ' ';
 	bank[2] = ' ';
 	bank[3] = ' ';
-	bank[4] = '\0';
+	bank[4] = ' ';
+	bank[5] = '\0';
 
 	// Clear distance
 	ui_strPrintAt( ui->ios2Tid, 34, 10, bank,
