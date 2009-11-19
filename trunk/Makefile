@@ -21,6 +21,7 @@ LDFLAGS = -init main -Map kern/main.map -N  -T kern/orex.ld -L/u/wbcowan/gnuarm-
 OBJECTS = arch/blank.o \
 		  arch/drivers.o \
 		  arch/requests.o \
+		  arch/primitives.o \
 		  arch/switch.o \
 		  arch/ep93xx.o \
 		  kern/syscalls.o \
@@ -70,6 +71,9 @@ kern/main.elf: libraries $(OBJECTS)
 
 arch/switch.o: arch/switch.S
 	$(AS) $(ASFLAGS) -o arch/switch.o arch/switch.S
+
+arch/primitives.o: arch/primitives.S
+	$(AS) $(ASFLAGS) -o arch/primitives.o arch/primitives.S
 	
 clean:
 	rm -f kern/main.elf kern/main.map
