@@ -412,7 +412,7 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.type       = DISPLAYROUTE;
 			rpReq.lastSensor = tmpInt;
 			rpReq.destIdx    = rpRpl.idx;
-			output( "Displaying from %d to %d\r\n", tmpInt, rpRpl.idx );
+//			output( "Displaying from %d to %d\r\n", tmpInt, rpRpl.idx );
 			rpCmd( &rpReq, tids->rp );
 		}
 	// first switch
@@ -468,6 +468,19 @@ void shell_exec( TIDs *tids, char *command ) {
 		} else {
 			rpReq.type = DISPLAYPREDICT;
 			rpReq.nodeIdx1 = rpRpl.idx;
+			rpCmd( &rpReq, tids->rp );
+		}
+	} else if( sscanf( command, "wolf %s", tmpStr1 )>= 0 ) {
+		rpReq.type = CONVERT_IDX;
+		strncpy( rpReq.name, (const char*) tmpStr1, 5 );
+		rpRpl = rpCmd( &rpReq, tids->rp );
+	
+		if( ( rpRpl.idx == NOT_FOUND )||( rpRpl.err == INVALID_NODE_NAME ) ) {
+			output( "Invalid node name.\r\n" );
+		} else {
+			rpReq.type     = RESERVE;
+			rpReq.nodeIdx1 = rpRpl.idx;
+			rpReq.trainId  = 12; // TODO: Remove this after Demo 1
 			rpCmd( &rpReq, tids->rp );
 		}
 	// go
