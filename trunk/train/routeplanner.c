@@ -408,6 +408,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	Path p;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
+	debug ("start= %d\r\n", currentIdx);
 
 	debug ("GOING TO %s (%d)\r\n", rp->model.nodes[destIdx].name, destIdx);
 
@@ -460,7 +461,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 */
 	// Get the next switches 
 	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
-	
+	/*
 	int i;
 	for ( i = 0; i < NUM_SETTINGS; i ++ ) {
 		if ( trReply->switches[i].dist == -1 ) {
@@ -472,7 +473,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 				trReply->switches[i].dist, trReply->switches[i].id, 
 				trReply->switches[i].dir);
 	}
-
+*/
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
@@ -937,7 +938,7 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 		p->path[p->len] = j;
 		p->len += 1;
 	}
-
+/*
 	int  k;
 	int *path = p->path;
 	debug ( "path len %d\r\n", p->len );
@@ -947,7 +948,7 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 		//										rp->model.nodes[path[k]].type, path[k]);
 		printf("%s(%d)> ", rp->model.nodes[path[k]].name, path[k]);
 	}
-	debug ("\r\n");
+	debug ("\r\n");*/
 
 }
 
