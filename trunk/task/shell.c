@@ -24,9 +24,9 @@
 #define INPUT_HIST  1
 #define IO			5	// harcoded in this file as it actually creates it
 
-#define output(args...)	cprintf( IO, "\033[36m\0338" ); \
+#define output(args...)	cprintf( IO, "\033[36m" ); \
 						cprintf( IO, args ); \
-						cprintf( IO, "\033[37m\0337" )
+						cprintf( IO, "\033[37m" )
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -126,7 +126,7 @@ void shell_run( TIDs *tids ) {
 	input[0] = '\0';
 
 //	output( "\r\nType 'h' for a list of commands.\r\n" );
-	output ("\r\n> ");
+	output ("\r> ");
 
 	FOREVER {
 		shell_inputData( input, true );
@@ -155,7 +155,7 @@ void shell_inputData( char *input, bool reset ) {
 
 		switch( ch ) {
 			case '\r': // Enter was pressed
-				output( "\r\n> " );
+				output( "\r> " );
 				return;
 				break;
 			case '\b': // Backspace was pressed
@@ -412,7 +412,7 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.type       = DISPLAYROUTE;
 			rpReq.lastSensor = tmpInt;
 			rpReq.destIdx    = rpRpl.idx;
-//			output( "Displaying from %d to %d\r\n", tmpInt, rpRpl.idx );
+			output( "Displaying from %d to %d\r\n", tmpInt, rpRpl.idx );
 			rpCmd( &rpReq, tids->rp );
 		}
 	// first switch
