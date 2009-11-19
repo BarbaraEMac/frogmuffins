@@ -155,7 +155,7 @@ void shell_inputData( char *input, bool reset ) {
 
 		switch( ch ) {
 			case '\r': // Enter was pressed
-				output( "\r> " );
+				output( "\r\n> " );
 				return;
 				break;
 			case '\b': // Backspace was pressed
@@ -485,6 +485,9 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.trainId  = 12; // TODO: Remove this after Demo 1
 			rpCmd( &rpReq, tids->rp );
 		}
+	} else if( sscanf( command, "sd %d", tmpInt )>= 0 ) {
+		Send ( tids->tr1Tid, (char*)&tmpInt, sizeof(int), 
+							 (char*)&tmpInt, sizeof(int) );
 	// go
 	} else if( sscanf( command, "go %s", tmpStr1 )>= 0 ) {
 		shell_cmdTrain( tids, tmpStr1, 0, NORMAL );
