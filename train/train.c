@@ -517,6 +517,7 @@ void train_reverse( Train *tr ) {
 
 	req.type = RV;
 	req.train = tr->id;
+	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
 					 (char *)&reply, sizeof(TSReply) );
@@ -540,6 +541,7 @@ void train_drive( Train *tr, int gear ) {
 	req.type = TR;
 	req.train = tr->id;
 	req.speed = gear;
+	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
 					 (char *)&reply, sizeof(TSReply) );
@@ -562,6 +564,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 		req.type = SW;
 		req.sw   = ss->id;
 		req.dir  = ss->dir;
+		req.startTicks	= Time(tr->csTid);
 
 		err = Send( tr->tsTid, (char *)&req,   sizeof(TSRequest),
 								(char *)&reply, sizeof(TSReply) );
@@ -572,6 +575,8 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 SwitchDir train_dir( Train *tr, int sw ) {
 	TSRequest 	req = { ST, {sw}, {0} };
 	TSReply		reply;
+	
+	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, (char *)&req,	  sizeof(TSRequest), 
 					  (char *)&reply, sizeof(TSReply) );
