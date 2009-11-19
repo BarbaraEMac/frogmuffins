@@ -134,6 +134,9 @@ void train_run () {
 		if( tr.mode == IDLE ) {
 			debug("train: awaiting purpose\r\n");
 			train_getPurpose( &tr );
+			// TODO hack?
+			tr.velocity.mm = 50;
+			tr.velocity.ms = 1000;
 		}
 
 		// Until you've reached your destination:
@@ -273,8 +276,7 @@ void train_predictSpeed( Train *tr, RPReply *rep ) {
 
 	// If you should reverse / are backwards, turn around.
 	if( rep->stopDist < 0 ) {
-
-		//train_reverse( tr );			// TODO this
+		train_reverse( tr );			// TODO this
 		rep->stopDist = -rep->stopDist;
 
 	} else if( rep->stopDist == 0 ) { 
@@ -350,7 +352,7 @@ void train_update( Train *tr, DeReply *rpl ) {
 	printf("train: acceleration is %dmm/s^2\r\n", (last * 1000)/ time );
 	
 	tr->trigger = rpl->ticks;
-	tr->velocity = pr;// sp;
+	tr->velocity = sp;
 }
 
 //-----------------------------------------------------------------------------
@@ -361,7 +363,7 @@ void train_getStopDist( Train *tr ) {
 	// TODO replace 60 with p[roper number
 	// TODO this doesn't work
 	// harcode 650 mm
-	tr->stopDist = 650;
+	tr->stopDist = 900;
 	/*char input[60];
 	input[10] = 0;
 
@@ -648,21 +650,21 @@ void train_watch( Train *tr, RPReply *rep ) {
 			//printf( "watchman ticks%d, trigger%d\r\n", ticks, tr->trigger);
 				printf( "\033[41m stopping %dmm \033[49m\r\n", 
 						rep->stopDist - dist );
-				// Stop the train
-				train_drive( tr, 0 ); 
 
 				// do not stop again
 				stopped = true;
 
 				// we've actualyl reached our destination
 				if( rep->stopAction == JUST_STOP ) {
+					// Stop the train
+					train_drive( tr, 0 ); 
 					tr->mode = IDLE;
 					//replace with trai_honk
 					train_drive( tr, 68 );
 					train_drive( tr, 60 );
 				}
 			}
-
+/*
 				
 			// The train should be stopped, reverse it
 			if( stopped && !reversed && (ticksToReverse < ticks)
@@ -670,8 +672,11 @@ void train_watch( Train *tr, RPReply *rep ) {
 				printf ( "\033[41m reversing \033[49m\r\n" );
 				train_drive( tr, 15 );
 				train_drive( tr, tr->defaultGear );
+				// TODO hack?
+				tr->velocity.mm = 50;
+				tr->velocity.ms = 1000;
 				reversed = true;
-			}
+			}*/
 		}
 
 		/*if ( ticks > tr->trigger + LOCATE_TIMEOUT ) {
