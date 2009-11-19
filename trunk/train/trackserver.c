@@ -65,6 +65,7 @@ void ts_run () {
 	FOREVER {
 		// Receive a server request
 		len = Receive ( &senderTid, (char *) &req, sizeof(req) );
+//		printf ("Current Time: %d Request Sent At: %d\r\n", Time(WhoIs(CLOCK_NAME)), req.startTicks);
 	
 		assert( len == sizeof(TSRequest) );
 		

@@ -281,10 +281,12 @@ void shell_initTrain 	( TIDs *tids ) {
 }
 
 // Execute a train command
-TSReply trainCmd( TSRequest *req, TID tsTid ) {
+TSReply trainCmd( TSRequest *req, TIDs *tids ) {
 	TSReply	rpl;
+	req->startTicks = Time(tids->cs);
 	
-	Send( tsTid, (char *) req, sizeof( TSRequest ), (char *) &rpl, sizeof( rpl ) ); 
+	Send( tids->ts, (char *) req, sizeof( TSRequest ), 
+					(char *) &rpl, sizeof( rpl ) ); 
 	return rpl;
 }
 
@@ -353,25 +355,25 @@ void shell_exec( TIDs *tids, char *command ) {
 	// rv
 	} else if( sscanf( command, "rv %d", &tsReq.train )>=0 ) {
     	tsReq.type = RV;
-		trainCmd( &tsReq, tids->ts );
+		trainCmd( &tsReq, tids );
 	// st
     } else if( sscanf( command, "st %d", &tsReq.sw )>=0 ) {
 		tsReq.type = ST;
-		tsRpl = trainCmd( &tsReq, tids->ts );
+		tsRpl = trainCmd( &tsReq, tids );
 		output( "Switch %d is set to %c. \r\n", tsReq.sw, switch_dir( tsRpl.dir ) );
 	// sw
     } else if( sscanf( command, "sw %d %c", &tsReq.sw, tmpStr1 )>=0 ) {
 		tsReq.type = SW;
 		tsReq.dir = switch_init( tmpStr1[0] );
-		trainCmd( &tsReq, tids->ts );
+		trainCmd( &tsReq, tids );
 	// tr
 	} else if( sscanf( command, "tr %d %d", &tsReq.train, &tsReq.speed )>= 0 ) {
 		tsReq.type = TR;
-		trainCmd( &tsReq, tids->ts );
+		trainCmd( &tsReq, tids );
 	// wh
     } else if( sscanf( command, "wh" )>=0 ) {
 		tsReq.type = WH;
-		tsRpl = trainCmd( &tsReq, tids->ts );
+		tsRpl = trainCmd( &tsReq, tids );
 		if( tsRpl.sensor < 0 ) {
 			output( "No sensor triggered yet." );
 		} else {
@@ -382,11 +384,11 @@ void shell_exec( TIDs *tids, char *command ) {
 	// start
     } else if( sscanf( command, "start" )>=0 ) {
 		tsReq.type = START;
-		trainCmd( &tsReq, tids->ts );
+		trainCmd( &tsReq, tids );
 	// stop
     } else if( sscanf( command, "stop" )>=0 ) {
 		tsReq.type = STOP;
-		trainCmd( &tsReq, tids->ts );
+		trainCmd( &tsReq, tids );
 	// cache ON
 	} else if( sscanf( command, "cache ON" )>= 0 ) {
 		cache_on(  );
