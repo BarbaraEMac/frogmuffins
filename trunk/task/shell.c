@@ -485,7 +485,8 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.trainId  = 12; // TODO: Remove this after Demo 1
 			rpCmd( &rpReq, tids->rp );
 		}
-	} else if( sscanf( command, "sd %d", tmpInt )>= 0 ) {
+	} else if( sscanf( command, "sd %d", &tmpInt )>= 0 ) {
+		printf ("sending %d\r\n", tmpInt);
 		Send ( tids->tr1Tid, (char*)&tmpInt, sizeof(int), 
 							 (char*)&tmpInt, sizeof(int) );
 	// go

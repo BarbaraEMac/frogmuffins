@@ -228,7 +228,6 @@ void train_init ( Train *tr ) {
 	tr->cal_loops = 0;
 	tr->stopDist = 0;
 
-	train_getStopDist ( tr );
 
 //	RegisterAs ("Train");;
 }
@@ -364,18 +363,15 @@ void train_getStopDist( Train *tr ) {
 	// TODO this doesn't work
 	// harcode 650 mm
 	tr->stopDist = 900;
-	/*char input[60];
-	input[10] = 0;
+	int dist;
+	int senderTid;
 
-	FOREVER {
-		printf( "Stop dist:" );
-		shell_inputData( input, false );
-		if( sscanf( input, "%d", &(tr->stopDist) ) >= 0 ) break;
-		printf( "Invalid stopping distance. Try again.\r\n" );
-	}
-	printf( "\r\n%dmm stored as stopping distance.\r\n", tr->stopDist );*/
+	Receive( &senderTid, (char*)&dist, sizeof(int) );
+	Reply  ( senderTid,  (char*)&dist, sizeof(int) );
+//		printf( "Invalid stopping distance. Try again.\r\n" );
 
-
+	tr->stopDist = dist;
+	printf( "\r\n%dmm stored as stopping distance.\r\n", tr->stopDist );
 }
 
 //-----------------------------------------------------------------------------
