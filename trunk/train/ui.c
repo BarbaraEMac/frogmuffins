@@ -145,7 +145,7 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Limit the scroll range of the shell
-	//cprintf( ui->ios2Tid , "\033[20;24r" );
+	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 
