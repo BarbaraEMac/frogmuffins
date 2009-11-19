@@ -147,7 +147,7 @@ void train_run () {
 			//debug( "train: has a route stopDist=%d\r\n", rpReply.stopDist );
 
 			if( rpReply.err < NO_ERROR ) {
-				//eprintf( "Route Planner failed (%d).\r\n", rpReply.err );
+				debug( "Route Planner failed (%d).\r\n", rpReply.err );
 				rpReply.stopDist = 0; 
 				rpReply.switches[0].id = -1;
 				rpReply.nextSensors.len = 0;
@@ -495,7 +495,8 @@ void train_check( Train *tr, RPReply *rep ) {
 		req.expire = max( req.expire, req.events[i].end );
 	}
 	// This awas a stupid idea
-	req.expire = tr->trigger + 10000 / MS_IN_TICK;
+	req.expire = tr->trigger + (10000 / MS_IN_TICK);
+	debug( "train: req.expire=%d\r\n", req.expire );
 	
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->coTid, (char *) &req,	sizeof(DeRequest), 0 , 0 );
@@ -611,7 +612,7 @@ void train_watch( Train *tr, RPReply *rep ) {
 
 		if( req.sensor != TIME_UPDATE ) {
 			printf( "got a detective reply back, %d\r\n", req.sensor );
-			if( req.sensor >= NO_ERROR || tr->mode == IDLE ) {
+			if( req.sensor >= NO_ERROR ) {
 				train_update( tr, &req );
 			} else {
 				// Train is lost
@@ -642,7 +643,6 @@ void train_watch( Train *tr, RPReply *rep ) {
 					//(speed_time( tr->velocity, rep->stopDist - dist ) < timeToStop) 
 					&& !stopped ) {
 				ticksToReverse = (timeToStop/ MS_IN_TICK) + ticks;
-				printf( "\033[42m %dms \033[49m\r\n", ticksToReverse * MS_IN_TICK);
 			//printf( "watchman ticks%d, trigger%d\r\n", ticks, tr->trigger);
 				printf( "\033[41m stopping %dmm \033[49m\r\n", 
 						rep->stopDist - dist );
@@ -652,27 +652,28 @@ void train_watch( Train *tr, RPReply *rep ) {
 
 				// we've actualyl reached our destination
 				if( rep->stopAction == JUST_STOP ) {
+					printf( "\033[42m %dms \033[49m\r\n", ticksToReverse * MS_IN_TICK);
 					// Stop the train
 					train_drive( tr, 0 ); 
-					tr->mode = IDLE;
+				//	tr->mode = IDLE;
 					//replace with trai_honk
-					train_drive( tr, 68 );
-					train_drive( tr, 60 );
 				}
 			}
-/*
+
 				
 			// The train should be stopped, reverse it
 			if( stopped && !reversed && (ticksToReverse < ticks)
-					&& (rep->stopAction == STOP_AND_REVERSE) ) {
-				printf ( "\033[41m reversing \033[49m\r\n" );
+					&& (rep->stopAction == JUST_STOP ) ) { // STOP_AND_REVERSE) ) {
+				//printf ( "\033[41m reversing \033[49m\r\n" );
+					train_drive( tr, 68 );
+					train_drive( tr, 60 ); /*
 				train_drive( tr, 15 );
 				train_drive( tr, tr->defaultGear );
 				// TODO hack?
 				tr->velocity.mm = 50;
-				tr->velocity.ms = 1000;
+				tr->velocity.ms = 1000;*/
 				reversed = true;
-			}*/
+			}
 		}
 
 		/*if ( ticks > tr->trigger + LOCATE_TIMEOUT ) {
