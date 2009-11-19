@@ -145,6 +145,7 @@ int ts_init( TS *ts ) {
 	int *k;
 	foreach( k, trains ) {
 		ts_trainSet( ts, *k, 0 );
+		ts_trainSet( ts, *k, 64 );
 	}
 
 	// Reset the switches
