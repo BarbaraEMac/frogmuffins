@@ -16,7 +16,6 @@
 #include "train.h"
 
 #define INT_MAX		0xFFFF
-#define EPSILON		20
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -112,6 +111,7 @@ void rp_run() {
 	int				err;
 	int				tmp;
 	char 			tmpStr[12];
+	Path			p;
 
 	// Initialize the Route Planner
 	shellTid = rp_init (&rp);
@@ -148,11 +148,12 @@ void rp_run() {
 				debug ("determining the shortest path from %d (%d) to %d\r\n", 
 						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
 				rp_planRoute (&rp, &trReply, &req);
-
-				// Display the path
+				
+				makePath ( &rp, &p, sIdxToIdx(req.lastSensor), req.destIdx );
+				rp_displayPath ( &rp, &p );
+				
 				// Display the total distance
-				printf ("%s\r\nDistance travelled = %d\r\n", 
-						rp.model.nodes[req.nodeIdx2].name,
+				printf ("\r\nDistance travelled = %d\r\n", 
 						rp.dists[sIdxToIdx(req.lastSensor)][req.destIdx]);
 				break;
 
@@ -218,11 +219,17 @@ void rp_run() {
 				break;
 
 			case RESERVE:
+				printf ("\r\nWolf moves to %s and snarls. It looks like he won't be moving for awhile.\r\n",
+						rp.model.nodes[req.nodeIdx1].name);
+				
+				rp.model.nodes[req.nodeIdx1].reserved = 1;
+				
+				floyd_warshall (&rp, rp.model.num_nodes); 
 				// TODO: Reply with success?
-				rp_reserve (&rp, &req);
+				//rp_reserve (&rp, &req);
 				
 				// Reply to the client train
-				Reply(senderTid, (char*)&trReply, sizeof(RPReply));
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
 				break;
 			
@@ -408,9 +415,9 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	Path p;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
-	debug ("start= %d\r\n", currentIdx);
+//	debug ("start= %d\r\n", currentIdx);
 
-	debug ("GOING TO %s (%d)\r\n", rp->model.nodes[destIdx].name, destIdx);
+//	debug ("GOING TO %s (%d)\r\n", rp->model.nodes[destIdx].name, destIdx);
 
 	// Distance from current sensor to destination node
 	totalDist = rp->dists[currentIdx][req->destIdx];
@@ -518,7 +525,7 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 				 ((itr->sw.ahead[0].dest == path[i-1]) ||
 				  (itr->sw.ahead[1].dest == path[i-1])) ) {
 //				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
-				return rp->dists[path[0]][path[i]] + EPSILON;
+				return rp->dists[path[0]][path[i]];
 			}
 		}
 	}
@@ -545,7 +552,7 @@ int rp_distToNextSw (RoutePlanner *rp, Path *p) {
 			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
 				 (itr->sw.ahead[1].dest == path[i-1])) ) {
 //				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
-				return rp->dists[path[0]][path[i]] - EPSILON;
+				return rp->dists[path[0]][path[i]];
 			}
 		}
 	}
@@ -747,7 +754,7 @@ void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
 		return;
 	}
 
-	while ( (rp->dists[req->nodeIdx1][p.path[i]] != (dist + EPSILON)) && 
+	while ( (rp->dists[req->nodeIdx1][p.path[i]] != dist) && 
 			(i < p.len) ) {
 		i++;
 	}
@@ -766,28 +773,32 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 	
 	debug ("Path: ");
 	for ( i = 0; i < n; i ++ ) {
-//		printf ("%s> ", rp->model.nodes[p->path[i]].name);
-		debug ("%s(%d)>", p->path[i], rp->model.nodes[p->path[i]].name);
+		printf ("%s> ", rp->model.nodes[p->path[i]].name);
+//		debug ("%s(%d)>", p->path[i], rp->model.nodes[p->path[i]].name);
 	}
 
-	debug("\r\n");
+	printf("\r\n");
 }
 //-----------------------------------------------------------------------------
 //--------------------------- Reservation Stuff -------------------------------
 //-----------------------------------------------------------------------------
 
+// TODO: Rewrite all of this
 void rp_reserve (RoutePlanner *rp, RPRequest *req) {
 	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
 
 	// Cancel the old reservations
-	cancelReserve(&rp->model, rsv);
+//	cancelReserve(&rp->model, rsv);
 
 	// Save the new reservation data
-/*	//rsv->dist  = req->dist;
-	rsv->start = req->nodeA;
-	model_findNextNodes( &rp->model, req->nodeA, req->nodeB, 
-						 rsv->next1, rsv->next2 ); 
-*/
+	//rsv->dist  = req->dist;
+	
+	printf ("\r\nWolf moves to %s and snarls.\r\n", rp->model.nodes[req->nodeIdx1].name);
+	rp->model.nodes[req->nodeIdx1].reserved = 1;
+	floyd_warshall (rp, rp->model.num_nodes); 
+
+//	model_findNextNodes( &rp->model, req->nodeIdx1, req->nodeIdx1, 
+//						 rsv->next1, rsv->next2 ); 
 	// Make this new reservation
 //	int retDist = makeReserve(&rp->model, rsv);
 
@@ -804,8 +815,8 @@ int makeReserve(TrackModel *model, Reservation *rsv) {
 
 	// Reserve these nodes so that no other train can use them.
 	rsv->start->reserved = 1;
-	rsv->next1->reserved = 1;
-	rsv->next2->reserved = 1;
+//	rsv->next1->reserved = 1;
+//	rsv->next2->reserved = 1;
 
 	// TODO: fix this
 	return 0;
@@ -869,25 +880,26 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
       		}
     	}
   	}
-/*
-	// Print out the results table of shortest rp->distss
-  	for ( i = 0; i < 1; i++ ) {
+
+/*	// Print out the results table of shortest rp->distss
+  	for ( i = 0; i < n; i++ ) {
     	for ( j = 0; j < n; j++ ) {
       		
 			if ( rp->dists[i][j] != INT_MAX ) {
-				debug("DIST: (%s,%s)=%d THROUGH ", rp->model.nodes[i].name, 
+				debug("\r\nDIST: (%s,%s)=%d THROUGH ", rp->model.nodes[i].name, 
 											   rp->model.nodes[j].name, 
 										   rp->dists[i][j]);
 		//	rp_outputPath(model, rp, i ,j);		
 		//	printf ("%s\r\n", model->nodes[j].name);
 			}
 		}
+	
     }
 	*/
 }  //end of floyd_warshall()
 
 int cost (TrackModel *model, int idx1, int idx2) {
-	//debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
+//	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
 	int itr = 0;
 	int i, j;
 
@@ -903,14 +915,14 @@ int cost (TrackModel *model, int idx1, int idx2) {
 		i = idx2;
 		j = idx1;
 	}
-/*	
+	
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
 	if ( (model->nodes[i].reserved == 1) || 
 		 (model->nodes[j].reserved == 1) ) {
 		return INT_MAX;
 	}
-*/
+
 	// Check each edge in O(3) time
 	while ( itr < (int) model->nodes[i].type ) {
 		// If the edge reaches the destination,
