@@ -307,9 +307,6 @@ int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req) {
 	char tmpName[5];
 
 	// Check request type.
-	if ( (req->type < 0) || (req->type > MIN_SENSOR_DIST) ) {
-		return RP_INVALID_REQ_TYPE;
-	}
 	
 	switch (req->type) {
 		case CONVERT_SENSOR:
@@ -338,17 +335,16 @@ int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req) {
 				return INVALID_NODE_IDX;
 			}
 			break;
+		default: 
+			return RP_INVALID_REQ_TYPE;
+			break;
 	}
 	
 	return NO_ERROR;
 }
 
 int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
-	// Check request type.
-	if ( (req->type < 0) || (req->type > MIN_SENSOR_DIST) ) {
-		return RP_INVALID_REQ_TYPE;
-	}
-
+	
 	switch (req->type) {
 
 		case RESERVE:
@@ -390,6 +386,9 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 				(req->sensor2 < 0) || (req->sensor2 > 80) ) {
 				return INVALID_SENSOR_IDX;
 			}
+			break;
+		default:
+			return RP_INVALID_REQ_TYPE;
 			break;
 	}
 	return NO_ERROR;

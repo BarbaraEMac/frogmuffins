@@ -61,7 +61,6 @@ void ui_run () {
 	UI  ui;
 	int senderTid;
 	UIRequest req;
-	char ch;
 
 	// Initialize the UI
 	ui_init (&ui);
@@ -73,7 +72,7 @@ void ui_run () {
 
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
-/*
+
 		ui_saveCursor(&ui);
 
 		// Display the information at the correct location
@@ -99,7 +98,7 @@ void ui_run () {
 				break;
 		}
 
-		ui_restoreCursor(&ui);*/
+		ui_restoreCursor(&ui);
 	}
 	Exit();	// This will never be called.
 }
@@ -146,7 +145,7 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui->ios2Tid );
 
 	// Limit the scroll range of the shell
-	//cprintf( ui->ios2Tid , "\033[20;24r" );
+	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 

@@ -43,7 +43,7 @@ typedef struct {
 } TIDs;
 
 // Use this function to grab a line of data before the shell starts.
-void shell_inputData 	( char *input, bool reset );
+//void shell_inputData 	( char *input, bool reset );
 
 void shell_initTrack	( TIDs *tids );
 void shell_cmdTrain 	( TIDs *tids, const char *dest, int id, TrainMode mode );
@@ -496,7 +496,6 @@ void shell_exec( TIDs *tids, char *command ) {
 		}
 	// Nothing was entered
 	} else if( command[0] == '\0' ) {
-		output( "\r\n" );
 	// Unknown command
 	} else {
 		output( "Unknown command: '%s'\r\n", command );
