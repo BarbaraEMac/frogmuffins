@@ -189,7 +189,7 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 		}
 
 		ui_displayTimeAt( ui->ios2Tid, x[i], 19,
-						  ui->sensorsBuf[i].time );
+						  ui->sensorsBuf[i].time/(100/ MS_IN_TICK) );
 		
 		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
 		bank[1] = ' ';
