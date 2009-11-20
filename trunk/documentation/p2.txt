@@ -1,0 +1,90 @@
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
+			________             ________           _____     ______ 
+			___  __ \__________________(_)____________  /_    __|__ \
+			__  /_/ /_  ___/  __ \____  /_  _ \  ___/  __/    ____/ /
+			_  ____/_  /   / /_/ /___  / /  __/ /__ / /_      _  __/ 
+			/_/     /_/    \____/___  /  \___/\___/ \__/      /____/ 
+								/___/                               
+____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||1 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The executable is located at: /u8/becmacdonald/cs452/p2/handin/main/main.elf.
+
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_p2.elf
+
+	To load the program, type 'load ARM/becmacdo_p2.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||2 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The following is a description of our train application.
+	
+	Model
+	=====
+
+
+	Route Planner
+	=============
+
+	
+	Detective
+	=========
+
+Track Server
+	============
+
+	Train
+	=====
+	
+	UI / Shell
+	==========
+
+	Error Codes
+	===========
+	We created the following error codes for this assignment:
+		TIMEOUT,				// A timeout has occurred
+		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
+		INVALID_NODE_NAME,		// Invalid node name
+		INVALID_NODE_IDX,		// Invalid node index
+		RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
+		INVALID_SENSOR_IDX,		// Invalid sensor index
+		INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
+		INVALID_TRACK			// Invalid track identifier
+
+	Whenever a server request is made, we always check for these error values
+	in the reply. If there is an error, the user task should attempt to handle
+	it.
+
+	Neat Things
+	===========
+	We did some neat things for this assignment. Here's a brief discussion of
+	some of them.
+
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The source code is located in: /u8/becmacdonald/cs452/p2/handin.
+	
+	Here are the md5 hashes for each file:
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+	
+	Here are all of the files we are submitting:
+
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
