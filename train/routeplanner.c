@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -15,24 +15,22 @@
 #include "servers.h"
 #include "train.h"
 
-#define INT_MAX		0xFFFF
+#define INT_MAX			0xFFFF
+#define REVERSE_COST 	100
 
 // Private Stuff
 // ----------------------------------------------------------------------------
 
 typedef struct {
-	int		time1;		// Time period to reserve for
-	int		time2;		// end time
-	int 	dist; 		// Reservation distance in mm
-	Node 	*start;		// Starting at this node
-	Node 	*next1;		// Going towards this node
-	Node	*next2;		// Only used for switches
-
+	int len;		// Number of reserved sensors
+	int idxs[8];	// Indicies of the reserved sensor nodes
 } Reservation;
 
 typedef struct {
 	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
 	int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
+	int 		pred[MAX_NUM_NODES][MAX_NUM_NODES];
+	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
 
 	TrackModel model;
 
@@ -58,9 +56,9 @@ void rp_predictSensorHelper(RoutePlanner *rp, SensorsPred *p, Node *n, int prevI
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
-void rp_reserve   		(RoutePlanner *rp, RPRequest *req);
-void cancelReserve		(TrackModel *model, Reservation *rsv);
-int  makeReserve  		(TrackModel *model, Reservation *rsv);
+void rp_reserve			(RoutePlanner *rp, SensorsPred *sensors, int trainId);
+void rsv_cancel			(Reservation *rsv, TrackModel *model);
+void rsv_make			(Reservation *rsv, TrackModel *model, SensorsPred *sensors);
 int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
@@ -74,6 +72,7 @@ void floyd_warshall 	(RoutePlanner *rp, int n);
 int  cost				(TrackModel *model, int idx1, int idx2);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
+int rev (RoutePlanner *rp, int i, int j, int k);
 
 // Convert a sensor index into a node index
 inline int sIdxToIdx ( int sIdx ) {
@@ -219,17 +218,10 @@ void rp_run() {
 				break;
 
 			case RESERVE:
-				printf ("\r\nWolf moves to %s and snarls. It looks like he won't be moving for awhile.\r\n",
-						rp.model.nodes[req.nodeIdx1].name);
-				
-				rp.model.nodes[req.nodeIdx1].reserved = 1;
-				
-				floyd_warshall (&rp, rp.model.num_nodes); 
-				// TODO: Reply with success?
-				//rp_reserve (&rp, &req);
+				//TODO: rp_reserve (&rp, &req);
 				
 				// Reply to the client train
-				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
+				Reply(senderTid, (char*)&trReply, sizeof(RPReply));
 				
 				break;
 			
@@ -414,9 +406,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	Path p;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
-//	debug ("start= %d\r\n", currentIdx);
 
-//	debug ("GOING TO %s (%d)\r\n", rp->model.nodes[destIdx].name, destIdx);
 
 	// Distance from current sensor to destination node
 	totalDist = rp->dists[currentIdx][req->destIdx];
@@ -480,6 +470,8 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 				trReply->switches[i].dir);
 	}
 */
+	// Reserve the next sensors
+	rp_reserve( rp, &trReply->nextSensors, req->trainId );
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
@@ -783,42 +775,59 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //-----------------------------------------------------------------------------
 
 // TODO: Rewrite all of this
-void rp_reserve (RoutePlanner *rp, RPRequest *req) {
-	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
+void rp_reserve (RoutePlanner *rp, SensorsPred *sensors, int trainId) {
+	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
 
 	// Cancel the old reservations
-//	cancelReserve(&rp->model, rsv);
+	rsv_cancel( rsv, &rp->model );
 
-	// Save the new reservation data
-	//rsv->dist  = req->dist;
-	
-	printf ("\r\nWolf moves to %s and snarls.\r\n", rp->model.nodes[req->nodeIdx1].name);
-	rp->model.nodes[req->nodeIdx1].reserved = 1;
-	floyd_warshall (rp, rp->model.num_nodes); 
-
-//	model_findNextNodes( &rp->model, req->nodeIdx1, req->nodeIdx1, 
-//						 rsv->next1, rsv->next2 ); 
 	// Make this new reservation
-//	int retDist = makeReserve(&rp->model, rsv);
+	rsv_make( rsv, &rp->model, sensors );
 
+	// Recompute the distance tables
+	floyd_warshall( rp, rp->model.num_nodes );
 }
 
-void cancelReserve(TrackModel *model, Reservation *rsv) {
-	// Have: start node & distance & 2 next nodes
-	rsv->start->reserved = 0;
-	rsv->next1->reserved = 0;
-	rsv->next2->reserved = 0;
+void rsv_cancel( Reservation *rsv, TrackModel *model ) {
+	int i;
+	int index;
+
+	for ( i = 0; i < rsv->len; i ++ ) {
+		index = rsv->idxs[i];
+		
+		// Make sure the sensor node is actually reserved
+		assert ( model->nodes[index].reserved = 1 );
+		
+		// Cancel the reservation
+		model->nodes[index].reserved = 0;
+	
+		rsv->idxs[i] = -1;
+	}
+
+	rsv->len = 0;
 }
 
-int makeReserve(TrackModel *model, Reservation *rsv) {
+void rsv_make( Reservation *rsv, TrackModel *model, SensorsPred *sensors ) {
+	int i;
+	int index;
+	
+	for ( i = 0; i < sensors->len; i ++ ) {
+		// Convert the sensor index to node index
+		index = sIdxToIdx( sensors->idxs[i] );
+		
+		// Make sure this node is not already reserved
+		assert ( model->nodes[index].reserved = 0 );
+		
+		// Reserve the sensor node
+		model->nodes[index].reserved = 1;
 
-	// Reserve these nodes so that no other train can use them.
-	rsv->start->reserved = 1;
-//	rsv->next1->reserved = 1;
-//	rsv->next2->reserved = 1;
+		// Store the node index in the reservation
+		rsv->idxs[i] = index;
 
-	// TODO: fix this
-	return 0;
+	}
+
+	// Save the number of nodes in this reservation
+	rsv->len = sensors->len;
 }
 
 // And the hardcoding begins!
@@ -853,6 +862,7 @@ int mapTrainId (int trainId) {
 //          retPred - predicate matrix, useful in reconstructing shortest routes
 void floyd_warshall ( RoutePlanner *rp, int n ) {
 	int  i, j, k; // Loop counters
+	int  costMod = 0;
 	
 	// Algorithm initialization
 	for ( i = 0; i < n; i++ ) {
@@ -863,6 +873,9 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 			
 			// Init to garbage
 			rp->paths[i][j] = -1;
+
+			rp->pred[i][j] = i;
+			rp->succ[i][j] = j;
 		}
 	}
 
@@ -871,16 +884,21 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( i = 0; i < n; i++ ) {
 			for ( j = 0; j < n; j++ ) {
 				
-				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j])) {
+				costMod = (rev( rp, rp->pred[i][k], rp->succ[k][j], k ) == 1) ? REVERSE_COST : 0;
+
+				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j] + costMod)) {
 	  				
-					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j];
+					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j] + costMod;
 	  				rp->paths[i][j] = k; 
+
+					rp->pred[i][j] = rp->pred[k][j];
+					rp->succ[i][j] = rp->succ[i][k];
 				}
       		}
     	}
   	}
-
-/*	// Print out the results table of shortest rp->distss
+/*
+	// Print out the results table of shortest rp->distss
   	for ( i = 0; i < n; i++ ) {
     	for ( j = 0; j < n; j++ ) {
       		
@@ -894,9 +912,40 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		}
 	
     }
-	*/
+*/
+
+	Path p;
+	
+	for ( i = 0; i < n; i ++ ) {
+		for ( j = 0; j < n; j ++ ) {
+			int next = j;
+
+			makePath (rp, &p, i, j);
+
+			for ( k = 0; k < p.len; k ++ ) {
+				next = rp->succ[i][next];
+				
+				debug ("next=%s(%d) path=%s(%d) i=%d j=%d k=%d\r\n", rp->model.nodes[next].name, next, rp->model.nodes[p.path[k]].name, p.path[k], i, j, k);
+
+				assert (next == p.path[k]);
+			}
+			printf ("(%d, %d) PASSED.\r\n", i, j);
+		}
+	}
 }  //end of floyd_warshall()
 
+
+int rev (RoutePlanner *rp, int i, int j, int k) {
+	Node *mid = &rp->model.nodes[k];
+
+	if ( mid->type == NODE_SWITCH ) {
+		if ( ((mid->sw.ahead[0].dest == i) || (mid->sw.ahead[1].dest == i)) &&
+		     ((mid->sw.ahead[0].dest == j) || (mid->sw.ahead[1].dest == j )) ) {
+			return 1;
+		}	
+	}
+	return 0;
+}
 int cost (TrackModel *model, int idx1, int idx2) {
 //	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
 	int itr = 0;
