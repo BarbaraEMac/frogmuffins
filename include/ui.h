@@ -28,8 +28,9 @@ typedef struct {
 	};
 	int  idx;
 	char state;
-	char fmt[STR_LEN];
-	char str[STR_LEN];
+	int  trainId;
+//	char fmt[STR_LEN];
+//	char str[STR_LEN];
 } UIRequest;
 
 typedef enum {

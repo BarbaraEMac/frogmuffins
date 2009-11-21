@@ -31,10 +31,13 @@ typedef struct {
 	RB  	   	sensors;
 	TrackModel 	model;
 	TID 		ios2Tid;
+	int			train1Id;
+	int			train2Id;
 	int 		trackId;
 } UI;
 
 void ui_init(UI *ui);
+void ui_registerTrains( UI *ui );
 void ui_saveCursor(UI *ui);
 void ui_restoreCursor(UI *ui);
 void ui_clearScreen (int ios2Tid);
@@ -46,7 +49,7 @@ void ui_displayPrompt( int ios2Tid, char *fmt, char *str );
 void ui_updateMap( UI *ui, int idx, int state );
 void ui_displayTimeAt( int ios2Tid, int x, int y, int time );
 
-void ui_updateTrainLocation( UI *ui, int idx, int dist);
+void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId );
 
 void ui_strPrintAt (int ios2tid, int x, int y, char *str, 
 				 ForeColour fc, BackColour bc);
@@ -63,7 +66,10 @@ void ui_run () {
 	UIRequest req;
 
 	// Initialize the UI
-	ui_init (&ui);
+	ui_init( &ui );
+
+	// Get the information about the 2 trains
+	ui_registerTrains( &ui );
 
 	FOREVER {
 		// Receive a message
@@ -85,16 +91,19 @@ void ui_run () {
 				ui_updateMap( &ui, req.idx, req.state );
 				break;
 
-			case SHELL:
-				ui_displayPrompt( ui.ios2Tid, req.fmt, req.str );
-				break;
+//			case SHELL:
+//				ui_displayPrompt( ui.ios2Tid, req.fmt, req.str );
+//				break;
 			
 			case DETECTIVE:
 				ui_updateSensor( &ui, req.idx, req.time );
 				break;
 
 			case TRAIN:
-				ui_updateTrainLocation( &ui, req.idx, req.dist );
+				ui_updateTrainLocation( &ui, req.idx, req.dist, req.trainId );
+				break;
+			default:
+				// TODO: error?
 				break;
 		}
 
@@ -152,12 +161,17 @@ void ui_init (UI *ui) {
 	// Draw the map on the screen
 	ui_drawMap( ui );
 		
-	ui_strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train Data    ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 
-	ui_strPrintAt (ui->ios2Tid, 59, 7 , "Time:", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 55, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 55, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 55, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
+	ui_strPrintAt (ui->ios2Tid, 55, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	
+	ui_strPrintAt (ui->ios2Tid, 5, 9, "Time:", CYAN_FC, WHITE_BC);
 	ui_strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
@@ -170,6 +184,22 @@ void ui_init (UI *ui) {
 	
 	// Reply to the shell
 	Reply  (shellTid,  (char*)&err, sizeof(int));
+
+}
+
+void ui_registerTrains( UI *ui ) {
+	int shellTid;
+	int trainId;
+
+	Receive(&shellTid, (char*)&trainId, sizeof(int));
+	Reply  (shellTid,  (char*)&trainId, sizeof(int));
+	
+	ui->train1Id = trainId;
+
+	Receive(&shellTid, (char*)&trainId, sizeof(int));
+	Reply  (shellTid,  (char*)&trainId, sizeof(int));
+	
+	ui->train2Id = trainId;
 }
 
 void ui_updateSensor( UI *ui, int idx, int time ) {
@@ -246,7 +276,7 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	}
 }
 
-void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
+void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId ) {
 	int  num = sensor_num ( idx );
 	char bank[6];
 	bank[0] = ' ';
@@ -256,18 +286,21 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist ) {
 	bank[4] = ' ';
 	bank[5] = '\0';
 
+	// Determine the x-coord
+	int x = (trainId == ui->train1Id) ? 34 : 43;
+
 	// Clear distance
-	ui_strPrintAt( ui->ios2Tid, 34, 10, bank,
+	ui_strPrintAt( ui->ios2Tid, x, 10, bank,
 				   BLUE_FC, WHITE_BC );
 
 	bank[0] = sensor_bank( idx );
-	ui_strPrintAt( ui->ios2Tid, 34, 9, bank,
+	ui_strPrintAt( ui->ios2Tid, x, 9, bank,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, 35, 9, "%d", num,
+	ui_intPrintAt( ui->ios2Tid, x+1, 9, "%d", num,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, 34, 10, "%d", dist,
+	ui_intPrintAt( ui->ios2Tid, x, 10, "%d", dist,
 				   BLUE_FC, WHITE_BC );
 }
 
