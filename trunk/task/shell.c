@@ -1,4 +1,4 @@
- /*
+/*
  * Shell for Kernel 
  * becmacdo
  * dgoc
@@ -39,6 +39,7 @@ typedef struct {
 	TID rp;
 	TID ui;
 	TID tr1Tid;	// TODO: Make this numbering dynamic?
+	TID tr2Tid;	// TODO: Make this numbering dynamic?
 	TID idle;
 } TIDs;
 
@@ -47,7 +48,7 @@ typedef struct {
 
 void shell_initTrack	( TIDs *tids );
 void shell_cmdTrain 	( TIDs *tids, const char *dest, int id, TrainMode mode );
-void shell_initTrain 	( TIDs *tids );
+void shell_initTrain 	( TIDs *tids, int trainNum );
 
 /**
  * Given an input command, error check it and execute it.
@@ -110,9 +111,16 @@ void bootstrap(  ) {
 	// Create the first train!
 	tids.tr1Tid = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
+	
+	// Create the second train!
+	tids.tr2Tid = Create( TRAIN_PRTY, &train_run );
+//	output( "Creating the first train!\r\n" );
 
-	// Initialize the fist train
-	shell_initTrain( &tids );
+	// Initialize the first train
+	shell_initTrain( &tids, 1 /*train num*/);
+	
+	// Initialize the second train
+	shell_initTrain( &tids, 2 /*train num*/ );
 
 	// Run the shell
 	shell_run( &tids );
@@ -248,13 +256,14 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 	//assert( tmpId == id );
 }
 
-void shell_initTrain 	( TIDs *tids ) {
+void shell_initTrain( TIDs *tids, int trainNum ) {
 	TrainInit	init;
 	char 		input[INPUT_LEN];
 	int			id;
+	TID			trainTid = (trainNum == 1) ? tids->tr1Tid : tids->tr2Tid;
 
 	FOREVER {
-		output( "\033[24;1HTrain Id: " );
+		output( "\033[24;1HTrain %d Id: ", trainNum );
 		shell_inputData( input, true );
 		if( sscanf( input, "%d", &init.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
@@ -274,10 +283,14 @@ void shell_initTrain 	( TIDs *tids ) {
 	}
 
 	// Tell the train its init info.
-	Send( tids->tr1Tid, (char *) &init, sizeof( TrainInit ),
+	Send( trainTid, (char *) &init, sizeof( TrainInit ),
 						(char *) &id, sizeof( int ) );
-
+	
 	assert( id == init.id );
+	
+	// Tell the ui about the train we've started
+	Send( tids->ui, (char *) &init.id, sizeof( int ),
+					(char *) &id, sizeof( int ) );
 }
 
 // Execute a train command
