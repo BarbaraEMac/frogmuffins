@@ -14,7 +14,6 @@
 enum UIRequestType{
 	CLOCK = 1,
 	TRACK_SERVER,
-	SHELL,
 	DETECTIVE,
 	TRAIN
 };
