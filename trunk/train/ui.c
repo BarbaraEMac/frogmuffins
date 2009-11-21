@@ -36,26 +36,39 @@ typedef struct {
 	int 		trackId;
 } UI;
 
+// Initialize the UI
 void ui_init(UI *ui);
+// Save the 2 train Ids in the UI
 void ui_registerTrains( UI *ui );
+
+// Save teh cursor position
 void ui_saveCursor(UI *ui);
+// Restore the cursor position
 void ui_restoreCursor(UI *ui);
-void ui_clearScreen (int ios2Tid);
-void ui_splashScreen(int ios2Tid);
+// Clear the screen
+void ui_clearScreen( UI *ui );
+// Draw a splash screen
+void ui_splashScreen( UI *ui );
 
+// Draw the track map on the screen
 void ui_drawMap (UI *ui);
+// Update a last hit sensor information
 void ui_updateSensor( UI *ui, int idx, int time );
-void ui_displayPrompt( int ios2Tid, char *fmt, char *str );
+// Update a changed switch / sensor on the map
 void ui_updateMap( UI *ui, int idx, int state );
-void ui_displayTimeAt( int ios2Tid, int x, int y, int time );
-
+// Display the current time at a particular location on the screen
+void ui_displayTimeAt( UI *ui, int x, int y, int time );
+// Update a train's location on the screen
 void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId );
 
-void ui_strPrintAt (int ios2tid, int x, int y, char *str, 
+// Display a string on the screen at the given location in the given colour
+void strPrintAt (int ios2tid, int x, int y, char *str, 
 				 ForeColour fc, BackColour bc);
-void ui_intPrintAt (int ios2Tid, int x, int y, char *fmt, int value, 
+// Display an integer a the locaiton given the format and colours
+void intPrintAt (int ios2Tid, int x, int y, char *fmt, int value, 
 				 ForeColour fc, BackColour bc);
 
+// A Notifying task that displays the the current time in the UI
 void uiclk_run();
 
 // ----------------------------------------------------------------------------
@@ -74,27 +87,23 @@ void ui_run () {
 	FOREVER {
 		// Receive a message
 		Receive( &senderTid, (char*)&req, sizeof(UIRequest) );
-//		debug ("ui: received from %d\r\n", senderTid);
 
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
 
+		// Save the shell's cursor location
 		ui_saveCursor(&ui);
 
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				ui_displayTimeAt( ui.ios2Tid, 58, 8, req.time );
+				ui_displayTimeAt( &ui, 58, 8, req.time );
 				break;
 			
 			case TRACK_SERVER:
 				ui_updateMap( &ui, req.idx, req.state );
 				break;
 
-//			case SHELL:
-//				ui_displayPrompt( ui.ios2Tid, req.fmt, req.str );
-//				break;
-			
 			case DETECTIVE:
 				ui_updateSensor( &ui, req.idx, req.time );
 				break;
@@ -107,6 +116,7 @@ void ui_run () {
 				break;
 		}
 
+		// Restore the location of the cursor for the shell
 		ui_restoreCursor(&ui);
 	}
 	Exit();	// This will never be called.
@@ -151,7 +161,7 @@ void ui_init (UI *ui) {
 	parse_model( ui->trackId, &ui->model );
 	
 	// Start Drawing the ui
-	ui_clearScreen( ui->ios2Tid );
+	ui_clearScreen( ui );
 
 	// Limit the scroll range of the shell
 	cprintf( ui->ios2Tid , "\033[20;24r" );
@@ -161,18 +171,18 @@ void ui_init (UI *ui) {
 	// Draw the map on the screen
 	ui_drawMap( ui );
 		
-	ui_strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 
-	ui_strPrintAt (ui->ios2Tid, 55, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 55, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 55, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 55, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 55, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 55, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 55, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 55, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 	
-	ui_strPrintAt (ui->ios2Tid, 5, 9, "Time:", CYAN_FC, WHITE_BC);
-	ui_strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
+	strPrintAt (ui->ios2Tid, 5, 9, "Time:", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
 	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
@@ -218,7 +228,7 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 			return;
 		}
 
-		ui_displayTimeAt( ui->ios2Tid, x[i], 19,
+		ui_displayTimeAt( ui, x[i], 19,
 						  ui->sensorsBuf[i].time/(100/ MS_IN_TICK) );
 		
 		bank[0] = sensor_bank( ui->sensorsBuf[i].idx );
@@ -226,21 +236,14 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 		bank[2] = ' ';
 		bank[3] = '\0';
 		
-		ui_strPrintAt( ui->ios2Tid, x[i]+8, 19, bank,
+		strPrintAt( ui->ios2Tid, x[i]+8, 19, bank,
 					   WHITE_FC, BLACK_BC );
 
 		num = sensor_num ( ui->sensorsBuf[i].idx );
 		
-		ui_intPrintAt( ui->ios2Tid, x[i]+9, 19, "%d", num,
+		intPrintAt( ui->ios2Tid, x[i]+9, 19, "%d", num,
 					   WHITE_FC, BLACK_BC );
 	}
-}
-
-void ui_displayPrompt( int ios2Tid, char *fmt, char *str ) {
-	cprintf(ios2Tid, "\033[36m");
-	cprintf(ios2Tid, "\033[40B");
-	cprintf(ios2Tid, fmt, str);
-	cprintf(ios2Tid, "\033[37m");
 }
 
 void ui_updateMap( UI* ui, int idx, int state ) {
@@ -263,7 +266,7 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
-			ui_strPrintAt( ui->ios2Tid, 
+			strPrintAt( ui->ios2Tid, 
 						   n->x, 
 						   n->y, 
 						   ch,
@@ -290,36 +293,37 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId ) {
 	int x = (trainId == ui->train1Id) ? 34 : 43;
 
 	// Clear distance
-	ui_strPrintAt( ui->ios2Tid, x, 10, bank,
+	strPrintAt( ui->ios2Tid, x, 10, bank,
 				   BLUE_FC, WHITE_BC );
 
 	bank[0] = sensor_bank( idx );
-	ui_strPrintAt( ui->ios2Tid, x, 9, bank,
+	strPrintAt( ui->ios2Tid, x, 9, bank,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, x+1, 9, "%d", num,
+	intPrintAt( ui->ios2Tid, x+1, 9, "%d", num,
 				   BLUE_FC, WHITE_BC );
 	
-	ui_intPrintAt( ui->ios2Tid, x, 10, "%d", dist,
+	intPrintAt( ui->ios2Tid, x, 10, "%d", dist,
 				   BLUE_FC, WHITE_BC );
 }
 
-void ui_displayTimeAt ( int ios2Tid, int x, int y, int time ) {
+void ui_displayTimeAt ( UI *ui, int x, int y, int time ) {
+	int ios2Tid = ui->ios2Tid;
 	int tens, mins, secs;
 	tens = time % 10;
 	secs = (time / 10) % 60;
 	mins = time / 600;
 	
-	ui_intPrintAt (ios2Tid, x,   y, "%02d:", mins, CYAN_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+3, y, "%02d:", secs, CYAN_FC, BLACK_BC);
-	ui_intPrintAt (ios2Tid, x+6, y, "%01d",  tens, CYAN_FC, BLACK_BC);
+	intPrintAt (ios2Tid, x,   y, "%02d:", mins, CYAN_FC, BLACK_BC);
+	intPrintAt (ios2Tid, x+3, y, "%02d:", secs, CYAN_FC, BLACK_BC);
+	intPrintAt (ios2Tid, x+6, y, "%01d",  tens, CYAN_FC, BLACK_BC);
 }
 
-void ui_clearScreen (int ios2Tid) {
-	cprintf(ios2Tid, "\033c");
+void ui_clearScreen( UI *ui ) {
+	cprintf(ui->ios2Tid, "\033c");
 }
 
-void ui_strPrintAt (int ios2Tid, int x, int y, char *str, 
+void strPrintAt (int ios2Tid, int x, int y, char *str, 
 				 ForeColour fc, BackColour bc) {
 
 //	cprintf( ios2Tid, "\033[%dm\033[%dm\033[%d;%dH%s\033[%dm\033[%dm",
@@ -346,7 +350,7 @@ void ui_strPrintAt (int ios2Tid, int x, int y, char *str,
 	cprintf (ios2Tid, "\033[%dm", DEFAULT_BC);
 }
 
-void ui_intPrintAt (int ios2Tid, int x, int y, char *fmt, int value, 
+void intPrintAt (int ios2Tid, int x, int y, char *fmt, int value, 
 				 ForeColour fc, BackColour bc) {
 
 	// Set the colour
@@ -364,7 +368,7 @@ void ui_intPrintAt (int ios2Tid, int x, int y, char *fmt, int value,
 //	cprintf (ios2Tid, "\033[%dm", DEFAULT_BC);
 }
 
-void ui_splashScreen(int ios2Tid) {
+void ui_splashScreen( UI *ui ) {
 char frog[][100] = {
 "				     _    _", 	        
 "                    / \\  / \\",              
@@ -386,7 +390,7 @@ char frog[][100] = {
 
     int i;
     for ( i = 0; i < 20; i ++ ) {
-        ui_strPrintAt( ios2Tid, 1, i+20,
+        strPrintAt( ui->ios2Tid, 1, i+20,
         		    (char*)frog[i], GREEN_FC, BLACK_BC );
 	}
 
@@ -440,13 +444,13 @@ void ui_drawMap( UI *ui ) {
 	if ( ui->trackId == TRACK_A ) {
 		for ( i = 0; i < 18; i ++ ) {
 			cprintf( ui->ios2Tid, "\033(0" );
-			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC );
+			strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC );
 			cprintf( ui->ios2Tid, "\033(B" );
 		}
 	} else {
 		for ( i = 0; i < 18; i ++ ) {
 			cprintf( ui->ios2Tid, "\033(0" );
-			ui_strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], BLACK_FC, GREEN_BC );
+			strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], BLACK_FC, GREEN_BC );
 			cprintf( ui->ios2Tid, "\033(B" );
 		}
 	}
