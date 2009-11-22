@@ -39,8 +39,10 @@ char * strncpy ( char *dest, const char * src, size_t num ) {
 }
 
 // memcpy
-char * memcpy ( char * destination, const char * source, size_t num ) {
-	while( (--num) >= 0 ) destination[num] = source[num];
+void * memcpy ( void * destination, const void * source, size_t num ) {
+	char *s = (char *) source;
+	char *d = (char *) destination;
+	while( (--num) >= 0 ) d[num] = s[num];
 	return destination;
 }
 
@@ -301,7 +303,7 @@ size_t itoa( int num, char *bf ) {
 	if( num < 0 ) {
 		num = -num;
 		*bf++ = '-';
-		len=1;
+		len = 1;
 	}
 	return len + uitoa( num, 10, bf );
 }
@@ -312,9 +314,10 @@ char ctox( char ch ) {
 }
 
 // value-fill a char array
-char *memoryset( char *str, char value, size_t num ) {
-	while( num-- > 0 ) *str++ = value;
-	return str;
+void *memoryset( void *str, char value, size_t num ) {
+	char *s = (char *) str;
+	while( num-- > 0 ) *s++ = value;
+	return s;
 }
 
 // check for whitespace
