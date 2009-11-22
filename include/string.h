@@ -76,7 +76,7 @@ char * strncpy ( char *destination, const char * source, size_t num ) ;
  * and source parameters, shall be at least num bytes, and should not overlap 
  * (for overlapping memory blocks, memmove is a safer approach).
  */
-char * memcpy ( char * destination, const char * source, size_t num ) ;
+void * memcpy ( void * destination, const void * source, size_t num ) ;
 
 /**
  * Compare two strings
@@ -185,7 +185,7 @@ char ctox( char ch );
  *
  * Returns: place in memory after last set
  */
-char *memoryset ( char *ptr, char value, size_t num );
+void *memoryset ( void *ptr, char value, size_t num );
 
 
 /*
