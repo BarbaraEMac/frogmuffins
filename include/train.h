@@ -14,7 +14,8 @@ typedef enum _train_mode {
 	INIT_LOC = 1, 	// First go to a particular place
 	INIT_DIR,		// then turn around to go around the loop in proper dir
 	CAL_SPEED,		// Run around a bunch of times until speed is nice
-	CAL_STOP,		// Calubrate stopping distance
+	CAL_STOP,		// Calibrate stopping distance
+	CAL_WAIT,		// Waiting for the train to stop
 	IDLE,			// Ready for input
 	NORMAL			// Going from place A to place B
 } TrainMode;
