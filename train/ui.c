@@ -258,10 +258,36 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	}
 
 	Node *n = &ui->model.nodes[idx+39]; // you get a switch idx
-	char  ch[2];
+	char  ch[] = "\033(0 \033(B";
 
-	ch[0] = (state == 1) ? 'C' : 'S';
-	ch[1] = '\0';
+	// Curved
+	if ( state == 1 ) {
+		if ( idx == 1 || idx == 2 || idx == 3 || idx == 4 || idx == 14 ) {
+			ch[6] = 'q';
+		} else if ( idx == 5 || idx == 7 || idx == 8 || idx == 16 ) {
+			ch[6] = 'j';
+		} else if ( idx == 6 || idx == 9 || idx == 13 ) {
+			ch[6] = 'k';
+		} else if ( idx == 10 || idx == 11 || idx == 12 ) {
+			ch[6] = 'l';
+		} else {
+			ch[6] = 'm';
+		}
+	} else {
+		if ( idx == 1 || idx == 2 || idx == 3 ) {
+			ch[6] = 'm';
+		} else if ( idx == 4 ) {
+			ch[6] = 'l';
+		} else if ( idx == 14 ) {
+			ch[6] = 'j';
+		} else if ( idx == 5 || idx == 6 || idx == 7 || idx == 10 ||
+					idx == 11 || idx == 12 || idx == 13 || idx == 16 ||
+					idx == 17 || idx == 18 ) {
+			ch[6] = 'q';
+		} else  {
+			ch[6] = 'x';
+		}
+	}
 
 	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
