@@ -20,15 +20,28 @@ typedef enum _train_mode {
 	NORMAL			// Going from place A to place B
 } TrainMode;
 
-typedef struct {
-	int			id;
-	int			gear;
-} TrainInit;
+typedef enum _train_request {
+	TRAIN_INIT = 0,
+	DEST_UPDATE,
+	TIME_UPDATE,
+	POS_UPDATE,
+	STOP_UPDATE
+} TrainCode;
 
 typedef struct {
-	int  		dest;			// Desired End Location
-	TrainMode 	mode;	// whether we're running calibration
-} TrainCmd;
+	TrainCode	type;
+	union	{ 
+		int  		dest;			// Desired End Location
+		int			sensor;			// From detective
+		int			id;				// Destination
+		int			mm;
+	};
+	union {
+		TrainMode 	mode;			// whether we're running calibration
+		int			ticks;			// From Detective
+		int			gear;			// default gear
+	};
+} TrainReq;
 
 
 void train_run();
