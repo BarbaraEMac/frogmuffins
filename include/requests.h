@@ -159,7 +159,7 @@ TID WhoIs (char *name);
 /**
  * Blocks until the specified event occurs and returns.
  */
-int AwaitEvent (int eventid, char *event, size_t eventlen);
+int AwaitEvent (int eventid, void *event, size_t eventlen);
 
 /**
  * Install a driver to run to handle an interrupt from hardware
