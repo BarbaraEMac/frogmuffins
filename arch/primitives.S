@@ -88,6 +88,39 @@ Reply:
 	swi #8
 	bx	lr
 	.size	Reply, .-Reply
+	.align	2
+	.global	AwaitEvent
+	.type	AwaitEvent, %function
+AwaitEvent:
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 0, uses_anonymous_args = 0
+	@ link register save eliminated.
+	@ lr needed for prologue
+	swi #9
+	bx	lr
+	.size	AwaitEvent, .-AwaitEvent
+	.align	2
+	.global	InstallDriver
+	.type	InstallDriver, %function
+InstallDriver:
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 0, uses_anonymous_args = 0
+	@ link register save eliminated.
+	@ lr needed for prologue
+	swi #10
+	bx	lr
+	.size	InstallDriver, .-InstallDriver
+	.align	2
+	.global	Destroy
+	.type	Destroy, %function
+Destroy:
+	@ args = 0, pretend = 0, frame = 0
+	@ frame_needed = 0, uses_anonymous_args = 0
+	@ link register save eliminated.
+	@ lr needed for prologue
+	swi #11
+	bx	lr
+	.size	Destroy, .-Destroy
 	.comm	taskState,4,4
 	.comm	error,4,4
 	.ident	"GCC: (GNU) 4.0.2"

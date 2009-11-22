@@ -26,7 +26,7 @@ int RegisterAs (char *name) {
 	int ret;
 	req.type = REGISTERAS;
 	strncpy( req.name, name, sizeof(req.name));
-	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &ret, sizeof(int) );
+	Send( NS_TID, &req, sizeof(NSRequest), &ret, sizeof(int) );
 	return ret;
 }
 
@@ -36,20 +36,8 @@ TID WhoIs (char *name) {
 	TID tid;
 	req.type = WHOIS;
 	strncpy(req.name, name, sizeof(req.name));
-	Send( NS_TID, (char*) &req, sizeof(NSRequest), (char*) &tid, sizeof(TID) );
+	Send( NS_TID, &req, sizeof(NSRequest), &tid, sizeof(TID) );
 	return tid;
-}
-
-int AwaitEvent (int eventid, char *event, size_t eventlen) {
-	SWI(9);
-}
-
-int InstallDriver (int eventid, Driver driver) {
-	SWI(10);
-}
-
-int Destroy (TID tid) {
-	SWI(11);
 }
 
 int Delay (int ticks, TID csTid) {
@@ -59,7 +47,7 @@ int Delay (int ticks, TID csTid) {
 	req.type  = DELAY;
 	req.ticks = ticks;
 	
-	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	Send(csTid, &req, sizeof(CSRequest), &time, sizeof(int));
 	
 	return time;
 }
@@ -71,7 +59,7 @@ int Time (TID csTid) {
 	req.type  = TIME;
 	req.ticks = 0;
 
-	Send(csTid, (char*)&req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	Send(csTid, &req, sizeof(CSRequest), &time, sizeof(int));
 
 	return time;
 }
@@ -83,7 +71,7 @@ int DelayUntil (int ticks, TID csTid) {
 	req.type  = DELAYUNTIL;
 	req.ticks = ticks;
 	
-	Send(csTid, (char*) &req, sizeof(CSRequest), (char*) &time, sizeof(int));
+	Send(csTid, &req, sizeof(CSRequest), &time, sizeof(int));
 
 	return time;
 }
@@ -94,7 +82,7 @@ int Getc (TID iosTid) {
 	
 	req.type    = GETC;
 	req.len 	= 0;
-	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, &ret, sizeof(char));
+	Send(iosTid, &req, IO_REQUEST_SIZE, &ret, sizeof(char));
 	
 	return ret;
 }
@@ -106,7 +94,7 @@ int Putc (char ch, TID iosTid) {
 	req.data[0] = ch;
 	req.len     = 1;
 
-	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + 1, 0, 0);
+	return Send(iosTid, &req, IO_REQUEST_SIZE + 1, 0, 0);
 }
 
 int PutStr (const char *str, int strLen, TID iosTid) {
@@ -118,7 +106,7 @@ int PutStr (const char *str, int strLen, TID iosTid) {
 	memcpy (req.data, str, strLen);
 	req.len     = strLen;
 
-	return Send(iosTid, (char*)&req, IO_REQUEST_SIZE + strLen, 0, 0);
+	return Send(iosTid, &req, IO_REQUEST_SIZE + strLen, 0, 0);
 	
 }
 
@@ -127,31 +115,31 @@ void Purge (TID iosTid) {
 
 	req.type    = PURGE;
 	req.len 	= 0;
-	Send(iosTid, (char*)&req, IO_REQUEST_SIZE, 0, 0);
+	Send(iosTid, &req, IO_REQUEST_SIZE, 0, 0);
 }
 
 void getcHelper() {
 	helperMsg 	msg;
 	TID			parent;
 	// Get instructions on what to do
-	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Receive( &parent, &msg, sizeof(helperMsg) );
 	Reply( parent, 0 , 0 );
 	// Get a character from the IO server
 	msg.result = Getc( msg.tid );
 	// Return result back to parent
-	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+	Send( parent, &msg, sizeof(helperMsg), 0, 0);
 }
 
 void delayHelper() {
 	helperMsg 	msg;
 	TID			parent;
 	// Get instructions on what to do
-	Receive( &parent, (char *) &msg, sizeof(helperMsg) );
+	Receive( &parent, &msg, sizeof(helperMsg) );
 	Reply( parent, 0 , 0 );
 	// Wait for specified number of ticks
 	msg.result = Delay( msg.ticks, msg.tid );
 	// Return result back to parent
-	Send( parent, (char*) &msg, sizeof(helperMsg), 0, 0);
+	Send( parent, &msg, sizeof(helperMsg), 0, 0);
 }
 
 	
@@ -162,13 +150,13 @@ int TimeoutGetc( TID iosTid, TID csTid, int timeout ) {
 	TID			tid;
 	// Start off the getc helper
 	msg.tid = iosTid;
-	Send( getcTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	Send( getcTid, &msg, sizeof(helperMsg), 0, 0 );
 	// Start off the delay helper
 	msg.tid = csTid;
 	msg.ticks = timeout;
-	Send( delayTid, (char *) &msg, sizeof(helperMsg), 0, 0 );
+	Send( delayTid, &msg, sizeof(helperMsg), 0, 0 );
 	// Wait for one of them to finish
-	Receive( &tid, (char *) &msg, sizeof(helperMsg) );
+	Receive( &tid, &msg, sizeof(helperMsg) );
 	// Destroy them
 	Destroy( getcTid );
 	Destroy( delayTid );
