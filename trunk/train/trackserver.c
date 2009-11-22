@@ -68,7 +68,7 @@ void ts_run () {
 //		printf ("Current Time: %d Request Sent At: %d\r\n", Time(WhoIs(CLOCK_NAME)), req.startTicks);
 	
 		assert( len == sizeof(TSRequest) );
-		
+	
 		switch (req.type) {
 			case RV:
 				if ( (reply.ret = checkTrain ( req.train )) >= NO_ERROR ) {
@@ -77,7 +77,7 @@ void ts_run () {
 					reply.ret =  ts_trainSet( &ts, req.train, 0 );
 					// Wait for slow down depending on previous speed 
 					// TODO is the server allowed to block like this?
-					Delay( speed, ts.csTid );
+					Delay( speed * MS_IN_TICK, ts.csTid );
 					reply.ret |= ts_trainSet( &ts, req.train, 15 );
 					reply.ret |= ts_trainSet( &ts, req.train, speed );
 				}
