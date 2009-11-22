@@ -134,17 +134,17 @@ void Exit ();
 /**
  * Send a message to a task.
  */
-int Send (TID tid, char *msg, size_t msglen, char *reply, size_t rpllen);
+int Send (TID tid, void *msg, size_t msglen, void *reply, size_t rpllen);
 
 /**
  * Receive a message.
  */
-int Receive (TID *tid, char *msg, size_t msglen);
+int Receive (TID *tid, void *msg, size_t msglen);
 
 /**
  * Reply to a message.
  */
-int Reply (TID tid, char *reply, size_t rpllen);
+int Reply (TID tid, void *reply, size_t rpllen);
 
 /**
  * Register with the nameserver.
