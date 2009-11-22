@@ -38,8 +38,7 @@ typedef struct {
 	TID ts;
 	TID rp;
 	TID ui;
-	TID tr1Tid;	// TODO: Make this numbering dynamic?
-	TID tr2Tid;	// TODO: Make this numbering dynamic?
+	TID tr[2];	
 	TID idle;
 } TIDs;
 
@@ -56,7 +55,7 @@ void shell_initTrain 	( TIDs *tids, int trainNum );
 void shell_exec 		( TIDs *tids, char *command );
 void shell_run	 		( TIDs *tids );
 
-RPShellReply rpCmd( RPRequest *req, TID rpTid );
+RPShellReply rpCmd		( RPRequest *req, TID rpTid );
 
 // ----------------------------------------------------------------------------
 
@@ -109,18 +108,18 @@ void bootstrap(  ) {
 //	output( "Initializing the track server. \r\n" );
 	
 	// Create the first train!
-	tids.tr1Tid = Create( TRAIN_PRTY, &train_run );
+	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
 	
 	// Create the second train!
-	tids.tr2Tid = Create( TRAIN_PRTY, &train_run );
+	//tids.tr[1] = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
 
 	// Initialize the first train
-	shell_initTrain( &tids, 1 /*train num*/);
+	shell_initTrain( &tids, 0 /*train num*/);
 	
 	// Initialize the second train
-	shell_initTrain( &tids, 2 /*train num*/ );
+	//shell_initTrain( &tids, 1 /*train num*/ );
 
 	// Run the shell
 	shell_run( &tids );
@@ -217,25 +216,22 @@ void shell_initTrack( TIDs *tids ) {
 	shell_inputData( input, false );
 
 	// Tell the UI which track we are using
-	Send( tids->ui, (char *) &input[0], sizeof( char ),
-				    (char *) &err, 	 sizeof( int ) );
+	Send( tids->ui, &input[0], sizeof( char ), &err, sizeof( int ) );
 
 	// Tell the Route Planner which track we are using
-	Send( tids->rp, (char *) &input[0], sizeof( char ),
-				 (char *) &err, 	 sizeof( int ) );
+	Send( tids->rp, &input[0], sizeof( char ), &err, sizeof( int ) );
 	
 	if( err < NO_ERROR ) {
 		output( "Invalid Track ID. Using Track B.\r\n" );
 	}
 }
 
-void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
+void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
 	RPRequest		rpReq;
 	RPShellReply	rpRpl;
-	TrainCmd		cmd;
-	int				tmpId;
 
-	cmd.mode = mode;
+	assert( i > 0 && i < array_size( tids->tr ) );
+	TID				trainTid = tids->tr[i];
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
@@ -246,51 +242,60 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 		output("Destination not found." );
 		return;
 	}
-	cmd.dest = rpRpl.idx;
+
+	TrainReq		req;
+	req.type = DEST_UPDATE;
+	req.mode = mode;
+	req.dest = rpRpl.idx;
 
 	// Tell the train its command info.
-	Send( tids->tr1Tid, (char *) &cmd, 	sizeof( TrainCmd ),
-						(char *) &tmpId, sizeof( int ) );
+	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
 
-	// TODO actually use the train id
-	//assert( tmpId == id );
 }
 
-void shell_initTrain( TIDs *tids, int trainNum ) {
-	TrainInit	init;
+void shell_initTrain( TIDs *tids, int i ) {
+	TrainReq	req;
 	char 		input[INPUT_LEN];
-	int			id;
-	TID			trainTid = (trainNum == 1) ? tids->tr1Tid : tids->tr2Tid;
+	
+	assert( i > 0 && i < array_size( tids->tr ) );
+	TID			trainTid = tids->tr[i];
+	req.type = TRAIN_INIT;
 
 	FOREVER {
-		output( "\033[24;1HTrain %d Id: ", trainNum );
+		output( "\033[24;1HTrain %d Id: ", i );
 		shell_inputData( input, true );
-		if( sscanf( input, "%d", &init.id ) >= 0 ) break;
+		if( sscanf( input, "%d", &req.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
 	}
 
-	// gear 8 is default
-	input[0] = '6';
+	// gear 7 is default
+	input[0] = '7';
 	input[1] = 0;
 
 	FOREVER {
 		output( "\033[24;1HTrain Gear: " );
 		shell_inputData( input, false );
 		// only take in valid train speeds
-		if( sscanf( input, "%d", &init.gear ) >= 0
-			&& init.gear > 0 && init.gear <= 14 ) break;
+		if( sscanf( input, "%d", &req.gear ) >= 0
+			&& req.gear > 0 && req.gear <= 14 ) break;
 		output( "Invalid train gear. Try again.\r\n" );
 	}
 
-	// Tell the train its init info.
-	Send( trainTid, (char *) &init, sizeof( TrainInit ),
-						(char *) &id, sizeof( int ) );
-	
-	assert( id == init.id );
-	
 	// Tell the ui about the train we've started
-	Send( tids->ui, (char *) &init.id, sizeof( int ),
-					(char *) &id, sizeof( int ) );
+	Send( tids->ui, &req.id, sizeof( int ), &req.id, sizeof( int ) );
+	
+	// Tell the train its init info.
+	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
+	
+	// Send the train the stop distance
+	req.type = STOP_UPDATE;
+	FOREVER {
+		output( "\033[24;1Stop Distance for train %d: ", req.id );
+		shell_inputData( input, true );
+		if( sscanf( input, "%d", &req.mm ) >= 0 ) break;
+		output( "Invalid distance. Try again.\r\n" );
+	}
+	Send ( trainTid, &req, sizeof(TrainReq), 0, 0 );
 }
 
 // Execute a train command
@@ -298,8 +303,7 @@ TSReply trainCmd( TSRequest *req, TIDs *tids ) {
 	TSReply	rpl;
 	req->startTicks = Time(tids->cs);
 	
-	Send( tids->ts, (char *) req, sizeof( TSRequest ), 
-					(char *) &rpl, sizeof( rpl ) ); 
+	Send( tids->ts, req, sizeof( TSRequest ), &rpl, sizeof( rpl ) ); 
 	return rpl;
 }
 
@@ -307,23 +311,21 @@ TSReply trainCmd( TSRequest *req, TIDs *tids ) {
 RPShellReply rpCmd( RPRequest *req, TID rpTid ) {
 	RPShellReply	rpl;
 	
-	Send( rpTid, (char *) req,  sizeof( RPRequest ),
-				 (char *) &rpl, sizeof( rpl ) ); 
+	Send( rpTid, req,  sizeof( RPRequest ), &rpl, sizeof( rpl ) ); 
 	return rpl;
 }
 
 // Execute the command passed in
 void shell_exec( TIDs *tids, char *command ) {
-	int 		 i;
-	char 		 tmpStr1[INPUT_LEN];
-	char 		 tmpStr2[INPUT_LEN];
-	int			 tmpInt;
+	char 			 tmpStr1[INPUT_LEN];
+	char 		 	tmpStr2[INPUT_LEN];
+	int			 	tmpInt;
 
-	TSRequest	 tsReq;
-	TSReply		 tsRpl;
-
-	RPRequest	 rpReq;
-	RPShellReply rpRpl;
+	TSRequest		tsReq;
+	TSReply			tsRpl;
+	
+	RPRequest		rpReq;
+	RPShellReply	rpRpl;
 
 	char *commands[] = {
 		"\th = Help!", 
@@ -498,10 +500,6 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.trainId  = 12; // TODO: Remove this after Demo 1
 			rpCmd( &rpReq, tids->rp );
 		}
-	} else if( sscanf( command, "sd %d", &tmpInt )>= 0 ) {
-		printf ("sending %d\r\n", tmpInt);
-		Send ( tids->tr1Tid, (char*)&tmpInt, sizeof(int), 
-							 (char*)&tmpInt, sizeof(int) );
 	// go
 	} else if( sscanf( command, "go %s", tmpStr1 )>= 0 ) {
 		shell_cmdTrain( tids, tmpStr1, 0, NORMAL );
@@ -510,8 +508,9 @@ void shell_exec( TIDs *tids, char *command ) {
 		shell_cmdTrain( tids, tmpStr1, 0, CAL_STOP );
     // Help
 	} else if( sscanf( command, "h" )>=0 ) {
-		for( i = 0; i <( sizeof( commands )/ sizeof( char * ) ); i++ ) {
-			output( "%s\r\n", commands[i] );
+		char **cmd;
+		foreach( cmd, commands ) {
+			output( "%s\r\n", *cmd );
 		}
 	// Nothing was entered
 	} else if( command[0] == '\0' ) {
