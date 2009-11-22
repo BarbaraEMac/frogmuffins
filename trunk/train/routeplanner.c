@@ -72,7 +72,8 @@ void floyd_warshall 	(RoutePlanner *rp, int n);
 int  cost				(TrackModel *model, int idx1, int idx2);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
-int rev (RoutePlanner *rp, int i, int j, int k);
+int rev 				(RoutePlanner *rp, int i, int j, int k);
+void dijkstra		 	(TrackModel *model, int source, int dest);
 
 // Convert a sensor index into a node index
 inline int sIdxToIdx ( int sIdx ) {
@@ -785,6 +786,7 @@ void rp_reserve (RoutePlanner *rp, SensorsPred *sensors, int trainId) {
 	rsv_make( rsv, &rp->model, sensors );
 
 	// Recompute the distance tables
+	// TODO: dijkstra ?
 	floyd_warshall( rp, rp->model.num_nodes );
 }
 
@@ -1026,5 +1028,54 @@ void makePathHelper (RoutePlanner *rp, Path *p, int i, int j) {
 	} else {
 		makePathHelper (rp, p, i, rp->paths[i][j]);
 		makePathHelper (rp, p, rp->paths[i][j], j);
+	}
+}
+
+void dijkstra ( TrackModel *model, int source, int dest ) {
+	int n = model->num_nodes;
+	
+	int dists[n];
+	int prev [n];
+	int visited [n];
+	int min;
+	int linkCost;
+	int i, j;
+
+	for ( i = 0; i < n; i ++ ) {
+		dists[i] 	= INT_MAX;
+		prev[i]  	= INT_MAX; 
+		visited[i] 	= 0;
+	}
+
+	dists[source] = 0;
+
+	for ( i = 1; i < n; i ++ ) {
+		min = INT_MAX;
+		for ( j = 0; j < n; j ++ ) {
+			if ( !visited[j] && 
+				 (min == INT_MAX || dists[j] < dists[min]) ) {
+				min = j;
+			}
+		}
+
+		visited[min] = 1;
+
+		// Until the destination node,
+		for ( j = 1; j <= dest; j ++ ) {
+			linkCost = cost( model, min, j );
+			
+			if ( linkCost + dists[min] < dists[j] ) {
+				dists[j] = dists [min] + linkCost;
+				prev [j] = min;
+			}
+		}
+	}
+
+	printf ("Dist from %s to %d is=%d.\r\n", source, dest, dists[dest]);
+
+	for ( i = 0; i < n; i ++ ) {
+		printf ("%d> ", prev[i]);
+
+		if ( prev[i] == INT_MAX ) break;
 	}
 }
