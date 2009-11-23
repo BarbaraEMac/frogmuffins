@@ -241,8 +241,7 @@ int det_expire ( Det *det, int ticks ) {
 	int			woken = 0;
 	
 	foreach( req, det->requests ) {
-		if( (req->type != UNUSED_REQ) 
-				&& (req->expire < ticks) ) {
+		if( (req->type != UNUSED_REQ) && (req->expire < ticks) ) {
 			det_reply( req, TIMEOUT, ticks );
 			woken++;
 		}
