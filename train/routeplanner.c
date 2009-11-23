@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -119,8 +119,8 @@ void rp_run() {
 	FOREVER {
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
-		debug("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
-			  senderTid, req.trainId, req.type, req.nodeIdx1, req.nodeIdx2);
+		//printf("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
+		//	  senderTid, req.trainId, req.type, req.nodeIdx1, req.nodeIdx2);
 
 		// Error check the shell's request.
 		if ( senderTid == shellTid ) {
@@ -267,7 +267,6 @@ int rp_init(RoutePlanner *rp) {
 		err = INVALID_TRACK;
 	}
 	Reply  (shellTid,  (char*)&err, sizeof(int));
-	
 	debug ("routeplanner: Using track %c\r\n", ch);
 
 	// Parse the model for this track
