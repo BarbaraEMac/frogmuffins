@@ -278,12 +278,6 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 		}
 	}
 
-	int j;
-	debug ("printing ");
-	for (j = 0; j < 12; j ++ ) {
-		debug ("%c ", ch[j]);
-	}
-	debug ("\r\n");
 //	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
