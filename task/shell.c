@@ -97,15 +97,16 @@ void bootstrap(  ) {
 //	output( "Initializing the route planner. \r\n" );
 
 	// Create the ui 
+	// Makes 1 clock notifying task
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
-//	output( "Initializing the UI. \r\n" );
+	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
 	// Initialize the track we want to use.
 	shell_initTrack( &tids );
 
 	// Create the train controller
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
-//	output( "Initializing the track server. \r\n" );
+	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
 	
 	// Create the first train!
 	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
@@ -281,9 +282,6 @@ void shell_initTrain( TIDs *tids, int i ) {
 		output( "Invalid train gear. Try again.\r\n" );
 	}
 
-	// Tell the ui about the train we've started
-	Send( tids->ui, &req.id, sizeof( int ), &req.id, sizeof( int ) );
-	
 	// Tell the train its init info.
 	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
 	/*
