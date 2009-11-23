@@ -377,7 +377,7 @@ char * track[] = {
   2 straight 216 \
   41 curved 182 \
   19 behind 145 \
-43 SW4 switch 4 13 3 straight 3 \
+43 SW4 switch 4 12 3 straight 3 \
   7 straight 394 \
   6 curved 215 \
   51 behind 185 \

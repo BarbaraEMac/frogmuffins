@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -92,8 +92,7 @@ void ui_run () {
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-
-				ui_displayTimeAt( &ui, 50, 2, req.time );
+				ui_displayTimeAt( &ui, 46, 2, req.time );
 				break;
 			
 			case TRACK_SERVER:
@@ -159,15 +158,15 @@ void ui_init (UI *ui) {
 	parse_model( ui->trackId, &ui->model );
 	
 	// Start Drawing the ui
-//	ui_clearScreen( ui );
+	ui_clearScreen( ui );
 
 	// Limit the scroll range of the shell
-//	cprintf( ui->ios2Tid , "\033[20;24r" );
+	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
-//	ui_drawMap( ui );
+	ui_drawMap( ui );
 		
 	strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
@@ -179,7 +178,7 @@ void ui_init (UI *ui) {
 	strPrintAt (ui->ios2Tid, 53, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 53, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 	
-	strPrintAt (ui->ios2Tid, 43, 2, "Time:", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 41, 2, "Time:", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
@@ -230,7 +229,6 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 }
 
 void ui_updateMap( UI* ui, int idx, int state ) {
-	debug("updating the switches on the map");
 	
 	if ( idx == 153 ) {
 		idx = 22;
@@ -243,37 +241,44 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	}
 
 	Node *n = &ui->model.nodes[idx+39]; // you get a switch idx
-	char  ch[] = "\033(0 \033(B";
+	char  ch[] = "\033(0q\033(B";
 
 	// Curved
 	if ( state == 1 ) {
-		if ( idx == 1 || idx == 2 || idx == 3 || idx == 4 || idx == 14 ) {
-			ch[6] = 'q';
+		if ( idx == 1 || idx == 2 || idx == 14 ) {
+			ch[3] = 'q';
 		} else if ( idx == 5 || idx == 7 || idx == 8 || idx == 16 ) {
-			ch[6] = 'j';
-		} else if ( idx == 6 || idx == 9 || idx == 13 ) {
-			ch[6] = 'k';
-		} else if ( idx == 10 || idx == 11 || idx == 12 ) {
-			ch[6] = 'l';
+			ch[3] = 'j';
+		} else if ( idx == 6 || idx == 9 || idx == 13 || idx == 15 ) {
+			ch[3] = 'k';
+		} else if ( idx == 4 || idx == 10 || idx == 11 || idx == 12 ) {
+			ch[3] = 'l';
 		} else {
-			ch[6] = 'm';
+			ch[3] = 'm';
 		}
 	} else {
-		if ( idx == 1 || idx == 2 || idx == 3 ) {
-			ch[6] = 'm';
+		if ( idx == 1 || idx == 2 || idx == 7 ) {
+			ch[3] = 'm';
 		} else if ( idx == 4 ) {
-			ch[6] = 'l';
+			ch[3] = 'l';
 		} else if ( idx == 14 ) {
-			ch[6] = 'j';
-		} else if ( idx == 5 || idx == 6 || idx == 7 || idx == 10 ||
-					idx == 11 || idx == 12 || idx == 13 || idx == 16 ||
-					idx == 17 || idx == 18 ) {
-			ch[6] = 'q';
+			ch[3] = 'j';
+		} else if ( idx == 3  || idx == 4  || idx == 5  || idx == 6 ||
+					idx == 10 || idx == 11 || idx == 12 || 
+					idx == 13 || idx == 15 || idx == 16 || idx == 17 || 
+					idx == 18 ) {
+			ch[3] = 'q';
 		} else  {
-			ch[6] = 'x';
+			ch[3] = 'x';
 		}
 	}
 
+	int j;
+	debug ("printing ");
+	for (j = 0; j < 12; j ++ ) {
+		debug ("%c ", ch[j]);
+	}
+	debug ("\r\n");
 //	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
@@ -418,11 +423,11 @@ void ui_drawMap( UI *ui ) {
 	Delay( 200 / MS_IN_TICK, WhoIs(CLOCK_NAME) );
 	
 	char mapA[][90] = {	
-"tqqqqqqqqqqqqqwqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
-"             lj        lqqj                                            mk   ",
-"tqqqqqqqqqwqqj     lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk     mk  ",
-"         lj       lj                mk           lj               mk     x  ",
-"tqqqqqqqqj       lj                  mk    w    lj                 mk    x  ",
+"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
+"            lj         lqqj                                            mk   ",
+"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk     mk  ",
+"        lj        lj                mk           lj               mk     x  ",
+"tqqqqqqqj        lj                  mk    w    lj                 mk    x  ",
 "                lj                    mk   x   lj                   mqk  x  ",
 "              lqj                      mqk x lqj                      mqqn  ",
 "              x                          mqnqj                           x  ",
