@@ -85,7 +85,7 @@ void ui_run () {
 		
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
-
+/*
 		// Save the shell's cursor location
 		ui_saveCursor(&ui);
 
@@ -112,7 +112,7 @@ void ui_run () {
 		}
 
 		// Restore the location of the cursor for the shell
-		ui_restoreCursor(&ui);
+		ui_restoreCursor(&ui);*/
 	}
 	Exit();	// This will never be called.
 }
@@ -161,7 +161,7 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui );
 
 	// Limit the scroll range of the shell
-	cprintf( ui->ios2Tid , "\033[20;24r" );
+	//cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 

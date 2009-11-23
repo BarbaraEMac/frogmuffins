@@ -47,8 +47,10 @@ typedef struct {
 typedef struct {
 	int  		id;				// Identifying number
 	int			defaultGear;	// Default speed setting
+
 	int  		sensor;			// Last known location
 	int			trigger;		// last time we know a sensor
+
 	int  		dest;			// Desired End Location
 	TrainMode	mode;			// Train Mode (calibration or normal)
 		
@@ -111,6 +113,7 @@ speed_add( Speed sp1, Speed sp2 ) {
 void 		train_init    		( Train *tr );
 Speed 		train_speed			( Train *tr );
 void 		train_adjustSpeed	( Train *tr, int mm );
+void 		train_calibrate		( Train *tr );
 
 // Route Planner Commands
 RPReply		train_planRoute 	( Train *tr );
@@ -148,13 +151,8 @@ void train_run () {
 	// Initialize this train
 	train_init ( &tr );
 
-	// Locate the train
-	train_locate( &tr, timeout );
-
-	tr.dest = INIT_DEST;
-	debug( "train: found  at %c%d\r\n", 
-			sensor_bank(tr.sensor), sensor_num(tr.sensor) );
-	rpReply = train_planRoute ( &tr );
+	// Calibrate the train
+	train_calibrate( &tr );
 
 	FOREVER {
 		// Receive a server request
@@ -173,20 +171,22 @@ void train_run () {
 					train_updateUI( &tr, dist );
 					// Adjust speed
 					train_adjustSpeed( &tr, dist );
-					// resend detective request
-					train_detect( &tr, &rpReply.nextSensors, dist );
 				}
+				// Resend detective request
+				train_detect( &tr, &rpReply.nextSensors, dist );
 				break;
 
 			case WATCH_TIMEOUT:		// train is lost
 				Reply( senderTid, 0, 0 );
+				printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
 				train_locate( &tr, timeout );
 				break;
 
 			case STRAY_TIMEOUT:		// train is really lost
 				Reply( senderTid, 0, 0 );
+				timeout += (2000 / MS_IN_TICK); // increase the timeout by 2s 
+				printf( "Train is really lost for %dms.\r\n", timeout *MS_IN_TICK );
 				train_reverse( &tr );
-				timeout += (2000 / MS_IN_TICK); // increase the timeout by 50%
 				train_locate( &tr, timeout );
 				break;
 
@@ -301,6 +301,10 @@ void train_init ( Train *tr ) {
 	assert( tr->uiTid >= NO_ERROR );
 	assert( tr->htTid >= NO_ERROR );
 	assert( tr->coTid >= NO_ERROR );
+
+	// Block the heart
+	Receive( &tid, &init, sizeof(TrainReq) ); 
+	assert( tid == tr->htTid );
 
 	// Initialize internal variables
 	tr->mode = INIT_LOC;
@@ -472,7 +476,6 @@ void train_locate( Train *tr, int timeout ) {
 	// Slow down to locate speed
 	train_drive( tr, LOCATE_GEAR );
 
-	printf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
 	// Get stray sensors
 	Send( tr->coTid, &req, sizeof(DeRequest), 0, 0 );
 }
@@ -556,7 +559,7 @@ void train_drive( Train *tr, int gear ) {
 	TSRequest req;
 	TSReply	  reply;
 
-	assert( tr->mode != CAL_SPEED );
+	if( tr->mode == CAL_SPEED ) return;
 	
 	if( tr->gear == gear ) return;
 
@@ -629,107 +632,116 @@ void train_updateUI( Train *tr, int mm ) {
 }
 
 //-----------------------------------------------------------------------------
-//--------------------------------- Watchman ----------------------------------
+//--------------------------------- Calibration -------------------------------
 //-----------------------------------------------------------------------------
-//-- Question: Who watches the watchman? --------------------------------------
-/*
-void train_watch( Train *tr, RPReply *rep ) {
+void train_calibrate( Train *tr ) {
 
-	int ticks = 0;
-	int ticksToReverse;
-	bool stopped = false, reversed = false;
-	DeReply		req;
-	TID			sender;
-	int timeToStop = isqrt( speed( tr->velocity ) * C ); // in ms
+	RPReply   	rpReply;		// Reply from the Route Planner
+	TrainReq	req;
+	int 		senderTid, len, distTravelled = 0;
+	int			timeout = LOCATE_TIMEOUT;
 
-	debug( "time to stop %dms\r\n", timeToStop );
-	// Start off the heart task
-	Reply	( tr->htTid, 0, 0 );
-	
-	// If you should reverse / are backwards, turn around.
-	if( rep->stopDist < 0 ) {
-		train_reverse( tr );			// TODO this
-		rep->stopDist = -rep->stopDist;
-	}
-	int dist = rep->stopDist;
-	
+	// Locate the train
+	train_locate( tr, timeout );
+
+	tr->dest = INIT_DEST;
+
 	FOREVER {
-		// Set the speed to an appropriate setting
-		train_adjustSpeed( tr, dist );
-
-		// tell the watchman task to look for these sensors
-		//train_detect( tr, rep );
-
-		// Receive a either a reply from detective or send from heart
-		Receive	( &sender, &req, sizeof( DeReply ) );
-		Reply	( sender, 0, 0 );
-
-		// Stop if we got a sensor update
-		if( req.sensor != TIME_UPDATE ) {
-			printf( "got a detective reply back, %d\r\n", req.sensor );
-			if( req.sensor >= NO_ERROR ) {
-				train_update( tr, &req );
-			} else if( req.sensor == TIMEOUT ) {
-				// Train is lost
-				train_locate( tr );
-			}
-			// Stop the heart
-			Receive	( &sender, &req, sizeof( DeReply ) );
-			return;
-		} else {
-			ticks = req.ticks;
-		}
+		// Receive a server request
+		len = Receive ( &senderTid, &req, sizeof(req) );
+	
+		assert( senderTid != tr->htTid );
+		assert( len == sizeof(req) );
 		
+		switch (req.type) {
 
-		if( tr->mode == NORMAL ) {
+			case WATCH_TIMEOUT:		// train is lost
+				Reply( senderTid, 0, 0 );
+				printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
+				train_locate( tr, timeout );
+				break;
 
-			// Update current location
-			dist -= speed_dist( tr->velocity, HEARTBEAT * MS_IN_TICK );
-			
-			// Send this information to the UI
-			train_updateUI( tr, dist );
-		//	if( dist <= 0 && rep->stopAction == JUST_STOP ) tr->mode = IDLE;
+			case STRAY_TIMEOUT:		// train is really lost
+				Reply( senderTid, 0, 0 );
+				printf( "Train is really lost for %dms.\r\n", timeout *MS_IN_TICK );
+				train_reverse( tr );
+				timeout += (2000 / MS_IN_TICK); // increase the timeout by 50%
+				train_locate( tr, timeout );
+				break;
 
-			// Stop the train if needed
-			if( dist < tr->stopDist
-					//(speed_time( tr->velocity, rep->stopDist - dist ) < timeToStop) 
-					&& !stopped ) {
-				ticksToReverse = (timeToStop/ MS_IN_TICK) + ticks;
-			//printf( "watchman ticks%d, trigger%d\r\n", ticks, tr->trigger);
-				printf( "\033[41m stopping %dmm \033[49m\r\n", 
-						rep->stopDist - dist );
-
-				// do not stop again
-				stopped = true;
-
-				// we've actually reached our destination
-				if( rep->stopAction == JUST_STOP ) {
-					printf( "\033[42m %dms \033[49m\r\n", timeToStop);
-					// Stop the train
-				//	train_drive( tr, 0 ); 
-					//replace with trai_honk
+			case POS_UPDATE: 	// got a position update
+				Reply( senderTid, 0, 0 );
+				debug ( "train: #%d is at sensor %c%d\r\n",
+					tr->id, sensor_bank( tr->sensor ), sensor_num( tr->sensor ) );
+				// Update the train's information
+				train_update( tr, req.sensor, req.ticks );
+				// Ask the Route Planner for an efficient route!
+				rpReply = train_planRoute ( tr );
+				//debug( "train: has route stopDist=%d\r\n", rpReply.stopDist );
+				if( rpReply.err < NO_ERROR ) {
+					error( rpReply.err,  "Route Planner failed." );
+					assert( 1 == 0 );
 				}
-			}
-
 				
-			// The train should be stopped, reverse it
-			if( stopped && !reversed && (ticksToReverse < ticks)
-					&& (rep->stopAction == STOP_AND_REVERSE) ) {
-				printf ( "\033[41m reversing \033[49m\r\n" );
-				//train_drive( tr, 15 );
-				//train_drive( tr, tr->defaultGear );
-				// TODO hack?
-				//tr->velocity.mm = 50;
-				//tr->velocity.ms = 1000;
-				reversed = true;
-			}
+
+				// Depending on the mode do different things
+				if( rpReply.stopDist == 0 ) {
+					debug( "stopDist == 0\r\n" );
+					switch( tr->mode ) {
+						case INIT_LOC:
+							tr->mode = INIT_DIR;
+							tr->dest = CALIBRATION_DEST;
+							break;
+						case INIT_DIR:
+							tr->mode = CAL_SPEED;
+							break;
+						case CAL_SPEED:
+							tr->cal_loops ++;
+							break;
+						case CAL_STOP:
+							train_drive( tr, 0 );
+							printf("train: stopping at E11\r\n");
+							tr->mode = CAL_WAIT;
+							break;
+						default:
+							train_drive( tr, 0 );
+							printf( "train: passed over destination\r\n" );
+							return;
+							//break;
+					}
+				}	
+
+
+				if( rpReply.stopDist < 0 ) {
+					train_reverse( tr );			// TODO this
+					rpReply.stopDist = -rpReply.stopDist;
+				}
+				// Reset the distance counter
+				distTravelled = 0;
+				// Flip the switches along the path.
+				train_flipSwitches( tr, &rpReply );
+
+				// 
+				train_adjustSpeed( tr, rpReply.stopDist );
+				// Resend detective request
+				train_detect( tr, &rpReply.nextSensors, distTravelled );
+				break;
+
+			case STOP_UPDATE:
+				Reply( senderTid, 0, 0 );
+				// Store the stopping distance
+				debug( "train: stopping distance %dmm stored.\r\n", req.mm );
+				tr->stopDist = req.mm;
+				break;
+
+			default:
+				//error
+				break;
+	
+
 		}
-	} 
+	}
 }
-
-*/
-
-
 
 void courier() {
 	debug( "courier starting\r\n");
