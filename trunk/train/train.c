@@ -255,7 +255,7 @@ void train_init ( Train *tr ) {
 	tr->defaultGear = init.gear;
 
 	// Reply to the shell
-	Reply   ( tid, &tr->id, sizeof(int) );
+	Reply( tid, &tr->id, sizeof(int) );
 
 	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
