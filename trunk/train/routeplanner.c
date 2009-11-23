@@ -899,41 +899,28 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
       		}
     	}
   	}
-/*
-	// Print out the results table of shortest rp->distss
-  	for ( i = 0; i < n; i++ ) {
-    	for ( j = 0; j < n; j++ ) {
-      		
-			if ( rp->dists[i][j] != INT_MAX ) {
-				debug("\r\nDIST: (%s,%s)=%d THROUGH ", rp->model.nodes[i].name, 
-											   rp->model.nodes[j].name, 
-										   rp->dists[i][j]);
-		//	rp_outputPath(model, rp, i ,j);		
-		//	printf ("%s\r\n", model->nodes[j].name);
-			}
-		}
-	
-    }
-*/
-
+	/*
 	Path p;
-	
-	for ( i = 0; i < n; i ++ ) {
-		for ( j = 0; j < n; j ++ ) {
-			int next = j;
+	for ( i = 0; i < 1; i ++ ) {
+		for ( j = 0; j < 10; j ++ ) {
 
 			makePath (rp, &p, i, j);
+			debug ("PATH from %s(%d) to %s(%d):\r\n", rp->model.nodes[i].name, i, rp->model.nodes[j].name, j );
 
+			int s = i;
+			int pr = j;
 			for ( k = 0; k < p.len; k ++ ) {
-				next = rp->succ[i][next];
+				s = rp->succ[s][j];
+				pr = rp->pred[i][pr];
 				
-				debug ("next=%s(%d) path=%s(%d) i=%d j=%d k=%d\r\n", rp->model.nodes[next].name, next, rp->model.nodes[p.path[k]].name, p.path[k], i, j, k);
-
-				assert (next == p.path[k]);
+				debug ("s=%s(%d) pr=%s(%d) p=%s(%d) k=%d\r\n", rp->model.nodes[s].name, s, rp->model.nodes[pr].name, pr, rp->model.nodes[p.path[k]].name, p.path[k], k);
+				
+				//assert (next == p.path[k]);
 			}
 			printf ("(%d, %d) PASSED.\r\n", i, j);
 		}
 	}
+	*/
 }  //end of floyd_warshall()
 
 
