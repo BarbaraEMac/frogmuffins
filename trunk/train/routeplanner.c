@@ -49,7 +49,7 @@ inline SwitchDir getSwitchDir(Node *sw, Node *next);
 int rp_init      		(RoutePlanner *rp);
 int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req);
 int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req);
-inline void clearReply (RPReply *trReply);
+inline void clearReply  (RPReply *trReply);
 
 // Route Finding Functions
 void rp_planRoute 		(RoutePlanner *rp, RPReply *trReply, RPRequest *req);
@@ -58,16 +58,18 @@ int  rp_distToNextRv   	(RoutePlanner *rp, Path *p);
 int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
 
+// Node and Sensor Prediction Functions
 void rp_predict 		(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred,
 						 int sensorId);
 void rp_predictHelper	(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred, Node *n, 
 						 int prevIdx, int startIdx);
+
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
-void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId);
+void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor);
 void rsv_cancel			(Reservation *rsv, TrackModel *model);
-void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors);
+void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int lastSensor);
 int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
@@ -78,10 +80,10 @@ void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
 // Shortest Path Algorithms
 void floyd_warshall 	(RoutePlanner *rp, int n);
-int cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
+int  cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
-int rev 				(RoutePlanner *rp, int i, int j, int k);
+int  rev 				(RoutePlanner *rp, int i, int j, int k);
 void dijkstra		 	(TrackModel *model, int source, int dest);
 
 // Convert a sensor index into a node index
@@ -190,7 +192,7 @@ void rp_run() {
 				nodePred.len = 0;
 
 				rp_predict( &rp, &sensPred, &nodePred, 
-								   idxTosIdx(req.nodeIdx1, req.name) );
+							mdxTosIdx(req.nodeIdx1, req.name) );
 				
 				if ( req.nodeIdx1 > 39 ) {
 					printf ("\033[36m%s is not a valid sensor.\033[37m\r\n", req.name);
@@ -236,11 +238,18 @@ void rp_run() {
 				break;
 
 			case RESERVE:
-				//TODO: rp_reserve (&rp, &req);
+				// Empty out the predictions
+				sensPred.len = 0;
+				nodePred.len = 0;
+				tmp = idxTosIdx(req.nodeIdx1, req.name);
 				
-				// Reply to the client train
-				Reply(senderTid, (char*)&trReply, sizeof(RPReply));
+				// Predict the nodes you could hit
+				rp_predict( &rp, &sensPred, &nodePred, tmp );
+				// Reserve them all.
+				rp_reserve( &rp, &nodePred, req.trainId, tmp );
 				
+				// Reply to the shell
+				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				break;
 			
 			case PLANROUTE:
@@ -343,6 +352,7 @@ int rp_errorCheckShRequest (RoutePlanner *rp, RPRequest *req) {
 				return INVALID_NODE_IDX;
 			}
 			break;
+		case RESERVE:
 		case DISPLAYPREDICT:
 			// Error check the node indicies.
 			if ( (req->nodeIdx1 < 0) || (req->nodeIdx1 > rp->model.num_nodes) ) {
@@ -416,7 +426,6 @@ inline void clearReply (RPReply *trReply) {
 // ----------------------------------------------------------------------------
 // --------------------------- Route Finding ----------------------------------
 // ----------------------------------------------------------------------------
-
 int oppositeSensorId (int sensorIdx) {
 //	debug ("opposite to %d is %d\r\n", sensorIdx, (sensorIdx ^1));
 	return (sensorIdx ^ 1);
@@ -497,7 +506,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	}
 */
 	// Reserve the next nodes
-	rp_reserve( rp, &nodePred, req->trainId );
+	rp_reserve( rp, &nodePred, req->trainId, req->lastSensor );
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
@@ -641,6 +650,9 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	}
 }
 
+// ----------------------------------------------------------------------------
+// ---------------------- Node & Sensor Predictions  --------------------------
+// ----------------------------------------------------------------------------
 void rp_predict( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred, int sensorId ) {
 	int idx = sIdxToIdx ( sensorId );
 	Node *n = &rp->model.nodes[idx];
@@ -804,14 +816,14 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //--------------------------- Reservation Stuff -------------------------------
 //-----------------------------------------------------------------------------
 
-void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId ) {
+void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor ) {
 	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
 
 	// Cancel the old reservations
 	rsv_cancel( rsv, &rp->model );
 
 	// Make this new reservation
-	rsv_make( rsv, &rp->model, nodes );
+	rsv_make( rsv, &rp->model, nodes, lastSensor );
 
 	// Recompute the distance tables
 	// TODO: dijkstra ?
@@ -838,7 +850,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 	rsv->len = 0;
 }
 
-void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes ) {
+void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSensor ) {
 	int i;
 	int index;
 	
@@ -857,8 +869,17 @@ void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes ) {
 		rsv->idxs[i] = index;
 	}
 
+	// Reserve the last triggered sensor
+	index = sIdxToIdx( lastSensor );
+	model->nodes[index].reserved = 1;	
+	// Store the node index in the reservation
+	rsv->idxs[nodes->len] = index;
+
+	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+	
 	// Save the number of nodes in this reservation
-	rsv->len = nodes->len;
+	rsv->len = nodes->len + 1;
+	printf ("Reserved %d nodes in total.\r\n", rsv->len);
 }
 
 // And the hardcoding begins!
