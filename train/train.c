@@ -154,6 +154,9 @@ void train_run () {
 	// Calibrate the train
 	train_calibrate( &tr );
 
+	printf( "calibration done.\r\n" );
+	bwgetc( COM2 );
+
 	FOREVER {
 		// Receive a server request
 		len = Receive ( &senderTid, &req, sizeof(req) );
@@ -374,30 +377,30 @@ void train_adjustSpeed( Train *tr, int mm ) {
 		} else 	if( mm < 600 ) {
 			gear = 3;
 		}
-		train_drive( tr, gear);
 	}
+	train_drive( tr, gear);
+	assert( tr->gear == gear );
 
 	Speed base = train_speed( tr );
 	// Adjust calibrated speed based on gear
 	tr->velocity = speed_adjust( base, tr->defaultGear, tr->gear );
+	debug( "train: speed adjusted to %dmm/s\r\b", speed( tr->velocity ) );
 }
 
 
 void train_update( Train *tr, int sensor, int ticks ) {
-	int 		last, avg, diff, dist, time;
-	Speed		sp, pr;
+	int 		last, pred, diff, dist, time;
+	Speed		sp;
 
 	// Calculate the distance traveled
-	dist = train_distance( tr, sensor );
 	tr->sensor = sensor; 
 	
 	sp.ms = ( ticks - tr->trigger ) * MS_IN_TICK;
-	sp.mm = dist;
+	sp.mm = train_distance( tr, sensor );
 	last = speed( sp );
 	
-	// Calculate the mean speed
-	pr = tr->velocity;
-	avg = speed( pr );
+	// Calculate the predicted speed
+	pred = speed( tr->velocity );
 	
 	// Update the mean speed
 	if(  tr->mode == CAL_SPEED ) {
@@ -407,18 +410,14 @@ void train_update( Train *tr, int sensor, int ticks ) {
 	tr->gearChanged = false;
 
 	// See how far we were off
-	diff = ((avg * sp.ms) - (sp.mm * 1000)) / 1000;
+	diff = speed_dist( tr->velocity, sp.ms ) - sp.mm;
 
-	if( abs(diff) > 100 )
-		printf("\033[31m");
-	else if( abs(diff) > 50 )
-		printf("\033[33m");
-	else if( abs(diff) > 20 )
-		printf("\033[36m");
-	else 
-		printf("\033[32m");
+	if( abs(diff) > 100 ) 		{ printf("\033[31m"); }
+	else if( abs(diff) > 50 ) 	{ printf("\033[33m"); }
+	else if( abs(diff) > 20 ) 	{ printf("\033[36m"); }
+	else 						{ printf("\033[32m"); }
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
-			sp.mm, sp.ms, last, avg, tr->sd, diff);
+			sp.mm, sp.ms, last, pred, tr->sd, diff);
 
 
 	time = (Time( tr->csTid ) - tr->lastStopTime) * MS_IN_TICK; 
@@ -525,10 +524,9 @@ void train_detect( Train *tr, SensorsPred *pred, int mm ) {
 		req.expire = max( req.expire, req.events[i].end );
 	}
 	debug( "\r\n" );
-	if( req.expire > tr->trigger + SENSOR_TIMEOUT ) {
-		debug( "train: TOO LONG: req.expire=%d\r\n", req.expire );
-		req.expire = tr->trigger + SENSOR_TIMEOUT;
-	}
+	//if( req.expire > tr->trigger + SENSOR_TIMEOUT ) { }
+	debug( "train: req.expire=%dms in future\r\n", (req.expire - ticks) * MS_IN_TICK );
+	debug( "train: lower:%dmm/s upper%dmm/s\r\n", speed( lower ), speed( upper ) );
 	
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->coTid, &req,	sizeof(DeRequest), 0 , 0 );
@@ -686,24 +684,28 @@ void train_calibrate( Train *tr ) {
 
 				// Depending on the mode do different things
 				if( rpReply.stopDist == 0 ) {
-					debug( "stopDist == 0\r\n" );
 					switch( tr->mode ) {
 						case INIT_LOC:
+							debug( "mode = INIT_DIR\r\n" );
 							tr->mode = INIT_DIR;
 							tr->dest = CALIBRATION_DEST;
 							break;
 						case INIT_DIR:
+							debug( "mode = CAL_SPEED\r\n" );
 							tr->mode = CAL_SPEED;
 							break;
 						case CAL_SPEED:
 							tr->cal_loops ++;
 							break;
 						case CAL_STOP:
+							debug( "mode = CAL_STOP\r\n" );
 							train_drive( tr, 0 );
 							printf("train: stopping at E11\r\n");
 							tr->mode = CAL_WAIT;
 							break;
 						default:
+							debug( "mode = IDLE\r\n" );
+							tr->mode = IDLE;
 							train_drive( tr, 0 );
 							printf( "train: passed over destination\r\n" );
 							return;
@@ -721,8 +723,9 @@ void train_calibrate( Train *tr ) {
 				// Flip the switches along the path.
 				train_flipSwitches( tr, &rpReply );
 
-				// 
+				// Adjust the speed according to distance
 				train_adjustSpeed( tr, rpReply.stopDist );
+
 				// Resend detective request
 				train_detect( tr, &rpReply.nextSensors, distTravelled );
 				break;
