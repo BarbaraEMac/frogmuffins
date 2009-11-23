@@ -38,8 +38,6 @@ typedef struct {
 
 // Initialize the UI
 void ui_init(UI *ui);
-// Save the 2 train Ids in the UI
-void ui_registerTrains( UI *ui );
 
 // Save teh cursor position
 void ui_saveCursor(UI *ui);
@@ -81,13 +79,10 @@ void ui_run () {
 	// Initialize the UI
 	ui_init( &ui );
 
-	// Get the information about the 2 trains
-	ui_registerTrains( &ui );
-
 	FOREVER {
 		// Receive a message
 		Receive( &senderTid, (char*)&req, sizeof(UIRequest) );
-
+		
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
 
@@ -97,7 +92,8 @@ void ui_run () {
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				ui_displayTimeAt( &ui, 58, 8, req.time );
+
+				ui_displayTimeAt( &ui, 50, 2, req.time );
 				break;
 			
 			case TRACK_SERVER:
@@ -140,6 +136,8 @@ void ui_init (UI *ui) {
 
 	// Init private members
 	ui->ios2Tid = WhoIs(SERIALIO2_NAME);
+	ui->train1Id = -1;
+	ui->train2Id = -1;
 	
 	rb_init (&(ui->sensors), ui->sensorsBuf );
 	for ( i = 0; i < NUM_DISP_SENSORS; i ++ ) {
@@ -161,27 +159,27 @@ void ui_init (UI *ui) {
 	parse_model( ui->trackId, &ui->model );
 	
 	// Start Drawing the ui
-	ui_clearScreen( ui );
+//	ui_clearScreen( ui );
 
 	// Limit the scroll range of the shell
-	cprintf( ui->ios2Tid , "\033[20;24r" );
+//	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 
 	// Draw the map on the screen
-	ui_drawMap( ui );
+//	ui_drawMap( ui );
 		
 	strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 
-	strPrintAt (ui->ios2Tid, 55, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 55, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 55, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 55, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 	
-	strPrintAt (ui->ios2Tid, 5, 9, "Time:", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 43, 2, "Time:", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
@@ -193,23 +191,8 @@ void ui_init (UI *ui) {
 	RegisterAs( UI_NAME );
 	
 	// Reply to the shell
+	debug ("Replying to the shell\r\n");
 	Reply  (shellTid,  (char*)&err, sizeof(int));
-
-}
-
-void ui_registerTrains( UI *ui ) {
-	int shellTid;
-	int trainId;
-
-	Receive(&shellTid, (char*)&trainId, sizeof(int));
-	Reply  (shellTid,  (char*)&trainId, sizeof(int));
-	
-	ui->train1Id = trainId;
-
-	Receive(&shellTid, (char*)&trainId, sizeof(int));
-	Reply  (shellTid,  (char*)&trainId, sizeof(int));
-	
-	ui->train2Id = trainId;
 }
 
 void ui_updateSensor( UI *ui, int idx, int time ) {
@@ -247,6 +230,8 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 }
 
 void ui_updateMap( UI* ui, int idx, int state ) {
+	debug("updating the switches on the map");
+	
 	if ( idx == 153 ) {
 		idx = 22;
 	} else if ( idx == 154 ) {
@@ -289,7 +274,7 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 		}
 	}
 
-	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
+//	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
 	switch (n->type) {
 		case NODE_SWITCH:
 			strPrintAt( ui->ios2Tid, 
@@ -315,8 +300,14 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId ) {
 	bank[4] = ' ';
 	bank[5] = '\0';
 
+	// Register the train with the UI.
+	// We neeed to do more for > 2 trains.
+	if ( ui->train1Id == -1 ) {
+		ui->train1Id = trainId;
+	}
+
 	// Determine the x-coord
-	int x = (trainId == ui->train1Id) ? 34 : 43;
+	int x = (trainId == ui->train1Id) ? 34 : 42;
 
 	// Clear distance
 	strPrintAt( ui->ios2Tid, x, 10, bank,
