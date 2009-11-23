@@ -192,7 +192,7 @@ void rp_run() {
 				nodePred.len = 0;
 
 				rp_predict( &rp, &sensPred, &nodePred, 
-							mdxTosIdx(req.nodeIdx1, req.name) );
+							idxTosIdx(req.nodeIdx1, req.name) );
 				
 				if ( req.nodeIdx1 > 39 ) {
 					printf ("\033[36m%s is not a valid sensor.\033[37m\r\n", req.name);
