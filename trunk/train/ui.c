@@ -247,27 +247,32 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	if ( state == 1 ) {
 		if ( idx == 1 || idx == 2 || idx == 14 ) {
 			ch[3] = 'q';
-		} else if ( idx == 5 || idx == 7 || idx == 8 || idx == 16 ) {
+		} else if ( idx == 5 || idx == 8 || idx == 16 ) {
 			ch[3] = 'j';
 		} else if ( idx == 6 || idx == 9 || idx == 13 || idx == 15 ) {
 			ch[3] = 'k';
-		} else if ( idx == 4 || idx == 10 || idx == 11 || idx == 12 ) {
+		} else if ( idx == 4 || idx == 7 || idx == 10 || idx == 11 ||
+					idx == 12 ) {
 			ch[3] = 'l';
+		} else if ( idx >= 19 ) {
+			ch[3] = 'C';
 		} else {
 			ch[3] = 'm';
 		}
 	} else {
-		if ( idx == 1 || idx == 2 || idx == 7 ) {
+		if ( idx == 1 || idx == 2 ) {
 			ch[3] = 'm';
 		} else if ( idx == 4 ) {
 			ch[3] = 'l';
 		} else if ( idx == 14 ) {
 			ch[3] = 'j';
 		} else if ( idx == 3  || idx == 4  || idx == 5  || idx == 6 ||
-					idx == 10 || idx == 11 || idx == 12 || 
+					idx == 7  || idx == 10 || idx == 11 || idx == 12 || 
 					idx == 13 || idx == 15 || idx == 16 || idx == 17 || 
 					idx == 18 ) {
 			ch[3] = 'q';
+		} else if ( idx >= 19 ) {
+			ch[3] = 'S';
 		} else  {
 			ch[3] = 'x';
 		}
