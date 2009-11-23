@@ -27,12 +27,13 @@ typedef struct {
 } Reservation;
 
 typedef struct {
+	int 		rsvDists[MAX_NUM_NODES][MAX_NUM_NODES];
 	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
 	int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
 	int 		pred[MAX_NUM_NODES][MAX_NUM_NODES];
 	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
 
-	TrackModel model;
+	TrackModel  model;
 
 	Reservation reserves[MAX_NUM_TRAINS];
 } RoutePlanner;
@@ -69,7 +70,7 @@ void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
 // Shortest Path Algorithms
 void floyd_warshall 	(RoutePlanner *rp, int n);
-int  cost				(TrackModel *model, int idx1, int idx2);
+int cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
 int rev 				(RoutePlanner *rp, int i, int j, int k);
@@ -231,6 +232,7 @@ void rp_run() {
 				// Make a route
 //				debug ("determining the shortest path from %d (%d) to %d\r\n", 
 //						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
+				printf ("PLAN ROUTE: \r\n");
 				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
@@ -405,15 +407,16 @@ int oppositeSensorId (int sensorIdx) {
 }
 
 void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
-	int  nextRv;
-	int  totalDist;
+	Path p;					// Path to travel along to get to destination
+	int  nextRv;			// Distance to the next reverse
+	int  totalDist;			// Distance if reservations and blockages are considered
+	int  actualDist;		// Actual distance if we don't consider reservations
 	int  currentIdx = sIdxToIdx(req->lastSensor);
-	Path p;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
-
 	// Distance from current sensor to destination node
-	totalDist = rp->dists[currentIdx][req->destIdx];
+	actualDist = rp->dists[currentIdx][req->destIdx];
+	totalDist  = rp->rsvDists[currentIdx][req->destIdx];
 	//debug ("totalDist = %d\r\n", totalDist);
 	
 	// Construct the path from current sensor to destination node
@@ -426,7 +429,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// The stop distance is min {next reverse, total distance to travel}
 	if ( nextRv < totalDist ) {
-		trReply->stopDist = nextRv;
+		trReply->stopDist   = nextRv;
 		trReply->stopAction = STOP_AND_REVERSE;
 //		debug ("Stop distance is a reverse. (%d)\r\n", nextRv);
 	} else {
@@ -799,7 +802,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-	//	printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+//		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure the sensor node is actually reserved
 		assert ( model->nodes[index].reserved == 1 );
@@ -820,7 +823,7 @@ void rsv_make( Reservation *rsv, TrackModel *model, SensorsPred *sensors ) {
 	for ( i = 0; i < sensors->len; i ++ ) {
 		// Convert the sensor index to node index
 		index = sIdxToIdx( sensors->idxs[i] );
-		//printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+//		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure this node is not already reserved
 		assert ( model->nodes[index].reserved == 0 );
@@ -875,7 +878,8 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( j = 0; j < n; j++ ) {
 			
 			// INT_MAX if no link; 0 if i == j
-			rp->dists[i][j] = cost(&rp->model, i, j); 
+			rp->dists[i][j]    = cost(&rp->model, i, j, 0); // no reservations
+			rp->rsvDists[i][j] = cost(&rp->model, i, j, 1); // use reservations
 			
 			// Init to garbage
 			rp->paths[i][j] = -1;
@@ -891,14 +895,19 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 			for ( j = 0; j < n; j++ ) {
 				
 				costMod = (rev( rp, rp->pred[i][k], rp->succ[k][j], k ) == 1) ? REVERSE_COST : 0;
+				
+				// Consider the reservations while computing the distances
+				if (rp->rsvDists[i][j] > (rp->rsvDists[i][k] + rp->rsvDists[k][j] + costMod)) {
+					rp->rsvDists[i][j] = rp->rsvDists[i][k] + rp->rsvDists[k][j] + costMod;
 
-				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j] + costMod)) {
-	  				
-					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j] + costMod;
-	  				rp->paths[i][j] = k; 
-
+	  				// Store how we got here
+					rp->paths[i][j]    = k; 
 					rp->pred[i][j] = rp->pred[k][j];
 					rp->succ[i][j] = rp->succ[i][k];
+				}
+				// Store the distances as if there are not reservations
+				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j] + costMod)) {
+					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j] + costMod;
 				}
       		}
     	}
@@ -939,7 +948,7 @@ int rev (RoutePlanner *rp, int i, int j, int k) {
 	}
 	return 0;
 }
-int cost (TrackModel *model, int idx1, int idx2) {
+int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 //	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
 	int itr = 0;
 	int i, j;
@@ -959,8 +968,8 @@ int cost (TrackModel *model, int idx1, int idx2) {
 	
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
-	if ( (model->nodes[i].reserved == 1) || 
-		 (model->nodes[j].reserved == 1) ) {
+	if ( (rsvDist == 1) && 
+		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) {
 		return INT_MAX;
 	}
 
@@ -1053,7 +1062,7 @@ void dijkstra ( TrackModel *model, int source, int dest ) {
 
 		// Until the destination node,
 		for ( j = 1; j <= dest; j ++ ) {
-			linkCost = cost( model, min, j );
+			linkCost = cost( model, min, j, 0 );
 			
 			if ( linkCost + dists[min] < dists[j] ) {
 				dists[j] = dists [min] + linkCost;
