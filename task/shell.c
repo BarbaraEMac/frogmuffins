@@ -109,7 +109,7 @@ void bootstrap(  ) {
 	
 	// Create the first train!
 	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
-//	output( "Creating the first train!\r\n" );
+	//output( "Creating the first train! (%d)\r\n", tids.tr[0] );
 	
 	// Create the second train!
 	//tids.tr[1] = Create( TRAIN_PRTY, &train_run );
@@ -230,7 +230,7 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
 	RPRequest		rpReq;
 	RPShellReply	rpRpl;
 
-	assert( i > 0 && i < array_size( tids->tr ) );
+	assert( i >= 0 && i < array_size( tids->tr ) );
 	TID				trainTid = tids->tr[i];
 
 	// Parse the destination
@@ -257,7 +257,7 @@ void shell_initTrain( TIDs *tids, int i ) {
 	TrainReq	req;
 	char 		input[INPUT_LEN];
 	
-	assert( i > 0 && i < array_size( tids->tr ) );
+	assert( i >= 0 && i < array_size( tids->tr ) );
 	TID			trainTid = tids->tr[i];
 	req.type = TRAIN_INIT;
 
@@ -286,7 +286,7 @@ void shell_initTrain( TIDs *tids, int i ) {
 	
 	// Tell the train its init info.
 	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
-	
+	/*
 	// Send the train the stop distance
 	req.type = STOP_UPDATE;
 	FOREVER {
@@ -295,11 +295,11 @@ void shell_initTrain( TIDs *tids, int i ) {
 		if( sscanf( input, "%d", &req.mm ) >= 0 ) break;
 		output( "Invalid distance. Try again.\r\n" );
 	}
-	Send ( trainTid, &req, sizeof(TrainReq), 0, 0 );
+	Send ( trainTid, &req, sizeof(TrainReq), 0, 0 );*/
 }
 
 // Execute a train command
-TSReply trainCmd( TSRequest *req, TIDs *tids ) {
+TSReply trackCmd( TSRequest *req, TIDs *tids ) {
 	TSReply	rpl;
 	req->startTicks = Time(tids->cs);
 	
@@ -370,25 +370,25 @@ void shell_exec( TIDs *tids, char *command ) {
 	// rv
 	} else if( sscanf( command, "rv %d", &tsReq.train )>=0 ) {
     	tsReq.type = RV;
-		trainCmd( &tsReq, tids );
+		trackCmd( &tsReq, tids );
 	// st
     } else if( sscanf( command, "st %d", &tsReq.sw )>=0 ) {
 		tsReq.type = ST;
-		tsRpl = trainCmd( &tsReq, tids );
+		tsRpl = trackCmd( &tsReq, tids );
 		output( "Switch %d is set to %c. \r\n", tsReq.sw, switch_dir( tsRpl.dir ) );
 	// sw
     } else if( sscanf( command, "sw %d %c", &tsReq.sw, tmpStr1 )>=0 ) {
 		tsReq.type = SW;
 		tsReq.dir = switch_init( tmpStr1[0] );
-		trainCmd( &tsReq, tids );
+		trackCmd( &tsReq, tids );
 	// tr
 	} else if( sscanf( command, "tr %d %d", &tsReq.train, &tsReq.speed )>= 0 ) {
 		tsReq.type = TR;
-		trainCmd( &tsReq, tids );
+		trackCmd( &tsReq, tids );
 	// wh
     } else if( sscanf( command, "wh" )>=0 ) {
 		tsReq.type = WH;
-		tsRpl = trainCmd( &tsReq, tids );
+		tsRpl = trackCmd( &tsReq, tids );
 		if( tsRpl.sensor < 0 ) {
 			output( "No sensor triggered yet." );
 		} else {
@@ -399,11 +399,11 @@ void shell_exec( TIDs *tids, char *command ) {
 	// start
     } else if( sscanf( command, "start" )>=0 ) {
 		tsReq.type = START;
-		trainCmd( &tsReq, tids );
+		trackCmd( &tsReq, tids );
 	// stop
     } else if( sscanf( command, "stop" )>=0 ) {
 		tsReq.type = STOP;
-		trainCmd( &tsReq, tids );
+		trackCmd( &tsReq, tids );
 	// cache ON
 	} else if( sscanf( command, "cache ON" )>= 0 ) {
 		cache_on(  );
