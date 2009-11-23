@@ -239,12 +239,7 @@ int parse_model_str(FILE *file, TrackModel* model)
     }
   }
 
-  int r;
-  for ( r = 0; r < model->num_nodes; r ++ ) {
-	assert ( model->nodes[r].reserved == 0 );
-  }
-
-  // Whew, all parsed.
+   // Whew, all parsed.
   return 0;
 }
 
