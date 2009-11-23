@@ -61,7 +61,8 @@ int parse_model_str(FILE *file, TrackModel* model)
 
     Node* node = &model->nodes[num];
     // Store the index
-	node->idx = num;
+	node->idx 	   = num;
+	node->reserved = 0;
 
     char name[5];
     memoryset(name, 0, 5);
@@ -237,6 +238,12 @@ int parse_model_str(FILE *file, TrackModel* model)
       return -1;
     }
   }
+
+  int r;
+  for ( r = 0; r < model->num_nodes; r ++ ) {
+	assert ( model->nodes[r].reserved == 0 );
+  }
+
   // Whew, all parsed.
   return 0;
 }
