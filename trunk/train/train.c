@@ -756,13 +756,13 @@ void courier() {
 void heart() {
 	TID parent	= MyParentTid();
 	TID csTid 	= WhoIs( CLOCK_NAME );
-	DeReply		rpl;
-	rpl.sensor  = TIME_UPDATE;
+	TrainReq	req;
 
+	req.sensor  = TIME_UPDATE;
 	FOREVER {
-		Send( parent, &rpl, sizeof(DeReply), 0, 0 );
+		Send( parent, &req, sizeof(TrainReq), 0, 0 );
 		// Heart beat for the watchman
-		rpl.ticks = Delay( HEARTBEAT, csTid );
+		req.ticks = Delay( HEARTBEAT, csTid );
 	}
 }
 
