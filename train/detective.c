@@ -29,12 +29,8 @@
 #define SENSOR_WAIT	(50 / MS_IN_TICK)
 
 /* FORWARD DECLARATIONS */
-
-/**
- * A Track Detective
- */
-
-
+// ----------------------------------------------------------------------------
+// A Track Detective
 typedef struct {
 	int			sensorHist[NUM_SENSORS];
 	char		strayBuf[NUM_STRAY];
@@ -44,9 +40,7 @@ typedef struct {
 	TID 	 	iosTid;
 	TID  		csTid;
 	TID			tsTid;
-
 } Det;
-
 
 int  det_init	( Det *det );
 int  det_wake	( Det *det, int sensor, int ticks );	
@@ -54,9 +48,9 @@ int	 det_expire ( Det *det, int ticks );
 void det_reply	( DeRequest *req, int sensor, int ticks );
 void poll		();
 void watchDog	();
+// ----------------------------------------------------------------------------
 
 /* ACTUAL CODE */
-
 void det_run () {
 	debug ("det_run: The Track Server is about to start. \r\n");	
 	Det 		det;
@@ -67,7 +61,6 @@ void det_run () {
 	char		ch;
 	UIRequest	uiReq;
 	int 		uiTid;
-
 
 	// Initialize the Track Server
 	if_error( det_init (&det), "Initializing Track Server failed.");
@@ -90,6 +83,7 @@ void det_run () {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
+
 		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
 
 							// Send to the UI Server
@@ -117,6 +111,7 @@ void det_run () {
 
 			case WATCH_DOG:
 				Reply ( senderTid, 0, 0 );
+				
 				//debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
 				if( det.lstPoll < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
@@ -170,7 +165,7 @@ void det_run () {
 		
 			default:
 				reply.ret = DET_INVALID_REQ_TYPE;
-				error (reply.ret, "Track Server request type is not valid.");
+				error (reply.ret, "Detective request type is not valid.");
 				Reply ( senderTid, &reply, sizeof(reply) );
 				break;
 		}
@@ -183,10 +178,11 @@ int det_init( Det *det ) {
 	debug ("det_init: track detective=%x \r\n", det);
 	int err = NO_ERROR;
 
-	det->csTid = WhoIs( CLOCK_NAME );
-	det->iosTid = WhoIs( SERIALIO1_NAME );
-	det->tsTid = WhoIs( TRACK_SERVER_NAME );
-	det->lstPoll = POLL_GRACE; //wait 5 seconds before complaining
+	// Initialize the internal variables
+	det->csTid   = WhoIs( CLOCK_NAME );
+	det->iosTid  = WhoIs( SERIALIO1_NAME );
+	det->tsTid   = WhoIs( TRACK_SERVER_NAME );
+	det->lstPoll = POLL_GRACE; // wait 5 seconds before complaining
 
 	rb_init(&(det->stray), det->strayBuf ) ;
 //	rb_init(&(det->request), det->reqBuf, sizeof(DeRequest), MAX_NUM_TRAINS ) ;
@@ -197,16 +193,19 @@ int det_init( Det *det ) {
 		req->type = UNUSED_REQ;
 	}
 
+	// Create the helper tasks
 	err =  Create( 3, &poll );
 	if( err < NO_ERROR ) return err;
 	err = Create( 3, &watchDog );
 	if( err < NO_ERROR ) return err;
+	
+	// Register with the Name Server
 	return RegisterAs( DETECTIVE_NAME );
 }
 
 void det_reply( DeRequest *req, int sensor, int ticks ) {
 	debug("waking up (%d) with sensor %d at time %dms\r\n", req->tid, sensor, ticks * MS_IN_TICK);
-	DeReply		rpl = { {sensor}, {ticks} };
+	DeReply	rpl = { {sensor}, {ticks} };
 	
 	// Wake up the train
 	 Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
@@ -286,12 +285,11 @@ void poll() {
 		req.ticks = Time( csTid );
 
 		// Let the track server know
-		Send( deTid, &req, sizeof(req), 0, 0);
+		Send( deTid, &req, sizeof(req), 0, 0 );
 	}
 }
 
 void watchDog () {
-
 	debug( "det: poll watchdog task started\r\n" );
 
 	TID deTid = MyParentTid();
@@ -306,6 +304,6 @@ void watchDog () {
 		Delay( POLL_WAIT, csTid );
 
 		// Let the track server know
-		Send( deTid, &req, sizeof(req), 0, 0);
+		Send( deTid, &req, sizeof(req), 0, 0 );
 	}
 }
