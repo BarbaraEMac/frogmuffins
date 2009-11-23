@@ -21,6 +21,12 @@
 // Private Stuff
 // ----------------------------------------------------------------------------
 
+// A prediction for all of the NODES a train could hit
+typedef struct {
+	int len;
+	int idxs[10];
+} NodePred;
+
 typedef struct {
 	int len;		// Number of reserved sensors
 	int idxs[8];	// Indicies of the reserved sensor nodes
@@ -52,14 +58,16 @@ int  rp_distToNextRv   	(RoutePlanner *rp, Path *p);
 int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
 
-void rp_predictSensors  (RoutePlanner *rp, SensorsPred *p, int sensorId );
-void rp_predictSensorHelper(RoutePlanner *rp, SensorsPred *p, Node *n, int prevIdx, int startIdx);
+void rp_predict 		(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred,
+						 int sensorId);
+void rp_predictHelper	(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred, Node *n, 
+						 int prevIdx, int startIdx);
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
-void rp_reserve			(RoutePlanner *rp, SensorsPred *sensors, int trainId);
+void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId);
 void rsv_cancel			(Reservation *rsv, TrackModel *model);
-void rsv_make			(Reservation *rsv, TrackModel *model, SensorsPred *sensors);
+void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors);
 int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
@@ -107,7 +115,8 @@ void rp_run() {
 	RPReply			trReply;
 	RPShellReply    shReply;
 	int 			shellTid;
-	SensorsPred		pred;	
+	SensorsPred		sensPred;
+	NodePred		nodePred;
 	int 			i;
 	int				err;
 	int				tmp;
@@ -177,21 +186,28 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
-				pred.len = 0;
+				sensPred.len = 0;
+				nodePred.len = 0;
 
-				rp_predictSensors(&rp, &pred, idxTosIdx(req.nodeIdx1, req.name));
+				rp_predict( &rp, &sensPred, &nodePred, 
+								   idxTosIdx(req.nodeIdx1, req.name) );
 				
 				if ( req.nodeIdx1 > 39 ) {
 					printf ("\033[36m%s is not a valid sensor.\033[37m\r\n", req.name);
-				} else if ( pred.len == 0 ) {
+				} else if ( sensPred.len == 0 ) {
 					printf ("There are no sensors.\r\n");
 				} else {
 					printf ("Sensors: ");
-					for ( i = 0; i < pred.len; i ++ ) {
-						printf ("%c%d (dist=%d), ", sensor_bank(pred.idxs[i]), 
-								sensor_num(pred.idxs[i]), pred.dists[i] );
+					for ( i = 0; i < sensPred.len; i ++ ) {
+						printf ("%c%d (dist=%d), ", sensor_bank(sensPred.idxs[i]), 
+								sensor_num(sensPred.idxs[i]), sensPred.dists[i] );
+					}
+					printf("\r\nNodes: ");
+					for ( i = 0; i < nodePred.len; i ++ ) {
+						printf ("%s, ", rp.model.nodes[nodePred.idxs[i]].name );
 					}
 					printf("\r\n");
+
 				}
 				
 				break;
@@ -412,6 +428,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  totalDist;			// Distance if reservations and blockages are considered
 	int  actualDist;		// Actual distance if we don't consider reservations
 	int  currentIdx = sIdxToIdx(req->lastSensor);
+	NodePred   nodePred;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
 	// Distance from current sensor to destination node
@@ -441,6 +458,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Clear the next sensor predictions
 	trReply->nextSensors.len = 0;
+	nodePred.len 			 = 0;
 
 	// If the train needs to turn around right now,
 	if (rp_turnAround (rp, &p, req->lastSensor) ) {
@@ -449,11 +467,12 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 		
 		// Predicting sensors we expect to hit.
 		// Then, we'll predict the behind sensors.
-		rp_predictSensors(rp, &trReply->nextSensors, oppositeSensorId(req->lastSensor));
+		rp_predict( rp, &trReply->nextSensors, &nodePred,
+						   oppositeSensorId(req->lastSensor) );
 	}	
 
 	// Predict the next sensors the train could hit
- 	rp_predictSensors (rp, &trReply->nextSensors, req->lastSensor);
+ 	rp_predict( rp, &trReply->nextSensors, &nodePred, req->lastSensor );
 /*	
 	debug ("Predicted Sensors: ");
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
@@ -477,8 +496,8 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 				trReply->switches[i].dir);
 	}
 */
-	// Reserve the next sensors
-	rp_reserve( rp, &trReply->nextSensors, req->trainId );
+	// Reserve the next nodes
+	rp_reserve( rp, &nodePred, req->trainId );
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
@@ -622,7 +641,7 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	}
 }
 
-void rp_predictSensors (RoutePlanner *rp, SensorsPred *pred, int sensorId ) {
+void rp_predict( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred, int sensorId ) {
 	int idx = sIdxToIdx ( sensorId );
 	Node *n = &rp->model.nodes[idx];
 	Edge *e = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
@@ -631,13 +650,17 @@ void rp_predictSensors (RoutePlanner *rp, SensorsPred *pred, int sensorId ) {
 	n = &rp->model.nodes[e->dest]; 
 
 	// Fill the "path" with sensor ids
-	rp_predictSensorHelper ( rp, pred, n, idx, idx );
+	rp_predictHelper ( rp, pred, nodePred, n, idx, idx );
 }
 
-void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
+void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
 							  Node *n, int prevIdx, int startIdx ) {
 	Node *n1, *n2;
 	
+	// Save this node.
+	nodePred->idxs[nodePred->len] = n->idx;
+	nodePred->len += 1;
+
 	switch ( n->type ) {
 		case NODE_SWITCH:
 			// Progress on an edge you didn't just come from
@@ -647,20 +670,20 @@ void rp_predictSensorHelper ( RoutePlanner *rp, SensorsPred *pred,
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
 			
 			} else if ( n->sw.ahead[1].dest == prevIdx ) {
 				n1 = &rp->model.nodes[n->sw.behind.dest]; 
 				
 				// Recurse on the next node
-				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
 			} else { //behind
 				n1 = &rp->model.nodes[n->sw.ahead[0].dest]; 
 				n2 = &rp->model.nodes[n->sw.ahead[1].dest]; 
 				
 				// Recurse on these next nodes
-				rp_predictSensorHelper ( rp, pred, n1, n->idx, startIdx );
-				rp_predictSensorHelper ( rp, pred, n2, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n2, n->idx, startIdx );
 			}
 			break;
 		
@@ -781,15 +804,14 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //--------------------------- Reservation Stuff -------------------------------
 //-----------------------------------------------------------------------------
 
-// TODO: Rewrite all of this
-void rp_reserve (RoutePlanner *rp, SensorsPred *sensors, int trainId) {
+void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId ) {
 	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
 
 	// Cancel the old reservations
 	rsv_cancel( rsv, &rp->model );
 
 	// Make this new reservation
-	rsv_make( rsv, &rp->model, sensors );
+	rsv_make( rsv, &rp->model, nodes );
 
 	// Recompute the distance tables
 	// TODO: dijkstra ?
@@ -802,7 +824,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-//		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure the sensor node is actually reserved
 		assert ( model->nodes[index].reserved == 1 );
@@ -816,19 +838,19 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 	rsv->len = 0;
 }
 
-void rsv_make( Reservation *rsv, TrackModel *model, SensorsPred *sensors ) {
+void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes ) {
 	int i;
 	int index;
 	
-	for ( i = 0; i < sensors->len; i ++ ) {
-		// Convert the sensor index to node index
-		index = sIdxToIdx( sensors->idxs[i] );
-//		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+	for ( i = 0; i < nodes->len; i ++ ) {
+		index = nodes->idxs[i];
+
+		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure this node is not already reserved
 		assert ( model->nodes[index].reserved == 0 );
 		
-		// Reserve the sensor node
+		// Reserve the node
 		model->nodes[index].reserved = 1;
 
 		// Store the node index in the reservation
@@ -836,7 +858,7 @@ void rsv_make( Reservation *rsv, TrackModel *model, SensorsPred *sensors ) {
 	}
 
 	// Save the number of nodes in this reservation
-	rsv->len = sensors->len;
+	rsv->len = nodes->len;
 }
 
 // And the hardcoding begins!
