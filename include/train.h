@@ -11,11 +11,13 @@
 #include "requests.h"
 
 typedef enum _train_mode {
-	INIT_LOC = 1, 	// First go to a particular place
-	INIT_DIR,		// then turn around to go around the loop in proper dir
-	CAL_SPEED,		// Run around a bunch of times until speed is nice
-	CAL_STOP,		// Calibrate stopping distance
-	CAL_WAIT,		// Waiting for the train to stop
+//	INIT_LOC = 1, 	// First go to a particular place
+//	INIT_DIR,		// then turn around to go around the loop in proper dir
+//	CAL_SPEED,		// Run around a bunch of times until speed is nice
+//	CAL_STOP,		// Calibrate stopping distance
+//	CAL_WAIT,		// Waiting for the train to stop
+	CAL_SPEED = 1,	// Calibrate the running speed
+	CAL_STOP,		// Calibrate the stopping distance
 	IDLE,			// Ready for input
 	NORMAL			// Going from place A to place B
 } TrainMode;
@@ -27,7 +29,8 @@ typedef enum _train_request {
 	POS_UPDATE,
 	STOP_UPDATE,
 	STRAY_TIMEOUT,
-	WATCH_TIMEOUT
+	WATCH_TIMEOUT,
+	CALIBRATE
 } TrainCode;
 
 typedef struct {
