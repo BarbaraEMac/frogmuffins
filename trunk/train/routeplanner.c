@@ -257,7 +257,7 @@ void rp_run() {
 				// Make a route
 //				debug ("determining the shortest path from %d (%d) to %d\r\n", 
 //						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
-				printf ("PLAN ROUTE: \r\n");
+				debug ("PLAN ROUTE: \r\n");
 				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
@@ -836,7 +836,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+		debug ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure the sensor node is actually reserved
 		assert ( model->nodes[index].reserved == 1 );
@@ -857,7 +857,7 @@ void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSen
 	for ( i = 0; i < nodes->len; i ++ ) {
 		index = nodes->idxs[i];
 
-		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+		debug ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure this node is not already reserved
 		assert ( model->nodes[index].reserved == 0 );
@@ -875,11 +875,11 @@ void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSen
 	// Store the node index in the reservation
 	rsv->idxs[nodes->len] = index;
 
-	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+	debug ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 	
 	// Save the number of nodes in this reservation
 	rsv->len = nodes->len + 1;
-	printf ("Reserved %d nodes in total.\r\n", rsv->len);
+	debug ("Reserved %d nodes in total.\r\n", rsv->len);
 }
 
 // And the hardcoding begins!
