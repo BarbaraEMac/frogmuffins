@@ -260,6 +260,7 @@ int rp_init(RoutePlanner *rp) {
 	int  shellTid;
 	int  track;
 	int	 err = NO_ERROR;
+	int i;
 
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
@@ -286,7 +287,10 @@ int rp_init(RoutePlanner *rp) {
 	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
 	*/
 
-	// TODO: Initialize track reservation system (nothing is reserved)
+	// Initialize track reservation system (nothing is reserved)
+	for ( i = 0; i < MAX_NUM_TRAINS; i ++ ) {
+		rp->reserves[i].len = 0;
+	}
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
@@ -795,9 +799,10 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-		
+	//	printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+
 		// Make sure the sensor node is actually reserved
-		assert ( model->nodes[index].reserved = 1 );
+		assert ( model->nodes[index].reserved == 1 );
 		
 		// Cancel the reservation
 		model->nodes[index].reserved = 0;
@@ -815,16 +820,16 @@ void rsv_make( Reservation *rsv, TrackModel *model, SensorsPred *sensors ) {
 	for ( i = 0; i < sensors->len; i ++ ) {
 		// Convert the sensor index to node index
 		index = sIdxToIdx( sensors->idxs[i] );
-		
+		//printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+
 		// Make sure this node is not already reserved
-		assert ( model->nodes[index].reserved = 0 );
+		assert ( model->nodes[index].reserved == 0 );
 		
 		// Reserve the sensor node
 		model->nodes[index].reserved = 1;
 
 		// Store the node index in the reservation
 		rsv->idxs[i] = index;
-
 	}
 
 	// Save the number of nodes in this reservation
