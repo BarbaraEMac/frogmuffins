@@ -21,7 +21,8 @@
 #include "shell.h"
 
 #define	SPEED_HIST				10
-#define	HEARTBEAT				(200 /MS_IN_TICK)
+#define	HEARTBEAT_MS			200
+#define	HEARTBEAT_TICKS			(HEARTBEAT_MS /MS_IN_TICK)
 #define	TIME_UPDATE				-1
 #define WATCHMAN_PRIORITY		3
 #define CALIBRATION_DEST		37 // E11 
@@ -104,8 +105,10 @@ speed_adjust( Speed sp, int original, int final ) {
 inline Speed 
 speed_add( Speed sp1, Speed sp2 ) {
 	Speed sp;
-	sp.ms = sp1.ms * sp2.ms;
-	sp.mm = (sp1.mm * sp2.ms) + (sp2.mm * sp1.ms);
+	sp.ms = (sp1.ms * sp2.ms) / 1000;
+	sp.mm = ((sp1.mm * sp2.ms)/ 1000) + ((sp2.mm * sp1.ms) / 1000);
+	debug( "speed_add: %dmm/s + %dmm/s = %d/%d = %d mm/s\r\n",
+			speed( sp1 ), speed( sp2 ), sp.mm, sp.ms, speed( sp ) );
 	return sp;
 }
 
@@ -145,17 +148,11 @@ void train_run () {
 	Train 	 	tr;
 	RPReply   	rpReply;		// Reply from the Route Planner
 	TrainReq	req;
-	int 		senderTid, len, dist = 0;
+	int 		senderTid, len, distTraveled = 0;
 	int			timeout = LOCATE_TIMEOUT;
 
 	// Initialize this train
 	train_init ( &tr );
-
-	// Calibrate the train
-	train_calibrate( &tr );
-
-	printf( "calibration done.\r\n" );
-	bwgetc( COM2 );
 
 	FOREVER {
 		// Receive a server request
@@ -166,17 +163,18 @@ void train_run () {
 		switch (req.type) {
 			case TIME_UPDATE: // heartbeat
 				assert( senderTid == tr.htTid );
+				assert( tr.mode == NORMAL );
 				if( tr.mode == NORMAL ) {
 					Reply( senderTid, 0, 0 );
 					// Update current location
-					dist -= speed_dist( tr.velocity, HEARTBEAT * MS_IN_TICK );
+					distTraveled -= speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
-					train_updateUI( &tr, dist );
+					train_updateUI( &tr, distTraveled );
 					// Adjust speed
-					train_adjustSpeed( &tr, dist );
+					train_adjustSpeed( &tr, rpReply.stopDist - distTraveled );
 				}
 				// Resend detective request
-				train_detect( &tr, &rpReply.nextSensors, dist );
+				train_detect( &tr, &rpReply.nextSensors, distTraveled );
 				break;
 
 			case WATCH_TIMEOUT:		// train is lost
@@ -196,7 +194,7 @@ void train_run () {
 			case POS_UPDATE: 	// got a position update
 				Reply( senderTid, 0, 0 );
 				debug ( "train: #%d is at sensor %c%d\r\n",
-					tr.id, sensor_bank( tr.sensor ), sensor_num( tr.sensor ) );
+					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ) );
 				// Update the train's information
 				train_update( &tr, req.sensor, req.ticks );
 				// Ask the Route Planner for an efficient route!
@@ -206,47 +204,25 @@ void train_run () {
 					error( rpReply.err,  "Route Planner failed." );
 					assert( 1 == 0 );
 				}
-				
-
-	/*		// Depending on the mode do different things
-		if( rpReply.stopDist == 0 ) {
-			debug( "stopDist == 0\r\n" );
-			switch( tr.mode ) {
-				case INIT_LOC:
-					tr.mode = INIT_DIR;
-					tr.dest = CALIBRATION_DEST;
-					break;
-				case INIT_DIR:
-					tr.mode = CAL_SPEED;
-					break;
-				case CAL_SPEED:
-					tr.cal_loops ++;
-					break;
-				case CAL_STOP:
-					train_drive( &tr, 0 );
-					printf("train: stopping at E11\r\n");
-					tr.mode = CAL_WAIT;
-					break;
-				default:
-					train_drive( &tr, 0 );
-					printf( "train: passed over destination\r\n" );
-					tr.mode = IDLE;
-					continue;
-					break;
-			}
-		}	*/
-
 
 				if( rpReply.stopDist < 0 ) {
 					train_reverse( &tr );			// TODO this
 					rpReply.stopDist = -rpReply.stopDist;
 				}
 				// Reset the distance counter
-				dist = 0;
+				distTraveled = 0;
+
 				// Flip the switches along the path.
 				train_flipSwitches( &tr, &rpReply );
+
+				// Adjust the speed according to distance
+				train_adjustSpeed( &tr, rpReply.stopDist );
+
+				// Resend detective request
+				train_detect( &tr, &rpReply.nextSensors, distTraveled );
+
 				// Start off the heart task
-				Reply	( tr.htTid, 0, 0 );
+				if( tr.mode == NORMAL ) { Reply ( tr.htTid, 0, 0 ); }
 				break;
 
 			case DEST_UPDATE: 	// got a new destination to go to
@@ -384,17 +360,15 @@ void train_adjustSpeed( Train *tr, int mm ) {
 	Speed base = train_speed( tr );
 	// Adjust calibrated speed based on gear
 	tr->velocity = speed_adjust( base, tr->defaultGear, tr->gear );
-	debug( "train: speed adjusted to %dmm/s\r\b", speed( tr->velocity ) );
+	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
 
 
 void train_update( Train *tr, int sensor, int ticks ) {
-	int 		last, pred, diff, dist, time;
+	int 		last, pred, diff;
 	Speed		sp;
 
 	// Calculate the distance traveled
-	tr->sensor = sensor; 
-	
 	sp.ms = ( ticks - tr->trigger ) * MS_IN_TICK;
 	sp.mm = train_distance( tr, sensor );
 	last = speed( sp );
@@ -419,11 +393,13 @@ void train_update( Train *tr, int sensor, int ticks ) {
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, last, pred, tr->sd, diff);
 
-
-	time = (Time( tr->csTid ) - tr->lastStopTime) * MS_IN_TICK; 
+	// TODO remove following lines
+	//time = (Time( tr->csTid ) - tr->lastStopTime) * MS_IN_TICK; 
 	// calculate acceleration
-	printf("train: acceleration is %dmm/s^2\r\n", (last * 1000)/ time );
+	//printf("train: acceleration is %dmm/s^2\r\n", (last * 1000)/ time );
+
 	
+	tr->sensor = sensor; 
 	tr->trigger = ticks;
 }
 
@@ -495,7 +471,9 @@ void train_retract( Train *tr ) {
 void train_detect( Train *tr, SensorsPred *pred, int mm ) {
 	DeRequest	req;
 	int 		i, dist, ticks = Time( tr->csTid );
-	Speed		window = { tr->sd * 3 , 1000 };
+	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
+
+	Speed		window = { variation * 3 , 1000 };
 	Speed		upper = speed_add( tr->velocity, window );
 	window.mm *= -1;
 	Speed		lower = speed_add( tr->velocity, window );
@@ -526,7 +504,8 @@ void train_detect( Train *tr, SensorsPred *pred, int mm ) {
 	debug( "\r\n" );
 	//if( req.expire > tr->trigger + SENSOR_TIMEOUT ) { }
 	debug( "train: req.expire=%dms in future\r\n", (req.expire - ticks) * MS_IN_TICK );
-	debug( "train: lower:%dmm/s upper%dmm/s\r\n", speed( lower ), speed( upper ) );
+	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
+		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
 	
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->coTid, &req,	sizeof(DeRequest), 0 , 0 );
@@ -629,123 +608,6 @@ void train_updateUI( Train *tr, int mm ) {
 	Send( tr->uiTid, &req, sizeof(UIRequest), &tmp, sizeof(int) ); 
 }
 
-//-----------------------------------------------------------------------------
-//--------------------------------- Calibration -------------------------------
-//-----------------------------------------------------------------------------
-void train_calibrate( Train *tr ) {
-
-	RPReply   	rpReply;		// Reply from the Route Planner
-	TrainReq	req;
-	int 		senderTid, len, distTravelled = 0;
-	int			timeout = LOCATE_TIMEOUT;
-
-	// Locate the train
-	train_locate( tr, timeout );
-
-	tr->dest = INIT_DEST;
-
-	FOREVER {
-		// Receive a server request
-		len = Receive ( &senderTid, &req, sizeof(req) );
-	
-		assert( senderTid != tr->htTid );
-		assert( len == sizeof(req) );
-		
-		switch (req.type) {
-
-			case WATCH_TIMEOUT:		// train is lost
-				Reply( senderTid, 0, 0 );
-				printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
-				train_locate( tr, timeout );
-				break;
-
-			case STRAY_TIMEOUT:		// train is really lost
-				Reply( senderTid, 0, 0 );
-				printf( "Train is really lost for %dms.\r\n", timeout *MS_IN_TICK );
-				train_reverse( tr );
-				timeout += (2000 / MS_IN_TICK); // increase the timeout by 50%
-				train_locate( tr, timeout );
-				break;
-
-			case POS_UPDATE: 	// got a position update
-				Reply( senderTid, 0, 0 );
-				debug ( "train: #%d is at sensor %c%d\r\n",
-					tr->id, sensor_bank( tr->sensor ), sensor_num( tr->sensor ) );
-				// Update the train's information
-				train_update( tr, req.sensor, req.ticks );
-				// Ask the Route Planner for an efficient route!
-				rpReply = train_planRoute ( tr );
-				//debug( "train: has route stopDist=%d\r\n", rpReply.stopDist );
-				if( rpReply.err < NO_ERROR ) {
-					error( rpReply.err,  "Route Planner failed." );
-					assert( 1 == 0 );
-				}
-				
-
-				// Depending on the mode do different things
-				if( rpReply.stopDist == 0 ) {
-					switch( tr->mode ) {
-						case INIT_LOC:
-							debug( "mode = INIT_DIR\r\n" );
-							tr->mode = INIT_DIR;
-							tr->dest = CALIBRATION_DEST;
-							break;
-						case INIT_DIR:
-							debug( "mode = CAL_SPEED\r\n" );
-							tr->mode = CAL_SPEED;
-							break;
-						case CAL_SPEED:
-							tr->cal_loops ++;
-							break;
-						case CAL_STOP:
-							debug( "mode = CAL_STOP\r\n" );
-							train_drive( tr, 0 );
-							printf("train: stopping at E11\r\n");
-							tr->mode = CAL_WAIT;
-							break;
-						default:
-							debug( "mode = IDLE\r\n" );
-							tr->mode = IDLE;
-							train_drive( tr, 0 );
-							printf( "train: passed over destination\r\n" );
-							return;
-							//break;
-					}
-				}	
-
-
-				if( rpReply.stopDist < 0 ) {
-					train_reverse( tr );			// TODO this
-					rpReply.stopDist = -rpReply.stopDist;
-				}
-				// Reset the distance counter
-				distTravelled = 0;
-				// Flip the switches along the path.
-				train_flipSwitches( tr, &rpReply );
-
-				// Adjust the speed according to distance
-				train_adjustSpeed( tr, rpReply.stopDist );
-
-				// Resend detective request
-				train_detect( tr, &rpReply.nextSensors, distTravelled );
-				break;
-
-			case STOP_UPDATE:
-				Reply( senderTid, 0, 0 );
-				// Store the stopping distance
-				debug( "train: stopping distance %dmm stored.\r\n", req.mm );
-				tr->stopDist = req.mm;
-				break;
-
-			default:
-				//error
-				break;
-	
-
-		}
-	}
-}
-
 void courier() {
 	debug( "courier starting\r\n");
 	TID 		deTid = WhoIs (DETECTIVE_NAME);
@@ -793,7 +655,7 @@ void heart() {
 	FOREVER {
 		Send( parent, &req, sizeof(TrainReq), 0, 0 );
 		// Heart beat for the watchman
-		req.ticks = Delay( HEARTBEAT, csTid );
+		req.ticks = Delay( HEARTBEAT_TICKS , csTid );
 	}
 }
 
