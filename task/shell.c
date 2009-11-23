@@ -98,6 +98,7 @@ void bootstrap(  ) {
 
 	// Create the ui 
 	// Makes 1 clock notifying task
+	// TID == 11
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
 	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
@@ -113,14 +114,14 @@ void bootstrap(  ) {
 	//output( "Creating the first train! (%d)\r\n", tids.tr[0] );
 	
 	// Create the second train!
-	//tids.tr[1] = Create( TRAIN_PRTY, &train_run );
+	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
 
 	// Initialize the first train
 	shell_initTrain( &tids, 0 /*train num*/);
 	
 	// Initialize the second train
-	//shell_initTrain( &tids, 1 /*train num*/ );
+	shell_initTrain( &tids, 1 /*train num*/ );
 
 	// Run the shell
 	shell_run( &tids );
@@ -250,7 +251,7 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
 	req.dest = rpRpl.idx;
 
 	// Tell the train its command info.
-	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
+	Send( trainTid, &req, sizeof( TrainReq ), &trainTid, sizeof(int) );
 
 }
 
@@ -283,7 +284,7 @@ void shell_initTrain( TIDs *tids, int i ) {
 	}
 
 	// Tell the train its init info.
-	Send( trainTid, &req, sizeof( TrainReq ), 0, 0 );
+	Send( trainTid, &req, sizeof( TrainReq ), &trainTid, sizeof(int) );
 	/*
 	// Send the train the stop distance
 	req.type = STOP_UPDATE;
