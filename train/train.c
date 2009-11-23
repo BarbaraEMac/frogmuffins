@@ -21,8 +21,6 @@
 #include "shell.h"
 
 #define	SPEED_HIST				10
-#define PREDICTION_WINDOW 		(1000 /MS_IN_TICK)
-#define	BLANK_RECORD_DIVISOR	2
 #define	HEARTBEAT				(200 /MS_IN_TICK)
 #define	TIME_UPDATE				-1
 #define WATCHMAN_PRIORITY		3
@@ -75,25 +73,37 @@ typedef struct {
 	RB			hist;	
 } Train;
 
-inline int speed( Speed sp ) { // in mm/s
+inline int 
+speed( Speed sp ) { // in mm/s
 	if( sp.ms == 0 ) return INT_MAX;
 	return (sp.mm * 1000) / sp.ms;
 }
 
-inline int	speed_time( Speed sp, int mm ) { // in ms
+inline int	
+speed_time( Speed sp, int mm ) { // in ms
 	if( sp.mm == 0 ) return INT_MAX;
 	assert( sp.mm != 0 );
 	return (sp.ms * mm) / sp.mm;
 }
 
-inline int speed_dist( Speed sp, int ms ) { // in mm
+inline int 
+speed_dist( Speed sp, int ms ) { // in mm
 	assert (sp.ms != 0 );
 	return (sp.mm * ms) / sp.ms;
 }
 
-inline Speed speed_adjust( Speed sp, int original, int final ) {
+inline Speed 
+speed_adjust( Speed sp, int original, int final ) {
 	sp.mm *= final;
 	sp.ms *= original;
+	return sp;
+}
+
+inline Speed 
+speed_add( Speed sp1, Speed sp2 ) {
+	Speed sp;
+	sp.ms = sp1.ms * sp2.ms;
+	sp.mm = (sp1.mm * sp2.ms) + (sp2.mm * sp1.ms);
 	return sp;
 }
 
@@ -182,6 +192,8 @@ void train_run () {
 
 			case POS_UPDATE: 	// got a position update
 				Reply( senderTid, 0, 0 );
+				debug ( "train: #%d is at sensor %c%d\r\n",
+					tr.id, sensor_bank( tr.sensor ), sensor_num( tr.sensor ) );
 				// Update the train's information
 				train_update( &tr, req.sensor, req.ticks );
 				// Ask the Route Planner for an efficient route!
@@ -404,7 +416,7 @@ void train_update( Train *tr, int sensor, int ticks ) {
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, last, avg, tr->sd, diff);
 
-		
+
 	time = (Time( tr->csTid ) - tr->lastStopTime) * MS_IN_TICK; 
 	// calculate acceleration
 	printf("train: acceleration is %dmm/s^2\r\n", (last * 1000)/ time );
@@ -481,8 +493,13 @@ void train_retract( Train *tr ) {
 void train_detect( Train *tr, SensorsPred *pred, int mm ) {
 	DeRequest	req;
 	int 		i, dist, ticks = Time( tr->csTid );
-	Speed		window = { tr->sd, 1000 };
+	Speed		window = { tr->sd * 3 , 1000 };
+	Speed		upper = speed_add( tr->velocity, window );
+	window.mm *= -1;
+	Speed		lower = speed_add( tr->velocity, window );
 
+	lower		= speed_adjust( lower, tr->defaultGear, tr->gear );
+	upper		= speed_adjust( upper, tr->defaultGear, tr->gear );
 
 	assert( pred->len <= array_size( req.events ) );
 	req.type      = WATCH_FOR;
@@ -499,9 +516,8 @@ void train_detect( Train *tr, SensorsPred *pred, int mm ) {
 		debug("%c%d, ", sensor_bank(pred->idxs[i]), sensor_num(pred->idxs[i]));
 
 		req.events[i].sensor = pred->idxs[i];
-		req.events[i].start  = ticks + speed_time( tr->velocity, dist );
-		req.events[i].end    = req.events[i].start
-			+ speed_time( tr->velocity, dist )+ PREDICTION_WINDOW;
+		req.events[i].start  = ticks + speed_time( lower, dist );
+		req.events[i].end    = ticks + speed_time( upper, dist );
 
 		req.expire = max( req.expire, req.events[i].end );
 	}
@@ -758,7 +774,7 @@ void heart() {
 	TID csTid 	= WhoIs( CLOCK_NAME );
 	TrainReq	req;
 
-	req.sensor  = TIME_UPDATE;
+	req.type  = TIME_UPDATE;
 	FOREVER {
 		Send( parent, &req, sizeof(TrainReq), 0, 0 );
 		// Heart beat for the watchman
