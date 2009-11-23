@@ -28,7 +28,8 @@
 #define WATCHMAN_PRIORITY		3
 #define CALIBRATION_DEST		37 // E11 
 #define INIT_DEST				28 // D9
-#define LOCATE_TIMEOUT			(7000 /MS_IN_TICK)
+#define LOCATE_TIMEOUT			(5000 /MS_IN_TICK)
+#define LOCATE_TIMEOUT_INC		(2000 /MS_IN_TICK)
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define LOCATE_GEAR				4
@@ -90,6 +91,12 @@ inline int speed_dist( Speed sp, int ms ) { // in mm
 	return (sp.mm * ms) / sp.ms;
 }
 
+inline Speed speed_adjust( Speed sp, int original, int final ) {
+	sp.mm *= final;
+	sp.ms *= original;
+	return sp;
+}
+
 
 void 		train_init    		( Train *tr );
 Speed 		train_speed			( Train *tr );
@@ -100,7 +107,7 @@ RPReply		train_planRoute 	( Train *tr );
 int 		train_distance		( Train *tr, int sensor ); // in mm
 
 // Detective Commands
-void 		train_locate		( Train *tr );
+void 		train_locate		( Train *tr, int timeout );
 void 		train_detect		( Train *tr, SensorsPred *pred, int mm );
 void 		train_update		( Train *tr, int sensor, int ticks );
 
@@ -126,12 +133,13 @@ void train_run () {
 	RPReply   	rpReply;		// Reply from the Route Planner
 	TrainReq	req;
 	int 		senderTid, len, dist = 0;
+	int			timeout = LOCATE_TIMEOUT;
 
 	// Initialize this train
 	train_init ( &tr );
 
 	// Locate the train
-	train_locate( &tr );
+	train_locate( &tr, timeout );
 
 	tr.dest = INIT_DEST;
 	debug( "train: found  at %c%d\r\n", 
@@ -160,8 +168,16 @@ void train_run () {
 				}
 				break;
 
-			case TIMEOUT:		// train is lost
-				train_locate( &tr );
+			case WATCH_TIMEOUT:		// train is lost
+				Reply( senderTid, 0, 0 );
+				train_locate( &tr, timeout );
+				break;
+
+			case STRAY_TIMEOUT:		// train is really lost
+				Reply( senderTid, 0, 0 );
+				train_reverse( &tr );
+				timeout += (2000 / MS_IN_TICK); // increase the timeout by 50%
+				train_locate( &tr, timeout );
 				break;
 
 			case POS_UPDATE: 	// got a position update
@@ -214,6 +230,8 @@ void train_run () {
 				dist = 0;
 				// Flip the switches along the path.
 				train_flipSwitches( &tr, &rpReply );
+				// Start off the heart task
+				Reply	( tr.htTid, 0, 0 );
 				break;
 
 			case DEST_UPDATE: 	// got a new destination to go to
@@ -256,7 +274,6 @@ void train_init ( Train *tr ) {
 
 	// Reply to the shell
 	Reply( tid, &tr->id, sizeof(int) );
-
 	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
@@ -345,10 +362,8 @@ void train_adjustSpeed( Train *tr, int mm ) {
 	}
 
 	Speed base = train_speed( tr );
-	// TODO adjust calibrated speed based on gear
-	base.ms *= tr->defaultGear;
-	base.mm *= tr->gear;
-	tr->velocity = base;
+	// Adjust calibrated speed based on gear
+	tr->velocity = speed_adjust( base, tr->defaultGear, tr->gear );
 }
 
 
@@ -437,32 +452,17 @@ RPReply train_planRoute( Train *tr ) {
 //-------------------------- Detective Commands -------------------------------
 //-----------------------------------------------------------------------------
 
-void train_locate( Train *tr ) {
-	int			timeout = LOCATE_TIMEOUT;
-	DeReply 	rpl;
+void train_locate( Train *tr, int timeout ) {
 	DeRequest	req;
 	req.type = GET_STRAY;
-	int			original = tr->gear;
+	req.expire = timeout + Time( tr->csTid );
+	
+	// Slow down to locate speed
+	train_drive( tr, LOCATE_GEAR );
 
-	FOREVER {
-		train_drive( tr, LOCATE_GEAR );
-
-		req.expire = timeout + Time( tr->csTid );
-		printf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
-		// Try again
-		Send( tr->deTid, &req, sizeof(DeRequest), &rpl, sizeof(TSReply) );
-	  if( rpl.sensor >= NO_ERROR ) break;
-		train_reverse( tr );
-		// try for a longer time next time
-		timeout *= 2;
-	}
-
-	printf( "Train found itself at %c%d\r\n", sensor_bank(rpl.sensor), sensor_num(rpl.sensor) );
-	// if we're finished calibration we were just trying to find the train
-	if( tr->mode == CAL_WAIT ) tr->mode = IDLE;
-
-	train_drive( tr, original );
-	train_update( tr, rpl.sensor, rpl.ticks );
+	printf( "Train is lost, trying to find itself until %d.\r\n", req.expire );
+	// Get stray sensors
+	Send( tr->coTid, &req, sizeof(DeRequest), 0, 0 );
 }
 
 void train_retract( Train *tr ) {
@@ -734,7 +734,16 @@ void courier() {
 		// Ask the detective
 		Send	(  deTid, &req, sizeof( DeRequest ), &rpl, sizeof( DeReply ) );
 
-		ans.type 	= (rpl.sensor < NO_ERROR) ? rpl.sensor : POS_UPDATE;
+		if( rpl.sensor >= NO_ERROR ) {
+			ans.type 	= POS_UPDATE;
+		} else if( rpl.sensor == TIMEOUT && req.type == GET_STRAY ) {
+			ans.type 	= STRAY_TIMEOUT;
+		} else if( rpl.sensor == TIMEOUT && req.type == WATCH_FOR ) {
+			ans.type	= WATCH_TIMEOUT;
+		} else {
+			ans.type 	= rpl.sensor;
+		}
+
 		ans.sensor 	= rpl.sensor;
 		ans.ticks 	= rpl.ticks;
 		
