@@ -32,16 +32,87 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 	
 	Model
 	=====
-
+	For this assignment, we simply use the reserved flag in each node to set it
+	as reserved or not. Otherwise, oour abstraction of the track is identical 
+	to the one for P1.
 
 	Route Planner
 	=============
-
+	The Route Planner for P2 has a more robust reservation system. Other than
+	that, it has remained mostly the same.
 	
+		Sensor Predictions
+		==================
+		Since our sensor predictions worked for P1, we have not modified them for P2.
+		We've simply added some Node Predictions.
+	
+		Node Predictions
+		================
+		In addition to determining all of the next sensors we could possibly hit,
+		we now build a list of node predictions. This list includes every node
+		a train will pass until it reaches a sensor. These predictions include
+		each node a train could pass, independent of switch state or train direction.
+
+		Reservations
+		============
+		Given the last triggered sensor by a train, we are able to predict the next 
+		path it will head along and reserve it. 
+		
+		Once a train asks for a new path and gives the Route Planner the last 
+		triggered sensor, the list of predicted nodes is created. Then, we reserve 
+		all of those nodes. If a train is facing backwards along the desired path,
+		all of the nodes behind the train will also be reserved in case it does
+		not reverse properly. 
+
+		We also make sure to reserve the last triggered sensor so that a train
+		sitting idle between 2 sensors will never allow another train to travel
+		through it.
+
+		If a node is reserved, the cost of the path to that node is INT_MAX. Hence,
+		the shortest path from any node to any other will never include this node. 
+		This is how we ensure that no two trains will have them crossing the same
+		nodes at the same time. After a reservation is made, we recompute the 
+		shortest distances, observing these reservations.
+
+		The nodes stay reserved until the train hits another sensor and asks the 
+		Route Planner to change the path. At this point, the previous reservation
+		is cancelled and the new one is made. Therefore, nodes are only reserved 
+		for 1 time step (where we define 1 time step to be the time for a train
+		to move from 1 sensor to the next).
+
+		Here is the pseudo-code for the reservation function in the Route Planner:
+			Grab the reservation for this train using the id.
+			Cancel the previous reservation:
+				For each node in the reservation,
+					Set the reserved flag to 0.
+					Set the node index (in the reservation) to -1 (error val). 
+				Set the number of reserved nodes (in the reservation) to 0.
+			Make the new reservation:
+				For each node in the predicted nodes list:
+					Set the reserved flag to 1.
+					Save the node index in the reservation.
+				Add the last triggered sensor to the reservation and set the flag.
+				Set the length of the reservation to the number of nodes.
+			Recompute the distances given these new reservations.
+
+		Reservation Struct
+		==================
+		The following is the data structure for the reservations:
+
+		typedef struct {
+			int len;		// Number of reserved nodes
+			int idxs[8];	// Indicies of the reserved nodes
+		} Reservation;
+
+		There is 1 reservation stored for each train within the Route Planner.
+		We index this reservation by the train id. At this point, our reservations
+		have at most 8 nodes. We hope to reduce this number in the future to make 
+		it more aggressive.
+
 	Detective
 	=========
 
-Track Server
+	Track Server
 	============
 
 	Train
@@ -70,6 +141,9 @@ Track Server
 	===========
 	We did some neat things for this assignment. Here's a brief discussion of
 	some of them.
+
+		Standard Deviation
+		==================
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
