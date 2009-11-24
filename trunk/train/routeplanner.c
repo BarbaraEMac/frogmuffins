@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -438,6 +438,12 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	NodePred   nodePred;
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
+	// TODO: Idea.
+	// We need to call this to recomputer the distaces given a previous train;s
+	// reservations BEFORE we plan our route.
+	// BUT, we do not want to call floyd-warshall in between making our reservations.
+	floyd_warshall( rp, rp->model.num_nodes );
+	
 	// Distance from current sensor to destination node
 	actualDist = rp->dists[currentIdx][req->destIdx];
 	totalDist  = rp->rsvDists[currentIdx][req->destIdx];
