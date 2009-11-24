@@ -15,8 +15,8 @@
 #include "servers.h"
 #include "train.h"
 
-#define INT_MAX			0xFFFF
 #define REVERSE_COST 	1000
+#define INT_MAX			0xFFFF
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -255,7 +255,6 @@ void rp_run() {
 				// Make a route
 //				debug ("determining the shortest path from %d (%d) to %d\r\n", 
 //						sIdxToIdx(req.lastSensor), req.lastSensor, req.destIdx);
-				debug ("PLAN ROUTE: \r\n");
 				rp_planRoute (&rp, &trReply, &req);
 					
 				// Reply to the client train
@@ -285,7 +284,7 @@ int rp_init(RoutePlanner *rp) {
 	int  shellTid;
 	int  track;
 	int	 err = NO_ERROR;
-	int i;
+	int  i;
 
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
@@ -301,16 +300,6 @@ int rp_init(RoutePlanner *rp) {
 	
 	// Initialize shortest paths using model
 	floyd_warshall (rp, rp->model.num_nodes); 
-	/*	
-	int j, k;
-	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
-	for ( j = 0; j < rp.model.num_nodes; j ++ ) {
-		for ( k = 0; k < rp.model.num_nodes; k ++ ) {
-		 // print out stuff ..
-		}
-	}
-	debug ("FWARSH: %d\r\n", Time(WhoIs(CLOCK_NAME))*MS_IN_TICK);
-	*/
 
 	// Initialize track reservation system (nothing is reserved)
 	for ( i = 0; i < MAX_NUM_TRAINS; i ++ ) {
@@ -436,22 +425,34 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  actualDist;		// Actual distance if we don't consider reservations
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	NodePred   nodePred;
-	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
-	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
+	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
+	debug ("GOING TO NODE %s(%d) from %s\r\n", 
+			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
 
 	// Cancel your previous reservations
-	rsv_cancel( rsv, &rp->model );
-	// Calculate the new distances (also picks up reservations made by other trains)
-	floyd_warshall( rp, rp->model.num_nodes );
+	if ( rsv->len > 0 ) {
+		rsv_cancel( rsv, &rp->model );
+	
+		// Calculate the new distances 
+		// (also picks up reservations made by other trains)
+		floyd_warshall( rp, rp->model.num_nodes );
+	}
 	
 	// Distance from current sensor to destination node
 	actualDist = rp->dists[currentIdx][req->destIdx];
 	totalDist  = rp->rsvDists[currentIdx][req->destIdx];
-	//debug ("totalDist = %d\r\n", totalDist);
+	debug ("totalDist = %d\r\n", totalDist);
 	
+	if ( totalDist >= INT_MAX ) {
+		debug ("There is no path from %s to dest!\r\n", 
+				rp->model.nodes[currentIdx].name);
+		trReply->err = NO_PATH;
+		return;
+	}
+
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
-//	rp_displayPath ( rp, &p );
+	rp_displayPath ( rp, &p );
 	
 	// Get the distance to the next reverse
 	nextRv = rp_distToNextRv (rp, &p);
@@ -923,6 +924,9 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( i = 0; i < n; i++ ) {
 			for ( j = 0; j < n; j++ ) {
 				
+
+				//if ( i == j ) break;
+
 				distMod = rev( rp, rp->pred[i][k], rp->succ[k][j], k ) ? REVERSE_COST : 0;
 			/*	if( distMod > 0 ) {
 					printf("reversing at %s-%s-%s\r\n",
@@ -953,22 +957,28 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( j = 0; j < 10; j ++ ) {
 
 			makePath (rp, &p, i, j);
-			debug ("PATH from %s(%d) to %s(%d):\r\n", rp->model.nodes[i].name, i, rp->model.nodes[j].name, j );
+			debug( "PATH from %s(%d) to %s(%d): (dist=%d)(rsvD=%d)\r\n", 
+					rp->model.nodes[i].name, i, rp->model.nodes[j].name, j,
+					rp->dists[i][j], rp->rsvDists[i][j]);
 
 			int s = i;
-			int pr = j;
-			for ( k = 0; k < p.len; k ++ ) {
+			for ( k = 0; ; k ++ ) {
 				s = rp->succ[s][j];
-				pr = rp->pred[i][pr];
 				
-				debug ("s=%s(%d) pr=%s(%d) p=%s(%d) k=%d\r\n", rp->model.nodes[s].name, s, rp->model.nodes[pr].name, pr, rp->model.nodes[p.path[k]].name, p.path[k], k);
+				debug ("%s(%d)> ", rp->model.nodes[s].name, s);
 				
+				if ( s == j ) break;
 				//assert (next == p.path[k]);
 			}
-			printf ("(%d, %d) PASSED.\r\n", i, j);
+			debug ("\r\n");
+			for ( k = 0; k < p.len; k ++ ) {
+				debug ("%s(%d)> ", rp->model.nodes[p.path[k]].name, p.path[k]);
+			}
+			debug ("\r\n");
 		}
 	}
 	*/
+	
 }  //end of floyd_warshall()
 
 
@@ -987,6 +997,7 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 //	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
 	int itr = 0;
 	int i, j;
+	Node *node;
 
 	if ( idx1 == idx2 ) {
 		return 0;
@@ -1009,11 +1020,12 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 	}
 
 	// Check each edge in O(3) time
-	while ( itr < (int) model->nodes[i].type ) {
+	node = &model->nodes[i];
+	while ( itr < (int) node->type ) {
 		// If the edge reaches the destination,
-		if ( model->nodes[i].edges[itr].dest == j ) {
+		if ( node->edges[itr].dest == j ) {
 			// Return the distance between them
-			return model->nodes[i].edges[itr].distance; 
+			return node->edges[itr].distance; 
 		}
 
 		// Advance the iterator
@@ -1023,18 +1035,26 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 }
 
 void makePath (RoutePlanner *rp, Path *p, int i, int j) {
-	
+//	debug ("makePath: ");
 	// Recover the path from the FW matrix
 	int k, s = i;
 	for( k = 0; s != j; k++ ) {
+//		debug ("k=%d, s=%d \r\n", k, s);
 		assert( s >= 0 && s < rp->model.num_nodes );
 		p->path[k] = s;
 		s = rp->succ[s][j];
+
 	}
 	assert( s == j );
 	p->path[k] = j;
 	p->len = k + 1;
 	assert( p->len <= array_size( p->path ) );
+
+//	debug ("Path: ");
+//	for ( k = 0; k < p->len; k ++ ) {
+//		debug ("%s(%d)> ", rp->model.nodes[p->path[k]].name, p->path[k]);
+//	}
+//	debug ("\r\n");
 }
 
 void dijkstra ( TrackModel *model, int source, int dest ) {
