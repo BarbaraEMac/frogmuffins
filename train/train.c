@@ -12,13 +12,14 @@
 
 #include "debug.h"
 #include "error.h"
+#include "globals.h"
 #include "requests.h"
 #include "routeplanner.h"
 #include "servers.h"
+#include "shell.h"
 #include "trackserver.h"
 #include "train.h"
 #include "ui.h"
-#include "shell.h"
 
 #define	SPEED_HIST				10
 #define	HEARTBEAT_MS			200
@@ -36,7 +37,7 @@
 #define SD_THRESHOLD			10	// parts of mean	
 #define CAL_LOOPS				2
 #define	C						4000
-#define	INT_MAX					0x7fffffff
+#define INT_MAX					0x7FFFFFFF
 // Private Stuff
 // ----------------------------------------------------------------------------
 
@@ -70,6 +71,7 @@ typedef struct {
 	TID			htTid;			// Id of the Heart
 	TID			coTid;			// Id of the courier
 	TID			caTid;			// ID of the calibration task
+	TID			rwTid;			// ID of the route watch dog task
 
 	int			cal_loops;
 	int			sd;				// Standard deviation
@@ -142,6 +144,7 @@ void 		train_watch 		( Train *tr, RPReply *rep );
 void		heart				();
 void		courier				();
 void 		calibration			();
+void 		routeWatchDog 		();
 //----------------------------------------------------------------------------
 
 void train_run () {
@@ -215,14 +218,28 @@ void train_run () {
 				
 				// Ask the Route Planner for an efficient route!
 				rpReply = train_planRoute ( &tr );
-				debug( "train: has route stopDist=%d\r\n", rpReply.stopDist );
-				if( rpReply.err < NO_ERROR ) {
+
+				// If there is no path available,
+				if ( rpReply.err == NO_PATH ) {
+					debug ("The train has no route. Stopping.\r\n");
+					// Stop moving
+					train_drive( &tr, 0 );
+
+					// Wake up the route watcher so that we can try again later
+					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
+					// Stop executing this code.
+					break;
+
+				// If there is another error, then we can't handle it.
+				} else if( rpReply.err < NO_ERROR ) {
 					error( rpReply.err,  "Route Planner failed." );
 					assert( 1 == 0 );
 				}
+				debug( "train: has route stopDist=%d\r\n", rpReply.stopDist );
 				
 				// Reverse if the train is backwards
 				if( rpReply.stopDist < 0 ) {
+					debug ("Train is backwards. It's reversing.\r\n");
 					train_reverse( &tr );			// TODO this
 					rpReply.stopDist = -rpReply.stopDist;
 				}
@@ -245,7 +262,7 @@ void train_run () {
 				// If we are in calibration mode, reply to the calibration task
 				// on certain position updates
 				if ( tr.mode == CAL_SPEED && rpReply.stopDist == 0 ) {
-					Reply( tr.caTid, 0, 0 );
+					Reply( tr.caTid, &tr.sd, sizeof(int) );
 				} else if ( tr.mode == CAL_STOP && rpReply.stopDist == 0 ) {
 					// Stop the train if we've reach the calibration destination
 					train_drive ( &tr, 0 );
@@ -310,6 +327,7 @@ void train_init ( Train *tr ) {
 	tr->htTid = Create( TRAIN_PRTY - 1, &heart );
 	tr->coTid = Create( TRAIN_PRTY - 1, &courier );
 	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
+	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
 	assert( tr->rpTid >= NO_ERROR );
 	assert( tr->tsTid >= NO_ERROR );
 	assert( tr->deTid >= NO_ERROR );
@@ -486,7 +504,6 @@ void train_update( Train *tr, int sensor, int ticks ) {
 //-----------------------------------------------------------------------------
 //-------------------------- Route Planner Commands ---------------------------
 //-----------------------------------------------------------------------------
-
 int train_distance( Train *tr, int sensor ) {
 	RPRequest	req;
 	int	dist;
@@ -501,7 +518,6 @@ int train_distance( Train *tr, int sensor ) {
 	//debug( "train: distance returned %d \r\n", dist );
 	return dist;
 }
-
 
 RPReply train_planRoute( Train *tr ) {
 	RPReply 	reply;
@@ -522,7 +538,6 @@ RPReply train_planRoute( Train *tr ) {
 //-----------------------------------------------------------------------------
 //-------------------------- Detective Commands -------------------------------
 //-----------------------------------------------------------------------------
-
 void train_locate( Train *tr, int timeout ) {
 	DeRequest req;
 	req.type   = GET_STRAY;
@@ -600,14 +615,15 @@ void train_reverse( Train *tr ) {
 	TSReply	  reply;
 
 	// Do not reverse if we are testing the stopping distance.
-	if( tr->mode == CAL_STOP ) return;
+	if( tr->mode == CAL_STOP || tr->mode == CAL_SPEED ) return;
 	
-	debug ("\033[44mTrain %d is reversing at gear =%d\033[49m\r\n", tr->id, tr->gear );
+	debug( "\033[44mTrain %d is reversing at gear =%d\033[49m\r\n", 
+			tr->id, tr->gear );
 
 	tr->gearChanged = true;
 
-	req.type = RV;
-	req.train = tr->id;
+	req.type        = RV;
+	req.train       = tr->id;
 	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
@@ -618,7 +634,9 @@ void train_drive( Train *tr, int gear ) {
 	TSRequest req;
 	TSReply	  reply;
 
-//if( tr->mode == CAL_SPEED && tr->gear != 0) return;
+	// TODO:
+	// Don't change your speed while calibrating
+	if( tr->mode == CAL_SPEED ) return;
 	
 	if( tr->gear == gear ) return;
 
@@ -644,7 +662,8 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 	TSReply			reply;
 	SwitchSetting  *ss;
 
-	// TODO: Do we have to restrict the flip switching?
+	// Do not change the switches if we are calibrating the speed
+	if ( tr->mode == CAL_SPEED || tr->mode == CAL_STOP ) return;
 
 	foreach( ss, rpReply->switches ) {
 	  if( ss->id <= 0 ) break;
@@ -748,56 +767,70 @@ void heart() {
 //--------------------------------- Calibration -------------------------------
 //-----------------------------------------------------------------------------
 void calibration () {
+	int dests[] = { 37, 23, 15, 1, 22, 27 };
+	int i, j, sd;
 	TrainReq req;
 	TID 	 parent = MyParentTid();
 
 	req.type = DEST_UPDATE;
-	req.mode = CAL_SPEED;	
 	
 	// Find D9
 	printf ("CALI: Finding D9\r\n");
 	req.dest = INIT_DEST;		// D9
+	req.mode = NORMAL;
 	Send( parent, &req, sizeof(TrainReq), 0, 0 );
+	
+	// Change your mode to calibrate the speed
+	req.mode = CAL_SPEED;	
+	
+	for ( i = 0; i < CAL_LOOPS; i ++ ) {
+		for ( j = 0; j < 6; j ++ ) {
+			printf ("CALIBRATE: Train finding %d\r\n", dests[j]);
+			req.dest = dests[j];
 
-	// Turn around to face E11
-	printf ("CALI: Found D9. Finding E11\r\n");
-	req.dest = CALIBRATION_DEST;// E11
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
+			Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
+			if ( sd < SD_THRESHOLD ) {
+				printf ("Train is done calibration with sd=%d.\r\n", sd);
+				break;
+			}
+		}
+	}
 
-	// Run in a loop towards E11 without reversing
-	printf ("CALI: Finding C15\r\n");
-	req.dest = 23;				// C15
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	printf ("CALI: Finding B15\r\n");
-	req.dest = 15 ;				// B15
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	req.dest = 22;				// C13
-	printf ("CALI: Finding C13\r\n");
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	req.dest = 27;				// D7
-	printf ("CALI: Finding D7\r\n");
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	req.dest = 37;				// E11
-	printf ("CALI: Finding E11\r\n");
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-
-	// Run in a loop towards E11 without reversing AGAIN
-	req.dest = 20;				// C9
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	req.dest = 21;				// C11
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
-	req.dest = 34;				// E5
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
-	
 	req.dest = 37;				// E11
 	req.mode = CAL_STOP;		
-	Send( parent, &req, sizeof(TrainReq), 0, 0 );
+	printf ("CALI: Finding E11\r\n");
+	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
 
 	Exit();
+}
+
+//-----------------------------------------------------------------------------
+//------------------------------ Route Watch Dog ------------------------------
+//-----------------------------------------------------------------------------
+void routeWatchDog () {
+	TrainReq req;
+	int 	 parent = MyParentTid();
+	int 	 trainTid;
+	int		 clockTid = WhoIs( CLOCK_NAME );
+	int 	 lastHitSensor;
+
+	req.type = POS_UPDATE;
+
+	FOREVER {
+		// Wait until the path is blocked
+		Receive( &trainTid, &lastHitSensor, sizeof(int) );
+		assert ( trainTid == parent );
+		Reply  ( trainTid, &req, sizeof(TrainReq) );
+		
+		debug ("routeWatchDog: Waking up the train. There may be a path.\r\n");
+
+		// Wait a bit
+		req.ticks = Delay( 500 / MS_IN_TICK, clockTid );
+
+		// Wake up the train with a fake position update
+		req.sensor = lastHitSensor;
+		Send( trainTid, &req, sizeof(TrainReq), 0, 0 );
+	}
+
+	Exit(); // This task will never reach here
 }
