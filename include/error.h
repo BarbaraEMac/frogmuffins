@@ -54,7 +54,8 @@ enum ERROR {
 	INVALID_SENSOR_IDX,		// Invalid sensor index
 	// --9965
 	INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
-	INVALID_TRACK			// Invalid track identifier
+	INVALID_TRACK,			// Invalid track identifier
+	NO_PATH					// There is no path for the train
 } error;
 
 #endif
