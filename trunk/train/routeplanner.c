@@ -16,7 +16,7 @@
 #include "train.h"
 
 #define INT_MAX			0xFFFF
-#define REVERSE_COST 	100
+#define REVERSE_COST 	1000
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -35,7 +35,7 @@ typedef struct {
 typedef struct {
 	int 		rsvDists[MAX_NUM_NODES][MAX_NUM_NODES];
 	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
-	int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
+	//int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
 	int 		pred[MAX_NUM_NODES][MAX_NUM_NODES];
 	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
 
@@ -73,7 +73,6 @@ void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int las
 int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
-void rp_outputPath 	   	(RoutePlanner *rp, int i, int j);
 void rp_displayFirstSw	(RoutePlanner *rp, RPRequest *req);
 void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
 void rp_displayPath	  	(RoutePlanner *rp, Path *p );
@@ -82,7 +81,6 @@ void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 void floyd_warshall 	(RoutePlanner *rp, int n);
 int  cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
-void makePathHelper 	(RoutePlanner *rp, Path *p, int i, int j);
 int  rev 				(RoutePlanner *rp, int i, int j, int k);
 void dijkstra		 	(TrackModel *model, int source, int dest);
 
@@ -729,22 +727,6 @@ int rp_minSensorDist ( RoutePlanner *rp, int sensor1, int sensor2 ) {
 //--------------------- Displaying To Monitor ---------------------------------
 //-----------------------------------------------------------------------------
 
-void rp_outputPath (RoutePlanner *rp, int i, int j) {
-	if ( rp->paths[i][j] == -1 ) {
-		if ( rp->model.nodes[i].type == NODE_SENSOR ) {
-			printf ("%c%d> ", 
-					sensor_bank(rp->model.nodes[i].id), 
-					sensor_num( rp->model.nodes[i].id));
-		} else {
-			printf ("%s> ", rp->model.nodes[i].name);
-		}
-	}
-	else {
-		rp_outputPath (rp, i, rp->paths[i][j]);
-		rp_outputPath (rp, rp->paths[i][j], j);
-	}
-}
-
 void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req) {
 	Path p;
 	int dist;
@@ -827,7 +809,7 @@ void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor 
 
 	// Recompute the distance tables
 	// TODO: dijkstra ?
-	floyd_warshall( rp, rp->model.num_nodes );
+	//floyd_warshall( rp, rp->model.num_nodes );
 }
 
 void rsv_cancel( Reservation *rsv, TrackModel *model ) {
@@ -914,7 +896,7 @@ int mapTrainId (int trainId) {
 //          retPred - predicate matrix, useful in reconstructing shortest routes
 void floyd_warshall ( RoutePlanner *rp, int n ) {
 	int  i, j, k; // Loop counters
-	int  costMod = 0;
+	int  distMod = 0;
 	
 	// Algorithm initialization
 	for ( i = 0; i < n; i++ ) {
@@ -925,7 +907,7 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 			rp->rsvDists[i][j] = cost(&rp->model, i, j, 1); // use reservations
 			
 			// Init to garbage
-			rp->paths[i][j] = -1;
+			//rp->paths[i][j] = -1;
 
 			rp->pred[i][j] = i;
 			rp->succ[i][j] = j;
@@ -937,20 +919,26 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( i = 0; i < n; i++ ) {
 			for ( j = 0; j < n; j++ ) {
 				
-				costMod = (rev( rp, rp->pred[i][k], rp->succ[k][j], k ) == 1) ? REVERSE_COST : 0;
-				
+				distMod = rev( rp, rp->pred[i][k], rp->succ[k][j], k ) ? REVERSE_COST : 0;
+			/*	if( distMod > 0 ) {
+					printf("reversing at %s-%s-%s\r\n",
+						rp->model.nodes[rp->pred[i][k]].name, 
+						rp->model.nodes[k].name,
+						rp->model.nodes[rp->succ[k][j]].name );
+					bwgetc( COM2 );
+				}*/
 				// Consider the reservations while computing the distances
-				if (rp->rsvDists[i][j] > (rp->rsvDists[i][k] + rp->rsvDists[k][j] + costMod)) {
-					rp->rsvDists[i][j] = rp->rsvDists[i][k] + rp->rsvDists[k][j] + costMod;
+				if (rp->rsvDists[i][j] > (rp->rsvDists[i][k] + rp->rsvDists[k][j] + distMod)) {
+					rp->rsvDists[i][j] = rp->rsvDists[i][k] + rp->rsvDists[k][j] + distMod;
 
 	  				// Store how we got here
-					rp->paths[i][j]    = k; 
+				//	rp->paths[i][j]    = k; 
 					rp->pred[i][j] = rp->pred[k][j];
 					rp->succ[i][j] = rp->succ[i][k];
 				}
 				// Store the distances as if there are not reservations
-				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j] + costMod)) {
-					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j] + costMod;
+				if (rp->dists[i][j] > (rp->dists[i][k] + rp->dists[k][j] + distMod)) {
+					rp->dists[i][j] = rp->dists[i][k] + rp->dists[k][j] + distMod;
 				}
       		}
     	}
@@ -980,12 +968,12 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 }  //end of floyd_warshall()
 
 
-int rev (RoutePlanner *rp, int i, int j, int k) {
+int rev( RoutePlanner *rp, int i, int j, int k ) {
 	Node *mid = &rp->model.nodes[k];
 
 	if ( mid->type == NODE_SWITCH ) {
-		if ( ((mid->sw.ahead[0].dest == i) || (mid->sw.ahead[1].dest == i)) &&
-		     ((mid->sw.ahead[0].dest == j) || (mid->sw.ahead[1].dest == j )) ) {
+		if( ((mid->sw.ahead[0].dest == i) && (mid->sw.ahead[1].dest == j)) ||
+			((mid->sw.ahead[0].dest == j) && (mid->sw.ahead[1].dest == i)) ) {
 			return 1;
 		}	
 	}
@@ -1013,7 +1001,7 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 	// If either are reserved, let's say there is no link to them.
 	if ( (rsvDist == 1) && 
 		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) {
-		return INT_MAX;
+		assert( 6 == 5 ); return INT_MAX;
 	}
 
 	// Check each edge in O(3) time
@@ -1032,46 +1020,17 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 
 void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 	
-	// Initialize the length of this path
-	p->len = 0;
-	
-	// Make the path from i -> (j-1)
-	makePathHelper (rp, p, i, j);
-	
-	// Stick on the last node.
-	if ( i != j ) {
-		p->path[p->len] = j;
-		p->len += 1;
+	// Recover the path from the FW matrix
+	int k, s = i;
+	for( k = 0; s != j; k++ ) {
+		assert( s >= 0 && s < rp->model.num_nodes );
+		p->path[k] = s;
+		s = rp->succ[s][j];
 	}
-/*
-	int  k;
-	int *path = p->path;
-	debug ( "path len %d\r\n", p->len );
-	// path[0] == current node. Start checking after it.
-	for ( k = 0; k < p->len; k ++ ) {
-		//debug ("k=%d name=%s type=%d path=%d\r\n", k, rp->model.nodes[path[k]].name,
-		//										rp->model.nodes[path[k]].type, path[k]);
-		printf("%s(%d)> ", rp->model.nodes[path[k]].name, path[k]);
-	}
-	debug ("\r\n");*/
-
-}
-
-// UGLY & FULL 'O HACKS
-// but it works ...
-void makePathHelper (RoutePlanner *rp, Path *p, int i, int j) {
-	assert ( p->len < MAX_NUM_NODES );
-	assert ( &p->path[p->len] < &p->path[MAX_NUM_NODES] );
-
-
-	if ( rp->paths[i][j] == -1 ) {
-		p->path[p->len] = i;
-		p->len += 1;
-
-	} else {
-		makePathHelper (rp, p, i, rp->paths[i][j]);
-		makePathHelper (rp, p, rp->paths[i][j], j);
-	}
+	assert( s == j );
+	p->path[k] = j;
+	p->len = k + 1;
+	assert( p->len <= array_size( p->path ) );
 }
 
 void dijkstra ( TrackModel *model, int source, int dest ) {
