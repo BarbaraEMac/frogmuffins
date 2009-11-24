@@ -108,8 +108,8 @@ speed_add( Speed sp1, Speed sp2 ) {
 	Speed sp;
 	sp.ms = (sp1.ms * sp2.ms) / 1000;
 	sp.mm = ((sp1.mm * sp2.ms)/ 1000) + ((sp2.mm * sp1.ms) / 1000);
-	debug( "speed_add: %dmm/s + %dmm/s = %d/%d = %d mm/s\r\n",
-			speed( sp1 ), speed( sp2 ), sp.mm, sp.ms, speed( sp ) );
+	//debug( "speed_add: %dmm/s + %dmm/s = %d/%d = %d mm/s\r\n",
+	//		speed( sp1 ), speed( sp2 ), sp.mm, sp.ms, speed( sp ) );
 	return sp;
 }
 
@@ -164,20 +164,6 @@ void train_run () {
 		assert( len == sizeof(req) );
 		
 		switch (req.type) {
-			case CALIBRATE:		// Calibration mode!
-				assert( senderTid == tr.caTid );
-				// TODO: remove switch if they are going to be handled the same
-				switch( req.mode ) {
-					case CAL_SPEED:
-					case CAL_STOP:
-						tr.mode = req.mode;
-						tr.dest = req.dest;
-						break;
-					default:
-						break;
-				}	// Don't reply until we have the info we need.
-
-				break;
 
 			case TIME_UPDATE: 	// heartbeat
 				assert( senderTid == tr.htTid );
@@ -267,22 +253,29 @@ void train_run () {
 				}
 				break;
 
-			case DEST_UPDATE: 		// got a new destination to go to
-				debug ( "train: #%d is at sensor %d going to destidx %d\r\n",
-							tr.id, tr.sensor, req.dest);
-				Reply( senderTid, 0, 0 );
-				
-				// Update the internal dest variable
-				tr.dest = req.dest;
-				tr.mode = req.mode;
-				break;
-
 			case STOP_UPDATE:
 				debug( "train: stopping distance %dmm stored.\r\n", req.mm );
 				Reply( senderTid, 0, 0 );
 				
 				// Store the stopping distance
 				tr.stopDist = req.mm;
+				break;
+
+			case DEST_UPDATE: 		// got a new destination to go to
+				debug ( "train: #%d is at sensor %d going to destidx %d\r\n",
+							tr.id, tr.sensor, req.dest);
+				
+				if( req.mode == NORMAL ) { 
+					// Id not calibration reply right away
+					Reply( senderTid, 0, 0 );
+				} else {
+					// Don't reply until we have the info we need.
+					assert( senderTid == tr.caTid );
+				}
+
+				// Update the internal dest variable
+				tr.dest = req.dest;
+				tr.mode = req.mode;
 				break;
 
 			default:
@@ -324,6 +317,7 @@ void train_init ( Train *tr ) {
 	assert( tr->uiTid >= NO_ERROR );
 	assert( tr->htTid >= NO_ERROR );
 	assert( tr->coTid >= NO_ERROR );
+	assert( tr->caTid >= NO_ERROR );
 
 	// Block the heart
 	Receive( &tid, &init, sizeof(TrainReq) ); 
@@ -331,7 +325,7 @@ void train_init ( Train *tr ) {
 
 	// Initialize internal variables
 	tr->mode   = CAL_SPEED;
-	tr->sensor = 0;
+	tr->sensor = 0; // A1
 	tr->gear   = 0;
 
 	// Initialize the calibration data
@@ -421,41 +415,36 @@ void train_adjustSpeed( Train *tr, int distLeft ) {
 // HARDCODING
 // Returns the stop distance in mm given the gear and train id
 int train_getStopDist( Train *tr, int gear ) {
-	if ( tr->id == 12 || tr->id == 52 ) {
-		switch( gear ) {
-			case 14:
-			case 13:
-				return 830;
-			case 12:
-			case 11:
-				return 820;
-			case 10:
-			case 9:
-				return 600;
-			case 8:
-			case 7:
-				return 490;
-			case 6:
-			case 5:
-				return 330;
-			case 4:
-			case 3:
-				return 210;
-			case 2:
-			case 1:
-				return 100;
-		}
-	} else {
-		return 500;
+	switch( gear ) {
+		case 14:
+		case 13:
+			return 830;
+		case 12:
+		case 11:
+			return 820;
+		case 10:
+		case 9:
+			return 600;
+		case 8:
+		case 7:
+			return 490;
+		case 6:
+		case 5:
+			return 330;
+		case 4:
+		case 3:
+			return 210;
+		case 2:
+		case 1:
+			return 100;
+		default:
+			return 500;
 	}
 }
 
 void train_update( Train *tr, int sensor, int ticks ) {
 	int 		last, pred, diff;
 	Speed		sp;
-
-	// Calculate the distance traveled
-	tr->sensor = sensor; 
 
 	// Update the speed, given the remaining distance.
 //	train_adjustSpeed ( tr, dist );
@@ -468,8 +457,8 @@ void train_update( Train *tr, int sensor, int ticks ) {
 	pred = speed( tr->velocity );
 	
 	// Update the mean speed
-	if(  tr->mode == CAL_SPEED ) {
-		debug( "adding speed %d to history data\r\n");
+	if(  tr->gearChanged == false ) {
+		debug( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
 		rb_force( &tr->hist, &sp );
 	}
 	tr->gearChanged = false;
@@ -629,7 +618,7 @@ void train_drive( Train *tr, int gear ) {
 	TSRequest req;
 	TSReply	  reply;
 
-	if( tr->mode == CAL_SPEED && tr->gear != 0) return;
+//if( tr->mode == CAL_SPEED && tr->gear != 0) return;
 	
 	if( tr->gear == gear ) return;
 
@@ -762,7 +751,7 @@ void calibration () {
 	TrainReq req;
 	TID 	 parent = MyParentTid();
 
-	req.type = CALIBRATE;
+	req.type = DEST_UPDATE;
 	req.mode = CAL_SPEED;	
 	
 	// Find D9
