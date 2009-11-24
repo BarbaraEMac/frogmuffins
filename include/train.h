@@ -29,8 +29,7 @@ typedef enum _train_request {
 	POS_UPDATE,
 	STOP_UPDATE,
 	STRAY_TIMEOUT,
-	WATCH_TIMEOUT,
-	CALIBRATE
+	WATCH_TIMEOUT
 } TrainCode;
 
 typedef struct {
