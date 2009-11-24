@@ -436,12 +436,12 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  actualDist;		// Actual distance if we don't consider reservations
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	NodePred   nodePred;
+	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
 	debug ("GOING TO NODE %s(%d)\r\n", rp->model.nodes[req->destIdx].name, req->destIdx);
 
-	// TODO: Idea.
-	// We need to call this to recomputer the distaces given a previous train;s
-	// reservations BEFORE we plan our route.
-	// BUT, we do not want to call floyd-warshall in between making our reservations.
+	// Cancel your previous reservations
+	rsv_cancel( rsv, &rp->model );
+	// Calculate the new distances (also picks up reservations made by other trains)
 	floyd_warshall( rp, rp->model.num_nodes );
 	
 	// Distance from current sensor to destination node
@@ -467,7 +467,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 		trReply->stopAction = JUST_STOP;
 //		debug ("Stop distance is the total distance. (%d)\r\n", totalDist);
 	}
-//	debug ("Stopping distance is: %d\r\n", trReply->stopDist);
 
 	// Clear the next sensor predictions
 	trReply->nextSensors.len = 0;
@@ -486,6 +485,11 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Predict the next sensors the train could hit
  	rp_predict( rp, &trReply->nextSensors, &nodePred, req->lastSensor );
+	// Get the next switches 
+	rp_getNextSwitchSettings( rp, &p, (SwitchSetting*)trReply->switches );
+	// Reserve the next nodes
+	rsv_make( rsv, &rp->model, &nodePred, req->lastSensor );
+
 /*	
 	debug ("Predicted Sensors: ");
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
@@ -493,10 +497,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 				sensor_num(trReply->nextSensors.idxs[i]) );
 	}
 	printf("\r\n");
-*/
-	// Get the next switches 
-	rp_getNextSwitchSettings (rp, &p, (SwitchSetting*)trReply->switches);
-	/*
 	int i;
 	for ( i = 0; i < NUM_SETTINGS; i ++ ) {
 		if ( trReply->switches[i].dist == -1 ) {
@@ -509,8 +509,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 				trReply->switches[i].dir);
 	}
 */
-	// Reserve the next nodes
-	rp_reserve( rp, &nodePred, req->trainId, req->lastSensor );
 }
 
 int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
