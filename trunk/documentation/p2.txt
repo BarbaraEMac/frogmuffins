@@ -243,19 +243,47 @@ TODO:
 
 		We do it in this manner since it will avoid floating point calculations.
 
-		Route Planning
-		==============
-
 		Position Update
 		===============
+		When the detective gets a sensor that a train predicted, it tells the 
+		train in the form of a postion update. At that current point in time,
+		the train knows exactly where it is and its direction.
 
+		At this point we do the following:
+			Reply to the detective.
+			Ask for a new route given the new start location.
+				If there is no path,
+					Stop driving.
+					Wake up the Route Watcher.
+			If the train is facing backwards,
+				Reverse.
+			Adjust your speed given the new distance until stopping.
+			If the distance until stopping is not 0,
+				Flips the switches you need.
+				Tell the Detective about the predicted nodes.
+	
+		Route Planning
+		==============
+		In order to keep the train task simple and focussed on driving at the correct
+		speed, the train does not know anything about the landmarks on the track.
+
+		When the Route Planner returns, it simply gives the train a distance
+		until it needs to stop. While this is more complicated to handle within
+		the train, it makes the navigation code simple.
 
 		Prediction
 		==========
+		When the Route Planner returns, a list of all nodes the train could possibly
+		hit is returned. These predictions are forwarded on to the Detective with
+		an estimated time window for hitting them.
 
 		Reservations
 		============
-	
+		The track is automatically reserved within the call to plan route. This 
+		ensures that the train stays as simple as possible and can just focus on 
+		driving and calibrating.
+
+
 		
 	
 	UI / Shell
