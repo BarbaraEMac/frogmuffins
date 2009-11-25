@@ -108,13 +108,12 @@ void bootstrap(  ) {
 	// Create the train controller
 	// TID = 13, 14
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
-	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
-	Getc(tids.ios2);
+//	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
 	
 	// Create the first train!
 	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
-	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
-	Getc(tids.ios2);
+//	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
+	
 	// Create the second train!
 	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
