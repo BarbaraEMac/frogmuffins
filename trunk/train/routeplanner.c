@@ -130,6 +130,7 @@ void rp_run() {
 		
 		// Clear the trReply for the next time we use it
 		clearReply (&trReply);
+		
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
 		//printf("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
@@ -379,12 +380,12 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 				debug ("invalid sensor index: %d\r\n", req->lastSensor);
 				return INVALID_SENSOR_IDX;
 			}
-
+/*
 			// Check the train's average speed.
 			if ( (req->avgSpeed < 0) || (req->avgSpeed > 1000) ) {
 				return INVALID_TRAIN_SPEED;
 			}
-
+*/
 			// Check destination index.
 			if ( (req->destIdx < 0) || (req->destIdx > rp->model.num_nodes) ) {
 				return INVALID_NODE_IDX;
@@ -394,7 +395,7 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 		case MIN_SENSOR_DIST:
 			// Check the sensor
 			if ( (req->sensor1 < 0) || (req->sensor1 > 80) ||
-				(req->sensor2 < 0) || (req->sensor2 > 80) ) {
+				 (req->sensor2 < 0) || (req->sensor2 > 80) ) {
 				return INVALID_SENSOR_IDX;
 			}
 			break;
@@ -1018,7 +1019,7 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 	// If either are reserved, let's say there is no link to them.
 	if ( (rsvDist == 1) && 
 		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) {
-		assert( 6 == 5 ); return INT_MAX;
+		return INT_MAX;
 	}
 
 	// Check each edge in O(3) time
