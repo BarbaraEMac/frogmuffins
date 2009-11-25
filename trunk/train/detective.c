@@ -23,7 +23,7 @@
 #define	UNUSED_REQ		-1
 
 #define POLL_SIZE 	10
-#define POLL_WAIT 	(100 / MS_IN_TICK)
+#define POLL_WAIT 	(200 / MS_IN_TICK)
 #define POLL_GRACE  (5000 / MS_IN_TICK) // wait 5 seconds before complaining
 #define POLL_STR	(char [2]){133, 192}
 #define	MATCH_ALL	99
@@ -85,7 +85,9 @@ void det_run () {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
 
-		printf("sensor %c%d\r\n", sensor_bank(sensor), sensor_num(sensor));
+							printf("sensor %c%d last %dms ago\r\n", 
+									sensor_bank(sensor), sensor_num(sensor),
+									(req.ticks - det.lstPoll) * MS_IN_TICK);
 
 							// Send to the UI Server
 							debug ("Detective: sending to the ui server\r\n");
@@ -108,11 +110,10 @@ void det_run () {
 				break;
 
 			case WATCH_DOG:
-				//debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
-				if( det.lstPoll < req.ticks ) {
+				if( det.lstPoll + POLL_GRACE < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					// Don't tell me for another 5 seconds
-					det.lstPoll = req.ticks + POLL_GRACE;
+					det.lstPoll = req.ticks;
 					PutStr( POLL_STR, sizeof(POLL_STR), det.iosTid );
 				}
 				det_expire( &det, req.ticks );
@@ -124,33 +125,30 @@ void det_run () {
 					debug("%d", req.events[i].sensor);
 				}
 				debug(" expires at %d\r\n", req.expire);
-				req.tid = senderTid;
+				//req.tid = senderTid;
 				// Hash
-				i = senderTid % MAX_NUM_TRAINS; // simple hash function
-				if( det.requests[i].type != UNUSED_REQ ) {
-				//	error( 0, "det: overwriting precious request (WATCH_FOR)." );
-				}
+				i = req.tid % MAX_NUM_TRAINS; // simple hash function
+				assert( det.requests[i].type == UNUSED_REQ 
+						|| det.requests[i].tid == req.tid );
 				det.requests[i] = req;
 				det_checkHist( &det, &req );
 				break;
 
 			case GET_STRAY:
-				debug( "det: GetStray request from %d \r\n", senderTid );
+				debug( "det: GetStray request from (%d) \r\n", senderTid );
 				// Wait for next stray sensor
-				req.tid = senderTid;
+				//req.tid = senderTid;
 				req.events[0].sensor = MATCH_ALL;
 				// Hash
-				i = senderTid % MAX_NUM_TRAINS; // simple hash function
-				if( det.requests[i].type != UNUSED_REQ ) {
-		//			error( 0, "det: overwriting precious request (GET_STRAY)." );
-				}
+				i = req.tid % MAX_NUM_TRAINS; // simple hash function
+				assert( det.requests[i].type == UNUSED_REQ 
+						|| det.requests[i].tid == req.tid );
 				det.requests[i] = req;
 				break;
 
 			default:
 				reply.ret = DET_INVALID_REQ_TYPE;
 				error (reply.ret, "Detective request type is not valid.");
-				Reply ( senderTid, &reply, sizeof(reply) );
 				break;
 		}
 	}
