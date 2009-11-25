@@ -33,7 +33,7 @@
 #define LOCATE_GEAR				4
 #define	CAL_GEAR				10
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				1
+#define CAL_LOOPS				3
 #define INT_MAX					0x7FFFFFFF
 #define CALIBRATE_GEAR			7
 // Private Stuff
@@ -56,9 +56,7 @@ typedef struct {
 		
 	int 	    gear;			// The current speed setting
 	bool		gearChanged;	// Has the speed changed
-	int			lastStopTime;	// Time of last stop
 	Speed		velocity;		// The actual current speed (in mm/s)
-	Speed		baseVel;		// The last measured speed
 	int			stopDist;
 	
 	TID 		rpTid;			// Id of the Route Planner
@@ -71,7 +69,6 @@ typedef struct {
 	TID			rwTid;			// ID of the route watch dog task
 	TID			shTid;			// ID of the shell
 
-	int			cal_loops;
 	int			sd;				// Standard deviation
 	Speed		histBuf[SPEED_HIST];
 	RB			hist;	
@@ -163,16 +160,15 @@ void train_run () {
 		len = Receive ( &senderTid, &req, sizeof(req) );
 		assert( len == sizeof(req) );
 
-		printf ("receiving a request from %d of type %d\r\n", senderTid, req.type );
+		//printf ("receiving a request from %d of type %d\r\n", senderTid, req.type );
 		
 		switch (req.type) {
 
-			case TIME_UPDATE: 	// heartbeat
+			case TIME_UPDATE:		// heartbeat
 				assert( senderTid == tr.htTid );
-				assert( tr.mode == NORMAL );
+				assert( tr.mode == DRIVE );
 				
-				if( tr.mode == NORMAL ) {
-					printf ("TIME UPDATE REPLYING TO %d\r\n", senderTid);
+				if( tr.mode == DRIVE ) {
 					Reply( senderTid, 0, 0 );
 					// Update current location (NOTE: This is an estimate!)
 					distTraveled += speed_dist( tr.velocity, HEARTBEAT_MS );
@@ -180,14 +176,13 @@ void train_run () {
 					train_updateUI( &tr, distTraveled );
 					// Adjust speed
 					train_adjustSpeed( &tr, rpReply.stopDist - distTraveled );
+					// Resend detective request
+					train_detect( &tr, &rpReply.nextSensors, distTraveled );
 				}
 				
-				// Resend detective request
-				train_detect( &tr, &rpReply.nextSensors, distTraveled );
 				break;
 
 			case WATCH_TIMEOUT:		// train is lost
-				printf ("WATCH TIMEOUT REPLUYING TO %d\r\n", senderTid);
 				Reply( senderTid, 0, 0 );
 				printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
 				
@@ -196,7 +191,6 @@ void train_run () {
 				break;
 
 			case STRAY_TIMEOUT:		// train is really lost
-				printf ("STRAY TIMEOUT REPLUYING TO %d\r\n", senderTid);
 				Reply( senderTid, 0, 0 );
 				
 				// Increase the timeout by 2s 
@@ -212,15 +206,21 @@ void train_run () {
 			case DEST_UPDATE: 		// got a new destination to go to
 			//	debug ( "train: #%d is at sensor %d going to destidx %d\r\n",
 			//				tr.id, tr.sensor, req.dest);
-				printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
+			//	printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
 				
-				if( req.mode == NORMAL ) { 
-					printf ("DEST UPDATE REPLYING TO %d\r\n", senderTid);
+				if( req.mode == DRIVE ) { 
+				//	printf ("DEST UPDATE REPLYING TO %d\r\n", senderTid);
 					// If not calibration, reply right away
 					Reply( senderTid, 0, 0 );
 				} else {
 					// Don't reply until we have the info we need.
 					assert( senderTid == tr.caTid );
+				}
+
+				// Start off the heart task
+				if( tr.mode == CAL_STOP && req.mode == DRIVE ) { 
+				//	printf ("REPLYING TO THE HEART\r\n");
+					Reply( tr.htTid, 0, 0 ); 
 				}
 
 				// Update the internal dest variable
@@ -231,7 +231,7 @@ void train_run () {
 				req.sensor = tr.sensor;
 				req.ticks  = Time( tr.csTid );
 
-				//HACk
+				//HACK
 				tr.gearChanged = true;
 
 			case POS_UPDATE: 		// got a position update
@@ -240,7 +240,7 @@ void train_run () {
 				
 				// Do not reply twice for a DEST_UPDATE
 				if ( req.type == POS_UPDATE ) {
-					printf ("REPLYING IN POS_UPDATE to %d\r\n", senderTid);
+					//printf ("REPLYING IN POS_UPDATE to %d\r\n", senderTid);
 					Reply( senderTid, 0, 0 );
 				}
 					
@@ -256,14 +256,12 @@ void train_run () {
 				// If there is no path available,
 				if ( rpReply.err == NO_PATH ) {
 					debug ("The train has no route. Stopping.\r\n");
-					// Stop moving
-					train_drive( &tr, 0 );
+					
+					assert ( rpReply.stopDist == 0 );
 
 					// Wake up the route watcher so that we can try again later
 					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
-					// Stop executing this code.
-					break;
-
+				
 				// If there is another error, then we can't handle it.
 				} else if( rpReply.err < NO_ERROR ) {
 					error( rpReply.err,  "Route Planner failed." );
@@ -273,7 +271,7 @@ void train_run () {
 				// Reverse if the train is backwards
 				if( rpReply.stopDist < 0 ) {
 					debug ("Train is backwards. It's reversing.\r\n");
-					train_reverse( &tr );			// TODO this
+					train_reverse( &tr );			// TODO: Timeout incorrect for this mode.
 					rpReply.stopDist = -rpReply.stopDist;
 				}
 				printf( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
@@ -284,14 +282,13 @@ void train_run () {
 				if ( rpReply.stopDist == 0 ) {
 					if ( tr.mode == CAL_SPEED ) {
 						// Reply to the Calibration task
-						printf("SPEED: telling the calibrator we've reached a dest.\r\n");
 						Reply( tr.caTid, &tr.sd, sizeof(int) );
 					}
 					if ( tr.mode == CAL_STOP ) {
-						printf ("CAL_STOP SENDING TO SHELL\r\n");
 						// Reply to the shell
 						Reply( tr.shTid, 0, 0 );
 					}
+
 					break;
 				}
 
@@ -300,18 +297,12 @@ void train_run () {
 
 				// Resend detective request
 				train_detect( &tr, &rpReply.nextSensors, distTraveled );
-
-				// Start off the heart task
-				if( tr.mode == NORMAL ) { 
-					printf ("REPLYING TO THE HEART\r\n");
-					Reply( tr.htTid, 0, 0 ); 
-				}
 				
 				break;
 
 			case STOP_UPDATE:
 				printf( "train: stopping distance %dmm stored.\r\n", req.mm );
-				printf ("STOP UPDATE REPLYING TO %d\r\n", senderTid );
+		//		printf ("STOP UPDATE REPLYING TO %d\r\n", senderTid );
 				Reply( senderTid, 0, 0 );
 				
 				// Store the stopping distance
@@ -379,10 +370,7 @@ void train_init ( Train *tr ) {
 	tr->velocity = train_avgSpeed (tr);
 	tr->trigger = Time( tr->csTid );
 	tr->gearChanged = false;
-	tr->cal_loops = 0;
 	tr->stopDist = 0;
-
-
 //	RegisterAs ("Train");;
 }
 
@@ -408,8 +396,7 @@ Speed train_avgSpeed( Train *tr ) {
 	tr->sd = isqrt( var );
 
 	// Exit calibration mode once we have good enough data
-	if ( tr->mode == CAL_SPEED && 
-		(tr->sd < ( mean / SD_THRESHOLD ) || tr->cal_loops >= CAL_LOOPS) ) {
+	if ( tr->mode == CAL_SPEED && (tr->sd < ( mean / SD_THRESHOLD ) ) ) {
 		printf( "Train: finished calibration with sd=%d\r\n", tr->sd );
 	}
 
@@ -422,11 +409,12 @@ void train_adjustSpeed( Train *tr, int distLeft ) {
 	int i;
 	
 	// If we are not in calibration mode,
-	if( tr->mode == NORMAL ) {
+	if( tr->mode == DRIVE ) {
 		
 		if( distLeft <= 50 ) { 
 			printf( "train: thinks it's reached its destination." );
 			bestGear = 0;
+			tr->mode = IDLE;
 		} 
 		
 		// Given the stop distance for this train,
@@ -443,10 +431,11 @@ void train_adjustSpeed( Train *tr, int distLeft ) {
 		}
 	} 
 
+	// If you are stopping calibration,
 	if ( tr->mode == CAL_STOP && distLeft == 0 ) {
-		printf ("STOPPPPPPPPPPPPPPING\r\n");
 		bestGear = 0;
 	}
+
 	// Change your speed to this new gear.
 	train_drive( tr, bestGear );
 
@@ -632,7 +621,6 @@ void train_reverse( Train *tr ) {
 	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
-	tr->lastStopTime == Time( tr->csTid );
 }
 
 void train_drive( Train *tr, int gear ) {
@@ -641,7 +629,6 @@ void train_drive( Train *tr, int gear ) {
 
 	// Don't change your speed while calibrating
 	if( tr->mode == CAL_SPEED && tr->gear != CALIBRATE_GEAR ) {
-		debug ("drivign at the cal speed\r\n");
 		gear = CALIBRATE_GEAR;
 	} else if ( tr->mode == CAL_SPEED ) return;
 	
@@ -660,8 +647,6 @@ void train_drive( Train *tr, int gear ) {
 	req.startTicks	= Time(tr->csTid);
 
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
-
-	if( gear == 0 ) tr->lastStopTime == Time( tr->csTid );
 }
 
 void train_flipSwitches( Train *tr, RPReply *rpReply ) {
@@ -775,7 +760,7 @@ void calibration () {
 /*
 	// Go park at A5
 	req.dest = 2;				// A5
-	req.mode = NORMAL;		
+	req.mode = DRIVE;		
 	printf ("CALIBRATE: Parking at A5\r\n");
 	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
 */
