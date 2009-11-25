@@ -262,10 +262,7 @@ void shell_initTrain( TIDs *tids, int i ) {
 	TrainReq	req;
 	char 		input[INPUT_LEN];
 	TSRequest   tsReq;
-		
-	// Reset the switches!
-	tsReq.type = SWS;
-	trackCmd( &tsReq, tids );
+
 
 	assert( i >= 0 && i < array_size( tids->tr ) );
 	TID			trainTid = tids->tr[i];
@@ -277,7 +274,11 @@ void shell_initTrain( TIDs *tids, int i ) {
 		if( sscanf( input, "%d", &req.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
 	}
-
+		
+	// Reset the switches!
+	tsReq.type = SWS;
+	trackCmd( &tsReq, tids );
+	
 	// Store this train's id number
 	tids->trains[i] = req.id;
 
