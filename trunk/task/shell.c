@@ -102,7 +102,7 @@ void bootstrap(  ) {
 	// Makes 1 clock notifying task
 	// TID == 11, 12
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
-	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
+//	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
 	// Initialize the track we want to use.
 	shell_initTrack( &tids );
@@ -232,12 +232,11 @@ void shell_initTrack( TIDs *tids ) {
 }
 
 void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
-	assert( id >= 0 && id < array_size( tids->tr ) );
-	
 	TrainReq	 trReq;
 	RPRequest	 rpReq;
 	RPShellReply rpRpl;
 	TID		 	 trainTid = (tids->trains[0] == id) ? tids->tr[0] : tids->tr[1];
+	printf ("Given id=%d. SEnding to tid=%d\r\n", id, trainTid);
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
@@ -312,7 +311,7 @@ void shell_initTrain( TIDs *tids, int i ) {
 		// only take in valid train speeds
 		if( sscanf( input, "%d", &req.dest ) >= 0 ) break;
 	}
-	shell_cmdTrain( tids, input, 0, DRIVE );
+	shell_cmdTrain( tids, input, tids->trains[i], DRIVE );
 }
 
 // Execute a train command
