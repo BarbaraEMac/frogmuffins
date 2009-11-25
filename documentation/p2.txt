@@ -323,8 +323,9 @@ TODO:
 	We did some neat things for this assignment. Here's a brief discussion of
 	some of them.
 
-		Standard Deviation
-		==================
+		Kernel
+		======
+		Since we started working on the project, we have not modified our kernel.
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
@@ -334,12 +335,129 @@ TODO:
 	The source code is located in: /u8/becmacdonald/cs452/p2/handin.
 	
 	Here are the md5 hashes for each file:
+
+	ff334fdf2ea5232f8ff3e374b69e4245  ./kern/main.c
+	4749098b4d898c025e156b3705bbb9b8  ./kern/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./kern/orex.ld
+	c4f90105275b6228dfa8c5dbe221f40d  ./kern/syscalls.c
+	
+	5c79ef173674f2c84130aecda39abf67  ./task/gameserver.c
+	6152327419cbef8af5e19ce843e1eca3  ./task/task.c
+	43c84644f93f6e78930acf587f491930  ./task/gameplayer.c
+	ed45270c333e4c1875e8c908c7cb2a98  ./task/shell.c
+	
+	9312559f8df6a46f874cf4eadff47328  ./include/ui.h
+	90381c6299dd328ba7c1faba52772f69  ./include/math.h
+	fd1f7faece04ff0500d80c85a5018711  ./include/error.h
+	e190a73becbcbd7af79987ee8e51fd9f  ./include/servers.h
+	b42871f5f2eb8a1dff7011bd2d937753  ./include/trackserver.h
+	5efc2b57900cdd08ee04372ad606edde  ./include/syscalls.h
+	58e7ea88711ea3455cc9b65561e80c14  ./include/ts7200.h
+	9979e47e3560b3a694a7fd18077019ec  ./include/model.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./include/bwio.h
+	8146ed251b92ea06a95351da69340699  ./include/gameserver.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./include/task.h
+	67a9150395d1ba08a2061552601d24e6  ./include/string.h
+	660e3c8c27ef66e7e03a7f49b26f4fae  ./include/shell.h
+	9a9b2e58b88b5412afefe439cac97326  ./include/td.h
+	5a51907fa830160630d2f314a6390614  ./include/buffer.h
+	5e6d0e2468e92438607f8821ace1b835  ./include/requests.h
+	677715007e1853f1d0fb53a00854e23a  ./include/train.h
+	67e70e8647557c6d928f15eab1381a49  ./include/drivers.h
+	42c65b3d05826069be4afc8b638a4664  ./include/routeplanner.h
+	bf3d4171c16aa8649cb07da419eb7c02  ./include/globals.h
+	88790ee55eb595666ec820418bc74378  ./include/fifo.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./include/debug.h
+	
+	5b64f5e094563de356eafab30b23998d  ./lib/libbwio.a
+	52779600e0e02a41cadde4df65b5499b  ./lib/libdebug.a
+	aea092cb431c22728137cc63a45b948a  ./lib/libstring.a
+	a2eee848d0b584589e6c1f1e6d4ea78f  ./lib/libmath.a
+	86a9c8bf87cf5db467b738462b1eb1a1  ./lib/libbuffer.a
+	
+	9a0e976c1f786d68753dce3562e882a8  ./server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./server/nameserver.c
+	a7ce6cd7ae1805395cade0bfd137a25c  ./server/serialio.c
+	
+	ab667fc308f3a868abe305dde11d7589  ./src/bwio.c
+	4042844222d0cd3740b18f99b1c824a5  ./src/fifo.c
+	fe7345c32d27b7b615048b272de24c13  ./src/debug.c
+	c2c533982b37adfd03467601f58e40fa  ./src/string.c
+	74c148a7ff02b3b8ccc560ec8c106581  ./src/math.c
+	561ce06910fed4309b5f65dc401e9286  ./src/buffer.c
+	fa5e9c4e46d48e60b422286274aadeac  ./src/Makefile
+
+	6c6e0d45a99abd109342a7abcea9c85d  ./documentation/p2.txt
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./documentation/k3.txt
+	f2c08a56da789e93f3595bd099122a65  ./documentation/k4.txt
+	a1bd6b701571edfd0d7312fdb0bbf5a7  ./documentation/proposal.txt
+	012de728eb811b638c338260d779391c  ./documentation/p1.txt
+
+	af75127f35f286928b8e16153d07f7e7  ./arch/drivers.c
+	29632b3f08e1713528c1145dab2f6388  ./arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+	e8f4ccc1966ded6e40916fe10474aa63  ./arch/blank.c
+	8fb6754e34da4be7f442e9ada5eb310f  ./arch/requests.c
+	08936ac97b4e596a0ba49b026339cb6b  ./arch/primitives.S
+
+	baf5a93766dd99a7698e8af95b5ab648  ./train/routeplanner.c
+	2458fbe11fc021c55928252da74cae37  ./train/detective2.c
+	ac61ed6ceed3947118b13c5154cdbe7c  ./train/model.c
+	6c717b8c96daa222c431205e45cbb801  ./train/trackserver.c
+	df2431d02e99023ccf2131988294e384  ./train/detective.c
+	690e12263679e3bc87d1ba7e49c6edbb  ./train/train.c
+	0edb9670a730da2726baffe544ea1d52  ./train/ui.c
+	
+	de975f7952206ab06c7233a544c0106e  ./todo.txt
+	b713e7fce8154121fdc176acd2a9986c  ./wishlist
+	88a69bd7e5e322615b4cd908fad3c8f5  ./Makefile
+
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
 	
 	Here are all of the files we are submitting:
+	.:
+	arch           include  lib       src   todo.txt  wishlist
+	documentation  kern     Makefile  server  task  train
+
+	./arch:
+	blank.c  drivers.c  ep93xx.c  primitives.S  requests.c  switch.c  switch.S
+
+	./documentation:
+	k1.txt  k2.out  k2.txt  k3.txt  k4.txt  p1.txt  p2.txt  proposal.txt  syscall.txt
+
+	./include:
+	buffer.h   error.h       globals.h   routeplanner.h  switch.h    trackserver.h
+	bwio.h     fifo.h        math.h      servers.h       syscalls.h  train.h
+	debug.h    gameplayer.h  model.h     shell.h         task.h      ts7200.h
+	drivers.h  gameserver.h  requests.h  string.h        td.h        ui.h
+
+	./kern:
+	main.c  orex.ld  syscalls.c  td.c
+
+	./lib:
+	libbuffer.a  libbwio.a  libdebug.a  libmath.a  libstring.a
+
+	./server:
+	clockserver.c  nameserver.c  serialio.c
+
+	./src:
+	buffer.c  bwio.c  debug.c  fifo.c  Makefile  math.c  string.c
+
+	./task:
+	gameplayer.c  gameserver.c  shell.c  task.c
+
+	./train:
+	detective2.c  detective.c  model.c  routeplanner.c  trackserver.c  train.c  ui.c
 
 
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
