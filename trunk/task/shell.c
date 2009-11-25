@@ -98,7 +98,7 @@ void bootstrap(  ) {
 
 	// Create the ui 
 	// Makes 1 clock notifying task
-	// TID == 11
+	// TID == 11, 12
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
 	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
@@ -106,13 +106,15 @@ void bootstrap(  ) {
 	shell_initTrack( &tids );
 
 	// Create the train controller
+	// TID = 13, 14
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
 	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
+	Getc(tids.ios2);
 	
 	// Create the first train!
 	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
-	//output( "Creating the first train! (%d)\r\n", tids.tr[0] );
-	
+	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
+	Getc(tids.ios2);
 	// Create the second train!
 	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
 //	output( "Creating the first train!\r\n" );
@@ -229,11 +231,12 @@ void shell_initTrack( TIDs *tids ) {
 }
 
 void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
-	RPRequest		rpReq;
-	RPShellReply	rpRpl;
-
 	assert( i >= 0 && i < array_size( tids->tr ) );
-	TID				trainTid = tids->tr[i];
+	
+	TrainReq	 trReq;
+	RPRequest	 rpReq;
+	RPShellReply rpRpl;
+	TID		 	 trainTid = tids->tr[i];
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
@@ -245,14 +248,12 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
 		return;
 	}
 
-	TrainReq		req;
-	req.type = DEST_UPDATE;
-	req.mode = mode;
-	req.dest = rpRpl.idx;
+	trReq.type = DEST_UPDATE;
+	trReq.mode = mode;
+	trReq.dest = rpRpl.idx;
 
 	// Tell the train its command info.
-	Send( trainTid, &req, sizeof( TrainReq ), &trainTid, sizeof(int) );
-
+	Send( trainTid, &trReq, sizeof( TrainReq ), &trainTid, sizeof(int) );
 }
 
 void shell_initTrain( TIDs *tids, int i ) {
@@ -285,16 +286,29 @@ void shell_initTrain( TIDs *tids, int i ) {
 
 	// Tell the train its init info.
 	Send( trainTid, &req, sizeof( TrainReq ), &trainTid, sizeof(int) );
-	/*
+	
+	input[0] = '\0';
+	
 	// Send the train the stop distance
 	req.type = STOP_UPDATE;
 	FOREVER {
-		output( "\033[24;1Stop Distance for train %d: ", req.id );
+		output( "\033[24;1HStop Distance for train %d: ", req.id );
 		shell_inputData( input, true );
 		if( sscanf( input, "%d", &req.mm ) >= 0 ) break;
 		output( "Invalid distance. Try again.\r\n" );
 	}
-	Send ( trainTid, &req, sizeof(TrainReq), 0, 0 );*/
+	Send ( trainTid, &req, sizeof(TrainReq), 0, 0 );
+
+	input[0] = '\0';
+	
+	req.type = DEST_UPDATE;
+	FOREVER {
+		output( "\033[24;1HParking Space: " );
+		shell_inputData( input, false );
+		// only take in valid train speeds
+		if( sscanf( input, "%d", &req.dest ) >= 0 ) break;
+	}
+	shell_cmdTrain( tids, input, 0, DRIVE );
 }
 
 // Execute a train command
@@ -486,6 +500,22 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpReq.nodeIdx1 = rpRpl.idx;
 			rpCmd( &rpReq, tids->rp );
 		}
+	// Reserve
+	} else if( sscanf( command, "reserve %s", tmpStr1 )>= 0 ) {
+		rpReq.type = CONVERT_IDX;
+		strncpy( rpReq.name, (const char *) tmpStr1, 5 );
+		rpRpl = rpCmd( &rpReq, tids->rp );
+		
+		if( ( rpRpl.idx == NOT_FOUND )||( rpRpl.err == INVALID_NODE_NAME ) ) {
+			output( "Invalid node name.\r\n" );
+		} else {
+			printf ("SHELL IS RESERVING\r\n");
+			rpReq.type 	   = RESERVE;
+			rpReq.nodeIdx1 = rpRpl.idx;
+			rpReq.trainId  = 12; // TODO:
+			rpCmd( &rpReq, tids->rp );
+		}
+
 	} else if( sscanf( command, "wolf %s", tmpStr1 )>= 0 ) {
 		rpReq.type = CONVERT_IDX;
 		strncpy( rpReq.name, (const char*) tmpStr1, 5 );
@@ -501,7 +531,7 @@ void shell_exec( TIDs *tids, char *command ) {
 		}
 	// go
 	} else if( sscanf( command, "go %s", tmpStr1 )>= 0 ) {
-		shell_cmdTrain( tids, tmpStr1, 0, NORMAL );
+		shell_cmdTrain( tids, tmpStr1, 0, DRIVE );
 	// cal
 	} else if( sscanf( command, "cal %s", tmpStr1 )>= 0 ) {
 		shell_cmdTrain( tids, tmpStr1, 0, CAL_STOP );
