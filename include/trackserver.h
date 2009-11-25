@@ -17,6 +17,7 @@ enum TSRequestCode {
 	RV = 1,
 	ST,
 	SW,
+	SWS,
 	TR,
 	WH,
 	POLL,
