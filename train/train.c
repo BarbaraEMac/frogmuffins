@@ -3,7 +3,7 @@
 * becmacdo
 * dgoc
 */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <string.h>
 #include <ts7200.h>
@@ -31,7 +31,7 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				3
+#define CAL_LOOPS				2
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 // Private Stuff
@@ -64,6 +64,7 @@ typedef struct {
 	TID			uiTid;			// Id of the UI server
 	TID			htTid;			// Id of the Heart
 	TID			caTid;			// ID of the calibration task
+	TID			coTid;			// ID of the courier task
 	TID			rwTid;			// ID of the route watch dog task
 	TID			shTid;			// ID of the shell
 
@@ -135,6 +136,7 @@ void train_updateUI( Train *tr, int mm );
 // Watchman
 void 		train_watch 		( Train *tr, RPReply *rep );
 void		heart				();
+void		courier				();
 void 		calibration			();
 void 		routeWatchDog 		();
 //----------------------------------------------------------------------------
@@ -146,7 +148,6 @@ void train_run () {
 	TrainReq	req;
 	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
-	int			stopDist;
 
 	// Initialize this train
 	train_init ( &tr );
@@ -159,8 +160,6 @@ void train_run () {
 		len = Receive ( &senderTid, &req, sizeof(req) );
 		assert( len == sizeof(req) );
 
-		//printf ("receiving a request from %d of type %d\r\n", senderTid, req.type );
-		
 		switch (req.type) {
 
 			case TIME_UPDATE:		// heartbeat
@@ -260,6 +259,7 @@ void train_run () {
 					
 					assert ( rpReply.stopDist == 0 );
 
+					printf("train: waking up routewatcher.\r\n");
 					// Wake up the route watcher so that we can try again later
 					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
 				
@@ -339,6 +339,7 @@ void train_init ( Train *tr ) {
 	tr->csTid = WhoIs (CLOCK_NAME);
 	tr->uiTid = WhoIs (UI_NAME);
 	tr->htTid = Create( TRAIN_PRTY - 1, &heart );
+	tr->coTid = Create( TRAIN_PRTY - 1, &courier );
 	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
 	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
 	assert( tr->rpTid >= NO_ERROR );
@@ -348,6 +349,7 @@ void train_init ( Train *tr ) {
 	assert( tr->uiTid >= NO_ERROR );
 	assert( tr->htTid >= NO_ERROR );
 	assert( tr->caTid >= NO_ERROR );
+	assert( tr->coTid >= NO_ERROR );
 
 	// Block the heart
 	Receive( &tid, &init, sizeof(TrainReq) ); 
@@ -527,6 +529,7 @@ int train_distance( Train *tr, int sensor ) {
 	req.sensor1		= tr->sensor;
 	req.sensor2		= sensor;
 
+	printf("train: asking for distance.\r\n");
 	Send( tr->rpTid, &req,  sizeof(RPRequest), &dist, sizeof(int) );
 	
 
@@ -545,6 +548,7 @@ RPReply train_planRoute( Train *tr ) {
 	req.destIdx		= tr->dest;
 	req.avgSpeed	= min( speed( tr->velocity ), 0 );
 
+	printf("train: asking for route.\r\n");
 	Send( tr->rpTid, &req, sizeof(RPRequest), &reply, sizeof(RPReply) );
 	
 	return reply;
@@ -555,12 +559,14 @@ RPReply train_planRoute( Train *tr ) {
 //-----------------------------------------------------------------------------
 void train_locate( Train *tr, int timeout ) {
 	DeRequest req;
-	req.type   = GET_STRAY;
-	req.expire = timeout + Time( tr->csTid );
+	req.type	= GET_STRAY;
+	req.expire	= timeout + Time( tr->csTid );
+	req.tid 	= tr->coTid;
 	
 	// Drive at locate speed
 	train_drive( tr, LOCATE_GEAR );
 
+	printf("train: asking for stray sensors.\r\n");
 	// Get stray sensors
 	Send( tr->deTid, &req, sizeof(DeRequest), 0, 0 );
 }
@@ -580,9 +586,10 @@ void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 
 	assert( pred->len <= array_size( req.events ) );
 	
-	req.type      = WATCH_FOR;
-	req.numEvents = pred->len;
-	req.expire 	  = 0;
+	req.type 		= WATCH_FOR;
+	req.numEvents	= pred->len;
+	req.expire 		= 0;
+	req.tid 		= tr->coTid;
 
 	debug("predicting sensors:");
 
@@ -603,6 +610,7 @@ void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 //	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
 //		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
 	
+	printf("train: asking for predicted sensors.\r\n");
 	// Tell the detective about the Route Planner's prediction.
 	Send( tr->deTid, &req,	sizeof(DeRequest), 0 , 0 );
 }
@@ -626,6 +634,7 @@ void train_reverse( Train *tr ) {
 	req.train       = tr->id;
 	req.startTicks	= Time(tr->csTid);
 
+	printf("train: reversing.\r\n");
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 }
 
@@ -657,6 +666,7 @@ void train_drive( Train *tr, int gear ) {
 	req.speed = gear;
 	req.startTicks	= Time(tr->csTid);
 
+	printf("train: driving.\r\n");
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 }
 
@@ -680,6 +690,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			req.dir  = ss->dir;
 			req.startTicks	= Time(tr->csTid);
 
+			printf("train: flipping.\r\n");
 			Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 		}
 	}
@@ -707,6 +718,7 @@ void train_updateUI( Train *tr, int mm ) {
 	req.type = TRAIN;
 	req.idx  = tr->sensor;
 	req.dist = mm;
+	printf("train: updating UI.\r\n");
 	Send( tr->uiTid, &req, sizeof(UIRequest), &tmp, sizeof(int) ); 
 }
 
@@ -798,3 +810,28 @@ void routeWatchDog () {
 
 	Exit(); // This task will never reach here
 }
+
+
+
+//-----------------------------------------------------------------------------
+//--------------------------------- Courier -----------------------------------
+//-----------------------------------------------------------------------------
+void courier() {
+        debug( "courier starting\r\n");
+        TID             deTid;
+        TID             trTid = MyParentTid();
+        TrainReq        req;
+
+        assert( deTid >= NO_ERROR );
+
+        FOREVER {
+                debug( "courier receiving\r\n");
+                // Reveice a detective request
+                Receive( &deTid, &req, sizeof( TrainReq ) );
+                Reply( deTid, 0, 0 );
+
+                // Give the result back to the train
+                Send( trTid, &req, sizeof( TrainReq ), 0, 0 );
+        }
+}
+
