@@ -24,12 +24,12 @@
 // A prediction for all of the NODES a train could hit
 typedef struct {
 	int len;
-	int idxs[10];
+	int idxs[20];
 } NodePred;
 
 typedef struct {
 	int len;		// Number of reserved sensors
-	int idxs[20];	// Indicies of the reserved sensor nodes
+	int idxs[21];	// Indicies of the reserved sensor nodes
 } Reservation;
 
 typedef struct {
@@ -427,6 +427,8 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	NodePred   nodePred;
 	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
+	
+	printf ("TRAIN %d has reservation %x at indx=%d. len =%d\r\n", req->trainId, rsv, mapTrainId(req->trainId), rsv->len);
 	
 	debug ("GOING TO NODE %s(%d) from %s\r\n", 
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
@@ -827,7 +829,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-		debug ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure the sensor node is actually reserved
 		assert ( model->nodes[index].reserved == 1 );
@@ -848,7 +850,7 @@ void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSen
 	for ( i = 0; i < nodes->len; i ++ ) {
 		index = nodes->idxs[i];
 
-		debug ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure this node is not already reserved
 		assert ( model->nodes[index].reserved == 0 );
@@ -866,11 +868,12 @@ void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSen
 	// Store the node index in the reservation
 	rsv->idxs[nodes->len] = index;
 
-	debug ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 	
 	// Save the number of nodes in this reservation
 	rsv->len = nodes->len + 1;
-	debug ("Reserved %d nodes in total.\r\n", rsv->len);
+	printf ("Reserved %d nodes in total.\r\n", rsv->len);
+	assert ( rsv->len < 20 );
 }
 
 // And the hardcoding begins!
