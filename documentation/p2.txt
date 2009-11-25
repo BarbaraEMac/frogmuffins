@@ -201,11 +201,12 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 			Heart
 			=====
 			The heart is a timer task that delays for a set period of time and Sends
-			to the train. Upon the wake up, a train can update it's location on the 
+			to the train. Upon the wake up, a train can update its location on the 
 			track in between sensors.
 
 			Hence, we can estimate the train's location anywhere on the track within
-			the train's standard deviation worth of error. 
+			the train's standard deviation worth of error. Assuming normal distribution
+			this will predict the sensor hit correcly 99% of the time.
 			(See Standard Deviation below).
 
 			Calibration
@@ -214,10 +215,14 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 			estimate its speed and distance within a small standard deviation of
 			error.
 
-TODO:
 			Thus, we run the train around the large loop of the track 3 times and 
 			gather data to make these estimations. While estimating, we calculate
-			the standard deviation of the estimations.
+			the standard deviation of the estimations. To do this we keep an array
+			of the last 10 recorded speeds (as in P1) and calculate the standard
+			deviation of this sample. We only add a speed to the buffer if the train 
+			has not changed speed over the last sector to prevent contamination of data.
+			This speed calibration remains enabled over the course of the run, 
+			meaning it will adjust for the train slowing down with wear.
 
 			The calibrator task moves the train to D9 and then E11 so that we 
 			force a direction for it to travel around the loop.
@@ -260,6 +265,9 @@ TODO:
 			stopDist /= Hardcoded stop distance for default speed.
 
 		We do it in this manner since it will avoid floating point calculations.
+		A similar approach is used for all speed calculations - careful ordering of
+		division and multiplication, coupled with normalizing the data at particular 
+		times.
 
 		Position Update
 		===============
