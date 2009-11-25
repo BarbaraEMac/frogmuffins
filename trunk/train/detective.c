@@ -174,9 +174,9 @@ int det_init( Det *det ) {
 	}
 
 	// Create the helper tasks
-	err =  Create( 3, &poll );
+	err =  Create( OTH_NOTIFIER_PRTY, &poll );
 	if( err < NO_ERROR ) return err;
-	err = Create( 3, &watchDog );
+	err = Create( OTH_NOTIFIER_PRTY, &watchDog );
 	if( err < NO_ERROR ) return err;
 	
 	// Register with the Name Server
