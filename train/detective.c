@@ -34,8 +34,6 @@
 // A Track Detective
 typedef struct {
 	int			sensorHist[NUM_SENSORS];
-	char		strayBuf[NUM_STRAY];
-	RB			stray;
 	DeRequest	requests[MAX_NUM_TRAINS];
 	int			lstPoll;
 	TID 	 	iosTid;
@@ -43,12 +41,13 @@ typedef struct {
 	TID			tsTid;
 } Det;
 
-int  det_init	( Det *det );
-int  det_wake	( Det *det, int sensor, int ticks );	
-int	 det_expire ( Det *det, int ticks );
-void det_reply  ( DeRequest *req, int sensor, int ticks, TrainCode type );
-void poll		();
-void watchDog	();
+int  det_init		( Det *det );
+int  det_wake		( Det *det, int sensor, int ticks );	
+int	 det_expire		( Det *det, int ticks );
+void det_checkHist	( Det *det, DeRequest *req );
+void det_reply  	( DeRequest *req, int sensor, int ticks, TrainCode type );
+void poll			();
+void watchDog		();
 // ----------------------------------------------------------------------------
 
 /* ACTUAL CODE */
@@ -59,7 +58,6 @@ void det_run () {
 	DeRequest 	req;
 	DeReply		reply;
 	int			i, k, len, sensor;
-	char		ch;
 	UIRequest	uiReq;
 	int 		uiTid;
 
@@ -98,13 +96,10 @@ void det_run () {
 							Send( uiTid, &uiReq, sizeof(UIRequest), 
 									 	 &uiReq.time, sizeof(int) );
 
-							// Update the history
-							det.sensorHist[sensor] = req.ticks;
 							// Wake up any tasks waiting for this event
 							if( !det_wake( &det, sensor, req.ticks ) ) {
-								// Put in stray sensor queue
-								ch = (char) sensor;
-								rb_force( &det.stray, &ch );
+								// Update the history
+								det.sensorHist[sensor] = req.ticks;
 							}
 						}
 					}
@@ -136,6 +131,7 @@ void det_run () {
 				//	error( 0, "det: overwriting precious request (WATCH_FOR)." );
 				}
 				det.requests[i] = req;
+				det_checkHist( &det, &req );
 				break;
 
 			case GET_STRAY:
@@ -170,7 +166,6 @@ int det_init( Det *det ) {
 	det->tsTid   = WhoIs( TRACK_SERVER_NAME );
 	det->lstPoll = POLL_GRACE; // wait 5 seconds before complaining
 
-	rb_init(&(det->stray), det->strayBuf ) ;
 	memoryset ( det->sensorHist, 0, sizeof(det->sensorHist) );
 
 	DeRequest * req;
@@ -222,6 +217,21 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 		}
 	}
 	return woken;
+}
+
+void det_checkHist( Det *det, DeRequest *req ) {
+	assert( req->type == WATCH_FOR );
+	int i;
+	for( i = 0; i < req->numEvents; i ++ ) {
+		int sensor 	= req->events[i].sensor;
+		int ticks 	= det->sensorHist[sensor];
+		if(req->events[i].start <= ticks ) {
+			printf( "det: sensor: %d from the past.\r\n", sensor );
+			det_reply( req, sensor, ticks, POS_UPDATE );
+			// Reset the History to prevent another train from grabbing it
+			det->sensorHist[sensor] = 0;
+		}
+	}
 }
 
 int det_expire ( Det *det, int ticks ) {
