@@ -30,12 +30,10 @@
 #define LOCATE_TIMEOUT_INC		(2000 /MS_IN_TICK)
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
-#define LOCATE_GEAR				4
-#define	CAL_GEAR				10
 #define SD_THRESHOLD			10	// parts of mean	
 #define CAL_LOOPS				3
 #define INT_MAX					0x7FFFFFFF
-#define CALIBRATE_GEAR			7
+#define LOCATE_GEAR				4
 // Private Stuff
 // ----------------------------------------------------------------------------
 
@@ -57,7 +55,7 @@ typedef struct {
 	int 	    gear;			// The current speed setting
 	bool		gearChanged;	// Has the speed changed
 	Speed		velocity;		// The actual current speed (in mm/s)
-	int			stopDist;
+	int			stopDist;		// The measured stopping distance		
 	
 	TID 		rpTid;			// Id of the Route Planner
 	TID 		tsTid;			// Id of the Track Server
@@ -148,6 +146,7 @@ void train_run () {
 	TrainReq	req;
 	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
+	int			stopDist;
 
 	// Initialize this train
 	train_init ( &tr );
@@ -304,13 +303,11 @@ void train_run () {
 				break;
 
 			case STOP_UPDATE:
-				printf( "Train: Stopping distance %dmm stored.\r\n", req.mm );
-		//		printf ("STOP UPDATE REPLYING TO %d\r\n", senderTid );
-				Reply( senderTid, 0, 0 );
-				
-				// Store the stopping distance
+				// Store the measured stopping distance for the default gear
+				printf( "Train: Stopping distance %dmm calculated.\r\n", req.mm );
 				tr.stopDist = req.mm;
 				
+				Reply( senderTid, 0, 0 );
 				break;
 
 			default:
@@ -367,10 +364,10 @@ void train_init ( Train *tr ) {
 	Speed sp = {350, 1000}; // inital speed
 	rb_push( &(tr->hist), &sp );
 
-	tr->velocity = train_avgSpeed (tr);
-	tr->trigger = Time( tr->csTid );
-	tr->gearChanged = false;
-	tr->stopDist = 0;
+	tr->velocity     = train_avgSpeed (tr);
+	tr->trigger      = Time( tr->csTid );
+	tr->gearChanged  = false;
+	tr->stopDist     = 0;
 //	RegisterAs ("Train");;
 }
 
@@ -406,6 +403,7 @@ Speed train_avgSpeed( Train *tr ) {
 void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	int bestGear = tr->defaultGear;
 	int stopDist = 0;
+	int defaultStopDist = train_getStopDist( tr, tr->defaultGear );
 	int i;
 	
 	// If we are not in calibration mode,
@@ -415,6 +413,10 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		// In theory, as distLeft decreases, so does the speed.
 		for ( i = 14; i >= 1; i -- ) {
 			stopDist = train_getStopDist( tr, i );
+
+			// Use the stopping distance multiplier to better predict
+			stopDist *= tr->stopDist;
+			stopDist /= defaultStopDist;
 
 			// Multiply by 2 to account for acc/deceleration
 			if ( (stopDist*2) <= distLeft ) {
@@ -455,12 +457,12 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 // Returns the stop distance in mm given the gear and train id
 int train_getStopDist( Train *tr, int gear ) {
 	switch( gear ) {
-		case 14:
-		case 13:
-			return 830;
-		case 12:
-		case 11:
-			return 820;
+//		case 14:
+//		case 13:
+//			return 830;
+//		case 12:
+//		case 11:
+//			return 820;
 		case 10:
 		case 9:
 			return 600;
@@ -487,14 +489,15 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 
 	sp.ms = ( ticks - tr->trigger ) * MS_IN_TICK;
 	sp.mm = train_distance( tr, sensor );
-	last = speed( sp );
+	last  = speed( sp );
 	
 	// Calculate the predicted speed
 	pred = speed( tr->velocity );
 	
 	// Update the mean speed
-	if( tr->gearChanged == false ) { //TODO: this is wrong
+	if( tr->gearChanged == false && tr->gear == tr->defaultGear ) { //TODO: this is wrong
 //		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
+		
 		rb_force( &tr->hist, &sp );
 	}
 	tr->gearChanged = false;
@@ -631,8 +634,8 @@ void train_drive( Train *tr, int gear ) {
 	TSReply	  reply;
 
 	// Don't change your speed while calibrating
-	if( tr->mode == CAL_SPEED && tr->gear != CALIBRATE_GEAR ) {
-		gear = CALIBRATE_GEAR;
+	if( tr->mode == CAL_SPEED && tr->gear != tr->defaultGear ) {
+		gear = tr->defaultGear;
 	} else if ( tr->mode == CAL_SPEED ) {
 		return;
 	}
