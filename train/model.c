@@ -403,7 +403,7 @@ char * track[] = {
   27 straight 290 \
   26 curved 213 \
   47 behind 193 \
-49 SW10 switch 10 53 3 straight 3 \
+49 SW10 switch 10 51 3 straight 3 \
   25 straight 223 \
   33 curved 220 \
   34 behind 74 \
@@ -415,7 +415,7 @@ char * track[] = {
   0 straight 218 \
   43 curved 185 \
   50 behind 190 \
-52 SW13 switch 13 39 3 straight 3 \
+52 SW13 switch 13 40 3 straight 3 \
   10 straight 214 \
   39 curved 230 \
   21 behind 140 \
@@ -427,11 +427,11 @@ char * track[] = {
   18 straight 411 \
   20 curved 305 \
   15 behind 70 \
-55 SW16 switch 16 39 14 straight 3 \
+55 SW16 switch 16 41 14 straight 3 \
   8 straight 225 \
   9 curved 220 \
   20 behind 146 \
-56 SW17 switch 17 53 14 straight 3 \
+56 SW17 switch 17 52 14 straight 3 \
   30 straight 225 \
   31 curved 230 \
   38 behind 62 \
@@ -439,19 +439,19 @@ char * track[] = {
   19 straight 215 \
   45 curved 338 \
   44 behind 187 \
-61 SW99 switch 0x99 45 8 curved 3 \
+61 SW99 switch 0x99 46 8 curved 3 \
   62 straight 230 \
   16 curved 228 \
   58 behind 24 \
-58 SW9A switch 0x9a 47 8 straight 3 \
+58 SW9A switch 0x9a 46 7 straight 3 \
   61 straight 24 \
   14 curved 224 \
   60 behind 32 \
-59 SW9B switch 0x9b 47 9 straight 3 \
+59 SW9B switch 0x9b 46 9 straight 3 \
   63 straight 247 \
   24 curved 227 \
   60 behind 24 \
-60 SW9C switch 0x9c 45 9 curved 3 \
+60 SW9C switch 0x9c 46 10 curved 3 \
   59 straight 24 \
   32 curved 222 \
   58 behind 32 \
@@ -634,7 +634,7 @@ char * track[] = {
   27 straight 290 \
   26 curved 213 \
   47 behind 193 \
-49 SW10 switch 10 53 3 straight 3 \
+49 SW10 switch 10 51 3 straight 3 \
   25 straight 223 \
   33 curved 220 \
   34 behind 74 \
@@ -646,7 +646,7 @@ char * track[] = {
   0 straight 218 \
   43 curved 185 \
   50 behind 190 \
-52 SW13 switch 13 39 3 straight 3 \
+52 SW13 switch 13 40 3 straight 3 \
   10 straight 214 \
   39 curved 230 \
   21 behind 140 \
@@ -658,11 +658,11 @@ char * track[] = {
   18 straight 411 \
   20 curved 305 \
   15 behind 70 \
-55 SW16 switch 16 39 14 straight 3 \
+55 SW16 switch 16 41 14 straight 3 \
   8 straight 225 \
   9 curved 220 \
   20 behind 146 \
-56 SW17 switch 17 53 14 straight 3 \
+56 SW17 switch 17 52 14 straight 3 \
   30 straight 225 \
   31 curved 230 \
   38 behind 62 \
@@ -670,19 +670,19 @@ char * track[] = {
   19 straight 215 \
   45 curved 338 \
   44 behind 187 \
-61 SW99 switch 0x99 45 8 curved 3 \
+61 SW99 switch 0x99 46 8 curved 3 \
   62 straight 230 \
   16 curved 228 \
   58 behind 24 \
-58 SW9A switch 0x9a 47 8 straight 3 \
+58 SW9A switch 0x9a 46 7 straight 3 \
   61 straight 24 \
   14 curved 224 \
   60 behind 32 \
-59 SW9B switch 0x9b 47 9 straight 3 \
+59 SW9B switch 0x9b 46 9 straight 3 \
   63 straight 247 \
   24 curved 227 \
   60 behind 24 \
-60 SW9C switch 0x9c 45 9 curved 3 \
+60 SW9C switch 0x9c 46 10 curved 3 \
   59 straight 24 \
   32 curved 222 \
   58 behind 32 \
