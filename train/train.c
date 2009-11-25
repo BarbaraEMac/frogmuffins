@@ -3,7 +3,7 @@
 * becmacdo
 * dgoc
 */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -31,7 +31,7 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				2
+#define CAL_LOOPS				1
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 // Private Stuff
@@ -212,7 +212,7 @@ void train_run () {
 				
 				if( req.mode == DRIVE ) { 
 					// If not calibration, reply right away
-					Reply( senderTid, 0, 0 );
+			//		Reply( senderTid, 0, 0 );
 				} else {
 					// Don't reply until we have the info we need.
 					assert( senderTid == tr.caTid );
@@ -224,7 +224,11 @@ void train_run () {
 
 				// Set up the request to mimic a position update
 				req.sensor = tr.sensor;
-				req.ticks  = Time( tr.csTid );
+
+				// TODO:
+				if ( tr.mode != CAL_SPEED ) {
+					req.ticks  = Time( tr.csTid );
+				}
 
 			case POS_UPDATE: 		// got a position update
 				debug ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
@@ -252,6 +256,7 @@ void train_run () {
 
 					printf("train: waking up routewatcher.\r\n");
 					// Wake up the route watcher so that we can try again later
+					// Non-Blocking
 					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
 				
 				// If there is another error, then we can't handle it.
@@ -276,8 +281,7 @@ void train_run () {
 					if ( tr.mode == CAL_SPEED ) {
 						// Reply to the Calibration task
 						Reply( tr.caTid, &tr.sd, sizeof(int) );
-					}
-					if ( tr.mode == CAL_STOP ) {
+					} else {
 						// Reply to the shell
 						Reply( tr.shTid, 0, 0 );
 					}
@@ -400,7 +404,7 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		// Given the stop distance for this train,
 		// estimate the best gear for the train to travel at.
 		// In theory, as distLeft decreases, so does the speed.
-		for ( i = 14; i >= 1; i -- ) {
+		for ( i = tr->defaultGear; i >= 1; i -- ) {
 			stopDist = train_getStopDist( tr, i );
 
 			// Use the stopping distance multiplier to better predict
@@ -408,7 +412,7 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 			stopDist /= defaultStopDist;
 
 			// Multiply by 2 to account for acc/deceleration
-			if ( (stopDist*2) <= distLeft ) {
+			if ( (stopDist*4) <= distLeft ) {
 				bestGear = i;
 				break;
 			}
@@ -446,12 +450,12 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 // Returns the stop distance in mm given the gear and train id
 int train_getStopDist( Train *tr, int gear ) {
 	switch( gear ) {
-//		case 14:
-//		case 13:
-//			return 830;
-//		case 12:
-//		case 11:
-//			return 820;
+		case 14:
+		case 13:
+			return 830;
+		case 12:
+		case 11:
+			return 820;
 		case 10:
 		case 9:
 			return 600;
@@ -518,7 +522,6 @@ int train_distance( Train *tr, int sensor ) {
 
 	printf("train: asking for distance.\r\n");
 	Send( tr->rpTid, &req,  sizeof(RPRequest), &dist, sizeof(int) );
-	
 
 	//debug( "train: distance returned %d \r\n", dist );
 	return dist;
@@ -655,6 +658,8 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 	// Do not change the switches if we are calibrating the speed
 	if ( tr->mode == CAL_STOP ) return;
 
+	if ( tr->mode == CAL_SPEED && tr->dest != INIT_DEST ) return;
+
 	foreach( ss, rpReply->switches ) {
 	  if( ss->id <= 0 ) break;
 
@@ -790,5 +795,3 @@ void routeWatchDog () {
 
 	Exit(); // This task will never reach here
 }
-
-
