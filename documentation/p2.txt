@@ -156,6 +156,25 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 
 	Detective
 	=========
+	The detective group of tasks is not much different from the last code. There is still
+	one main server task, one poller task and a watchdog task.
+	The few chages that were made are: GET_STRAY and WATCH_FOR will overwrite any
+	previous requests by a train, unlike before where a train had to wait for a request 
+	to return. Also these calls are non-blocking now, with the detective doing an explicit
+	Send() to the train when the request is handled. This is fine for now, as we have
+	rewritten the train to act as a server, meaning it spends most of its time Receive()
+	blocked.
+
+	Another change made was that when a WATCH_FOR request comes in, it is checked against
+	the history of the last time each sensor was hit, and if a match occurs (in the past)
+	the request is answered immediately. This is handy for times when we just passed over 
+	a sensor.
+
+	Also, we increased the grace period on the watchdog to 5 seconds, as sometimes the
+	poll takes a bit longer to respond - especially when sending in other commands.
+	The reason for this change is that reseting it too early might mean we discard useful
+	sensor data.
+
 
 	Track Server
 	============
