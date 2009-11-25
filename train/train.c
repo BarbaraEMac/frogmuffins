@@ -59,12 +59,10 @@ typedef struct {
 	
 	TID 		rpTid;			// Id of the Route Planner
 	TID 		tsTid;			// Id of the Track Server
-	TID			deTid;			// Id of the Detective
 	TID			csTid;			// Id of the Clock Server
 	TID			uiTid;			// Id of the UI server
-	TID			htTid;			// Id of the Heart
 	TID			caTid;			// ID of the calibration task
-	TID			coTid;			// ID of the courier task
+	//TID			coTid;			// ID of the courier task
 	TID			rwTid;			// ID of the route watch dog task
 	TID			shTid;			// ID of the shell
 
@@ -119,8 +117,8 @@ RPReply		train_planRoute 	( Train *tr );
 int 		train_distance		( Train *tr, int sensor ); // in mm
 
 // Detective Commands
-void 		train_locate		( Train *tr, int timeout );
-void 		train_predictSensors( Train *tr, SensorsPred *pred, int mm );
+void 		train_locate		( Train *tr, int timeout, DeRequest *predct);
+void 		train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest *predct );
 void 		train_updatePos		( Train *tr, int sensor, int ticks );
 
 // Track Server Commands
@@ -146,6 +144,7 @@ void train_run () {
 	Train 	 	tr;
 	RPReply   	rpReply;		// Reply from the Route Planner
 	TrainReq	req;
+	DeRequest	predct;
 	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
 
@@ -153,7 +152,7 @@ void train_run () {
 	train_init ( &tr );
 
 	// The train should figure out where it is
-	train_locate( &tr, timeout );
+	train_locate( &tr, timeout, &predct );
 	
 	FOREVER {
 		// Receive a server request
@@ -163,21 +162,21 @@ void train_run () {
 		switch (req.type) {
 
 			case TIME_UPDATE:		// heartbeat
-				assert( senderTid == tr.htTid );
-				assert( tr.mode == DRIVE || tr.mode == IDLE );
-				
 				if( tr.mode == DRIVE ) {
-					Reply( senderTid, 0, 0 );
 					// Update current location (NOTE: This is an estimate!)
 					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
 					train_updateUI( &tr, distFromSensor );
 					// Adjust speed
 					train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor, rpReply.stopAction );
-					// Resend detective request
-					train_predictSensors( &tr, &rpReply.nextSensors, distFromSensor );
+					// Only update predictions if train is not lost 
+					if( predct.type == WATCH_FOR ) {
+						// Resend detective request
+						train_predictSensors( &tr, &rpReply.nextSensors, 
+								distFromSensor, &predct );
+					}
 				}
-				
+				Reply( senderTid, &predct, sizeof(DeRequest) );
 				break;
 
 			case WATCH_TIMEOUT:		// train is lost
@@ -187,7 +186,7 @@ void train_run () {
 					printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
 					
 					// Try to hit a sensor to find where you are
-					train_locate( &tr, timeout );
+					train_locate( &tr, timeout, &predct );
 				}
 				break;
 
@@ -202,7 +201,7 @@ void train_run () {
 					// Reverse direction 
 					train_reverse( &tr );
 					// Try to hit a sensor to find where you are
-					train_locate( &tr, timeout );
+					train_locate( &tr, timeout, &predct );
 				}
 				break;
 			
@@ -212,18 +211,11 @@ void train_run () {
 			//	printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
 				
 				if( req.mode == DRIVE ) { 
-				//	printf ("DEST UPDATE REPLYING TO %d\r\n", senderTid);
 					// If not calibration, reply right away
 					Reply( senderTid, 0, 0 );
 				} else {
 					// Don't reply until we have the info we need.
 					assert( senderTid == tr.caTid );
-				}
-
-				// Start off the heart task
-				if( tr.mode == CAL_STOP && req.mode == DRIVE ) { 
-				//	printf ("REPLYING TO THE HEART\r\n");
-					Reply( tr.htTid, 0, 0 ); 
 				}
 
 				// Update the internal dest variable
@@ -240,7 +232,6 @@ void train_run () {
 				
 				// Do not reply twice for a DEST_UPDATE
 				if ( req.type == POS_UPDATE ) {
-					//printf ("REPLYING IN POS_UPDATE to %d\r\n", senderTid);
 					Reply( senderTid, 0, 0 );
 					
 					// Update the train's information
@@ -295,9 +286,11 @@ void train_run () {
 
 					// Flip the switches along the path.
 					train_flipSwitches( &tr, &rpReply );
+					
+					// Update the detective request
+					train_predictSensors( &tr, &rpReply.nextSensors,
+							distFromSensor, &predct );
 		
-					// Resend detective request
-					train_predictSensors( &tr, &rpReply.nextSensors, distFromSensor );
 				}
 				
 				break;
@@ -319,7 +312,6 @@ void train_run () {
 
 void train_init ( Train *tr ) {
 	TrainReq init;
-	TID		 tid;
 	
 	// Get the train number from shell
 	Receive ( &tr->shTid, &init, sizeof(TrainReq) );
@@ -335,25 +327,20 @@ void train_init ( Train *tr ) {
 	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
-	tr->deTid = WhoIs (DETECTIVE_NAME);
+	//tr->deTid = WhoIs (DETECTIVE_NAME);
 	tr->csTid = WhoIs (CLOCK_NAME);
 	tr->uiTid = WhoIs (UI_NAME);
-	tr->htTid = Create( TRAIN_PRTY - 1, &heart );
-	tr->coTid = Create( TRAIN_PRTY - 1, &courier );
+	Create( TRAIN_PRTY - 1, &heart );
+	//tr->coTid = Create( TRAIN_PRTY - 1, &courier );
 	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
 	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
 	assert( tr->rpTid >= NO_ERROR );
 	assert( tr->tsTid >= NO_ERROR );
-	assert( tr->deTid >= NO_ERROR );
+	//assert( tr->deTid >= NO_ERROR );
 	assert( tr->csTid >= NO_ERROR );
 	assert( tr->uiTid >= NO_ERROR );
-	assert( tr->htTid >= NO_ERROR );
 	assert( tr->caTid >= NO_ERROR );
-	assert( tr->coTid >= NO_ERROR );
-
-	// Block the heart
-	Receive( &tid, &init, sizeof(TrainReq) ); 
-	assert( tid == tr->htTid );
+//	assert( tr->coTid >= NO_ERROR );
 
 	// Initialize internal variables
 	tr->mode   = CAL_SPEED;
@@ -557,22 +544,16 @@ RPReply train_planRoute( Train *tr ) {
 //-----------------------------------------------------------------------------
 //-------------------------- Detective Commands -------------------------------
 //-----------------------------------------------------------------------------
-void train_locate( Train *tr, int timeout ) {
-	DeRequest req;
-	req.type	= GET_STRAY;
-	req.expire	= timeout + Time( tr->csTid );
-	req.tid 	= tr->coTid;
+void train_locate( Train *tr, int timeout, DeRequest *predct ) {
+	predct->type	= GET_STRAY;
+	predct->expire	= timeout + Time( tr->csTid );
+	predct->tid 	= MyTid();//tr->coTid; // TODO save this somewhere
 	
 	// Drive at locate speed
 	train_drive( tr, LOCATE_GEAR );
-
-	printf("train: asking for stray sensors.\r\n");
-	// Get stray sensors
-	Send( tr->deTid, &req, sizeof(DeRequest), 0, 0 );
 }
 
-void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
-	DeRequest	req;
+void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * predct ) {
 	int 		i, dist, ticks = Time( tr->csTid );
 	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
 
@@ -584,25 +565,26 @@ void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 	lower		= speed_adjust( lower, tr->defaultGear, tr->gear );
 	upper		= speed_adjust( upper, tr->defaultGear, tr->gear );
 
-	assert( pred->len <= array_size( req.events ) );
+	assert( sensor->len <= array_size( predct->events ) );
 	
-	req.type 		= WATCH_FOR;
-	req.numEvents	= pred->len;
-	req.expire 		= 0;
-	req.tid 		= tr->coTid;
+	predct->type 		= WATCH_FOR;
+	predct->numEvents	= sensor->len;
+	predct->expire 		= 0;
+	predct->tid 		= MyTid(); //tr->coTid; TODO save this somewhere
 
 	debug("predicting sensors:");
 
-	for( i = 0; i < req.numEvents ; i ++ ) {
-		dist = pred->dists[i] - mm ;
+	for( i = 0; i < predct->numEvents ; i ++ ) {
+		dist = sensor->dists[i] - mm ;
 
-		debug("%c%d, ", sensor_bank(pred->idxs[i]), sensor_num(pred->idxs[i]));
+		debug( "%c%d, ", sensor_bank(sensor->idxs[i]),
+				sensor_num(sensor->idxs[i]));
 
-		req.events[i].sensor = pred->idxs[i];
-		req.events[i].start  = ticks + speed_time( lower, dist );
-		req.events[i].end    = ticks + speed_time( upper, dist );
+		predct->events[i].sensor = sensor->idxs[i];
+		predct->events[i].start  = ticks + speed_time( lower, dist );
+		predct->events[i].end    = ticks + speed_time( upper, dist );
 
-		req.expire = max( req.expire, req.events[i].end );
+		predct->expire = max( predct->expire, predct->events[i].end );
 	}
 	debug( "\r\n" );
 	//if( req.expire > tr->trigger + SENSOR_TIMEOUT ) { }
@@ -610,9 +592,6 @@ void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 //	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
 //		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
 	
-	printf("train: asking for predicted sensors.\r\n");
-	// Tell the detective about the Route Planner's prediction.
-	Send( tr->deTid, &req,	sizeof(DeRequest), 0 , 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -634,7 +613,6 @@ void train_reverse( Train *tr ) {
 	req.train       = tr->id;
 	req.startTicks	= Time(tr->csTid);
 
-	printf("train: reversing.\r\n");
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 }
 
@@ -666,7 +644,6 @@ void train_drive( Train *tr, int gear ) {
 	req.speed = gear;
 	req.startTicks	= Time(tr->csTid);
 
-	printf("train: driving.\r\n");
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 }
 
@@ -690,7 +667,6 @@ void train_flipSwitches( Train *tr, RPReply *rpReply ) {
 			req.dir  = ss->dir;
 			req.startTicks	= Time(tr->csTid);
 
-			printf("train: flipping.\r\n");
 			Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 		}
 	}
@@ -718,7 +694,6 @@ void train_updateUI( Train *tr, int mm ) {
 	req.type = TRAIN;
 	req.idx  = tr->sensor;
 	req.dist = mm;
-	printf("train: updating UI.\r\n");
 	Send( tr->uiTid, &req, sizeof(UIRequest), &tmp, sizeof(int) ); 
 }
 
@@ -728,14 +703,19 @@ void train_updateUI( Train *tr, int mm ) {
 void heart() {
 	TID parent	= MyParentTid();
 	TID csTid 	= WhoIs( CLOCK_NAME );
-	TrainReq	req;
+	TID deTid	= WhoIs( DETECTIVE_NAME ); 
+	TrainReq 	beat;
+	DeRequest	predct;
 
-	req.type  = TIME_UPDATE;
+	beat.type  = TIME_UPDATE;
 	FOREVER {
-		Send( parent, &req, sizeof(TrainReq), 0, 0 );
+		Send( parent, &beat, sizeof(TrainReq), &predct, sizeof(DeRequest) );
+
+		// Tell the detective the updated info
+        Send( deTid, &predct, sizeof( DeRequest ), 0, 0 );
 		
 		// Heart beat for the train
-		req.ticks = Delay( HEARTBEAT_TICKS , csTid );
+		beat.ticks = Delay( HEARTBEAT_TICKS , csTid );
 	}
 }
 
@@ -811,27 +791,4 @@ void routeWatchDog () {
 	Exit(); // This task will never reach here
 }
 
-
-
-//-----------------------------------------------------------------------------
-//--------------------------------- Courier -----------------------------------
-//-----------------------------------------------------------------------------
-void courier() {
-        debug( "courier starting\r\n");
-        TID             deTid;
-        TID             trTid = MyParentTid();
-        TrainReq        req;
-
-        assert( deTid >= NO_ERROR );
-
-        FOREVER {
-                debug( "courier receiving\r\n");
-                // Reveice a detective request
-                Receive( &deTid, &req, sizeof( TrainReq ) );
-                Reply( deTid, 0, 0 );
-
-                // Give the result back to the train
-                Send( trTid, &req, sizeof( TrainReq ), 0, 0 );
-        }
-}
 
