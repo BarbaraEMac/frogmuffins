@@ -112,7 +112,7 @@ speed_add( Speed sp1, Speed sp2 ) {
 
 void 		train_init    		( Train *tr );
 Speed 		train_avgSpeed		( Train *tr );
-void 		train_adjustSpeed	( Train *tr, int mm );
+void 		train_adjustSpeed	( Train *tr, int distLeft, enum StopAction action );
 int 		train_getStopDist	( Train *tr, int gear );
 
 // Route Planner Commands
@@ -166,7 +166,7 @@ void train_run () {
 
 			case TIME_UPDATE:		// heartbeat
 				assert( senderTid == tr.htTid );
-				assert( tr.mode == DRIVE );
+				assert( tr.mode == DRIVE || tr.mode == IDLE );
 				
 				if( tr.mode == DRIVE ) {
 					Reply( senderTid, 0, 0 );
@@ -175,7 +175,7 @@ void train_run () {
 					// Send this information to the UI
 					train_updateUI( &tr, distFromSensor );
 					// Adjust speed
-					train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor );
+					train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor, rpReply.stopAction );
 					// Resend detective request
 					train_predictSensors( &tr, &rpReply.nextSensors, distFromSensor );
 				}
@@ -184,23 +184,28 @@ void train_run () {
 
 			case WATCH_TIMEOUT:		// train is lost
 				Reply( senderTid, 0, 0 );
-				printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
 				
-				// Try to hit a sensor to find where you are
-				train_locate( &tr, timeout );
+				if ( tr.mode != IDLE ) {
+					printf( "Train is lost, for %dms.\r\n", timeout * MS_IN_TICK );
+					
+					// Try to hit a sensor to find where you are
+					train_locate( &tr, timeout );
+				}
 				break;
 
 			case STRAY_TIMEOUT:		// train is really lost
 				Reply( senderTid, 0, 0 );
 				
-				// Increase the timeout by 2s 
-				timeout += (2000 / MS_IN_TICK); 
-				printf( "Train is really lost for %dms.\r\n", timeout *MS_IN_TICK );
-				
-				// Reverse direction 
-				train_reverse( &tr );
-				// Try to hit a sensor to find where you are
-				train_locate( &tr, timeout );
+				if ( tr.mode != IDLE ) {
+					// Increase the timeout by 2s 
+					timeout += (2000 / MS_IN_TICK); 
+					printf( "Train is really lost for %dms.\r\n", timeout *MS_IN_TICK );
+					
+					// Reverse direction 
+					train_reverse( &tr );
+					// Try to hit a sensor to find where you are
+					train_locate( &tr, timeout );
+				}
 				break;
 			
 			case DEST_UPDATE: 		// got a new destination to go to
@@ -274,7 +279,7 @@ void train_run () {
 				debug( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
 
 				// Adjust the speed according to distance
-				train_adjustSpeed( &tr, rpReply.stopDist );
+				train_adjustSpeed( &tr, rpReply.stopDist, rpReply.stopAction );
 
 				// If we have reached our destination, 
 				if ( rpReply.stopDist == 0 ) {
@@ -299,7 +304,7 @@ void train_run () {
 				break;
 
 			case STOP_UPDATE:
-				printf( "train: stopping distance %dmm stored.\r\n", req.mm );
+				printf( "Train: Stopping distance %dmm stored.\r\n", req.mm );
 		//		printf ("STOP UPDATE REPLYING TO %d\r\n", senderTid );
 				Reply( senderTid, 0, 0 );
 				
@@ -337,11 +342,8 @@ void train_init ( Train *tr ) {
 	tr->csTid = WhoIs (CLOCK_NAME);
 	tr->uiTid = WhoIs (UI_NAME);
 	tr->htTid = Create( TRAIN_PRTY - 1, &heart );
-	printf ("HEART = %d\r\n", tr->htTid);
 	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
-	printf ("CALI = %d\r\n", tr->caTid);
 	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
-	printf ("RouteWatch = %d\r\n", tr->rwTid);
 	assert( tr->rpTid >= NO_ERROR );
 	assert( tr->tsTid >= NO_ERROR );
 	assert( tr->deTid >= NO_ERROR );
@@ -392,29 +394,22 @@ Speed train_avgSpeed( Train *tr ) {
 	}
 
 	tr->sd = isqrt( var );
-
+/*
 	// Exit calibration mode once we have good enough data
 	if ( tr->mode == CAL_SPEED && (tr->sd < ( mean / SD_THRESHOLD ) ) ) {
 		printf( "Train: finished calibration with sd=%d\r\n", tr->sd );
 	}
-
+*/
 	return total;
 }
 
-void train_adjustSpeed( Train *tr, int distLeft ) {
+void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	int bestGear = tr->defaultGear;
 	int stopDist = 0;
 	int i;
 	
 	// If we are not in calibration mode,
 	if( tr->mode == DRIVE ) {
-		
-		if( distLeft <= 50 ) { 
-			printf( "train: thinks it's reached its destination." );
-			bestGear = 0;
-			tr->mode = IDLE;
-		} 
-		
 		// Given the stop distance for this train,
 		// estimate the best gear for the train to travel at.
 		// In theory, as distLeft decreases, so does the speed.
@@ -427,6 +422,18 @@ void train_adjustSpeed( Train *tr, int distLeft ) {
 				break;
 			}
 		}
+
+		if ( action == STOP_AND_REVERSE && bestGear < 3 ) {
+			bestGear = 3;
+		}
+
+		// If we need to stop,
+		if ( distLeft == 0 ) {
+			bestGear = 0;
+			tr->mode = IDLE;
+		}
+		
+//		printf ("picking %d as best gear for %d left.\r\n", bestGear, distLeft);
 	} 
 
 	// If you are stopping calibration,
@@ -469,8 +476,8 @@ int train_getStopDist( Train *tr, int gear ) {
 		case 2:
 		case 1:
 			return 100;
-		default:
-			return 500;
+		case 0:
+			return 0;
 	}
 }
 
@@ -487,7 +494,7 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 	
 	// Update the mean speed
 	if( tr->gearChanged == false ) { //TODO: this is wrong
-		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
+//		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
 		rb_force( &tr->hist, &sp );
 	}
 	tr->gearChanged = false;
@@ -574,8 +581,6 @@ void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 	req.numEvents = pred->len;
 	req.expire 	  = 0;
 
-//	if( rep.stopAction == STOP_AND_REVERSE ) 
-
 	debug("predicting sensors:");
 
 	for( i = 0; i < req.numEvents ; i ++ ) {
@@ -628,16 +633,21 @@ void train_drive( Train *tr, int gear ) {
 	// Don't change your speed while calibrating
 	if( tr->mode == CAL_SPEED && tr->gear != CALIBRATE_GEAR ) {
 		gear = CALIBRATE_GEAR;
-	} else if ( tr->mode == CAL_SPEED ) return;
+	} else if ( tr->mode == CAL_SPEED ) {
+		return;
+	}
 	
-	if( tr->gear == gear ) return;
+	// If we are already at this gear, just return.
+	if( tr->gear == gear ) {
+		return;
+	}
 
 	tr->gearChanged = true;
-	debug ("Train %d is driving at gear =%d\r\n", tr->id, gear);
 
 	if( gear >= 0 && gear < 15 ) {
 		tr->gear = gear;
 	}
+	debug ("Train %d is driving at gear =%d\r\n", tr->id, gear);
 		
 	req.type = TR;
 	req.train = tr->id;
