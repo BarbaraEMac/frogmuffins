@@ -29,7 +29,7 @@ typedef struct {
 
 typedef struct {
 	int len;		// Number of reserved sensors
-	int idxs[8];	// Indicies of the reserved sensor nodes
+	int idxs[20];	// Indicies of the reserved sensor nodes
 } Reservation;
 
 typedef struct {
@@ -427,6 +427,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	NodePred   nodePred;
 	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
+	
 	debug ("GOING TO NODE %s(%d) from %s\r\n", 
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
 
