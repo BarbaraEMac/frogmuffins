@@ -33,8 +33,8 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 	Model
 	=====
 	For this assignment, we simply use the reserved flag in each node to set it
-	as reserved or not. Otherwise, oour abstraction of the track is identical 
-	to the one for P1.
+	as reserved or not. We have not modified our representation of the track for
+	P2.
 
 	Route Planner
 	=============
@@ -85,7 +85,7 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		Route Planner to change the path. At this point, the previous reservation
 		is cancelled and the new one is made. Therefore, nodes are only reserved 
 		for 1 time step (where we define 1 time step to be the time for a train
-		to move from 1 sensor to the next).
+		to move from 1 sensor to the next), unless a train has stopped.
 
 		Note: After a train makes its reservations, we do not call Floyd-Warshall
 		to determine the new shortest paths. We do this because the next train to
@@ -134,7 +134,7 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		working.
 
 		Unfortunately, we do not currently have a systematic way to determine if a
-		deadlock has occurred systematically. When testing, we are able to notice 
+		deadlock has occurred. When testing, we are able to notice 
 		this situation ourselves and assign new destinations for the trains to have 
 		them move out of each other's way.
 
@@ -194,7 +194,7 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 
 		Helper Tasks
 		============
-		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher
+		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher.
 		These are all notifier tasks so their priorities' are all one higher than 
 		that of the train.
 
@@ -308,9 +308,6 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		The track is automatically reserved within the call to plan route. This 
 		ensures that the train stays as simple as possible and can just focus on 
 		driving and calibrating.
-
-
-		
 	
 	UI / Shell
 	==========
