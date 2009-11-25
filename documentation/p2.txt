@@ -227,9 +227,35 @@ TODO:
 		During calibration, a manual stopping distance for the calibration speed
 		is stored in the train.
 
-		When determining which speed to travel at, we do the following
+		When determining which speed to travel at, we consider the stopping distance.
+		If we have a long way to go, the train can speed up. The closer a train gets
+		to the desired distance, the slower it should travel. 
+
+		We currently have some stopping distances hardcoded into the train task.
+		As trains are dropped, used more, oiled, etc, their stopping distances 
+		change. To get around this, we can slightly alter the hardcoded stopping
+		distances given the measured one as follows:
+
+			stopDist = Hardcoded distance for the current speed.
+
+			stopDist *= Measured stop distance for default speed.
+			stopDist /= Hardcoded stop distance for default speed.
+
+		We do it in this manner since it will avoid floating point calculations.
+
+		Route Planning
+		==============
+
+		Position Update
+		===============
 
 
+		Prediction
+		==========
+
+		Reservations
+		============
+	
 		
 	
 	UI / Shell
