@@ -333,6 +333,11 @@ TODO:
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
 
 	The source code is located in: /u8/becmacdonald/cs452/p2/handin.
+	Since we have time between when this documentation is handed in 
+	and the demo, we will most likely change some of the files as we 
+	continue to improve the functionality of our code.
+
+	If we do, we will be sure to mention it during the demo.
 	
 	Here are the md5 hashes for each file:
 
