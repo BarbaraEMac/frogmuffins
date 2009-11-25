@@ -714,6 +714,7 @@ void train_updateUI( Train *tr, int mm ) {
 	req.type = TRAIN;
 	req.idx  = tr->sensor;
 	req.dist = mm;
+	req.trainId = tr->id;
 	Send( tr->uiTid, &req, sizeof(UIRequest), &tmp, sizeof(int) ); 
 }
 
