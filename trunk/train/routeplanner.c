@@ -127,6 +127,9 @@ void rp_run() {
 	shellTid = rp_init (&rp);
 
 	FOREVER {
+		
+		// Clear the trReply for the next time we use it
+		clearReply (&trReply);
 		// Receive from a client train
 		Receive ( &senderTid, (char*)&req, sizeof(RPRequest) );
 		//printf("routeplanner: Rcvd sender=%d from=%d type=%d idx1=%d idx2=%d\r\n",
@@ -270,9 +273,6 @@ void rp_run() {
 				// This will never be called since we handle errors above.
 				break;
 		}
-		
-		// Clear the trReply for the next time we use it
-		clearReply (&trReply);
 	}
 
 	Exit(); // This will never be called
