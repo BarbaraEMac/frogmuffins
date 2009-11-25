@@ -40,6 +40,8 @@ typedef struct {
 	TID ui;
 	TID tr[2];	
 	TID idle;
+
+	int trains[2];
 } TIDs;
 
 // Use this function to grab a line of data before the shell starts.
@@ -229,13 +231,13 @@ void shell_initTrack( TIDs *tids ) {
 	}
 }
 
-void shell_cmdTrain( TIDs *tids, const char *dest, int i, TrainMode mode ) {
+void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 	assert( i >= 0 && i < array_size( tids->tr ) );
 	
 	TrainReq	 trReq;
 	RPRequest	 rpReq;
 	RPShellReply rpRpl;
-	TID		 	 trainTid = tids->tr[i];
+	TID		 	 trainTid = (tids->trains[0] == id) ? tids->tr[0] : tids->tr[1];
 
 	// Parse the destination
 	strncpy( rpReq.name, dest, 5 );
@@ -269,6 +271,9 @@ void shell_initTrain( TIDs *tids, int i ) {
 		if( sscanf( input, "%d", &req.id ) >= 0 ) break;
 		output( "Invalid train id. Try again.\r\n" );
 	}
+
+	// Store this train's id number
+	tids->trains[i] = req.id;
 
 	// gear 7 is default
 	input[0] = '7';
@@ -529,11 +534,11 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpCmd( &rpReq, tids->rp );
 		}
 	// go
-	} else if( sscanf( command, "go %s", tmpStr1 )>= 0 ) {
-		shell_cmdTrain( tids, tmpStr1, 0, DRIVE );
+	} else if( sscanf( command, "go %d %s", tmpInt, tmpStr1 )>= 0 ) {
+		shell_cmdTrain( tids, tmpStr1, tmpInt, DRIVE );
 	// cal
-	} else if( sscanf( command, "cal %s", tmpStr1 )>= 0 ) {
-		shell_cmdTrain( tids, tmpStr1, 0, CAL_STOP );
+	} else if( sscanf( command, "cal %d %s", tmpInt, tmpStr1 )>= 0 ) {
+		shell_cmdTrain( tids, tmpStr1, tmpInt, CAL_STOP );
     // Help
 	} else if( sscanf( command, "h" )>=0 ) {
 		char **cmd;
