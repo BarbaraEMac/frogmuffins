@@ -51,6 +51,8 @@ void shell_initTrack	( TIDs *tids );
 void shell_cmdTrain 	( TIDs *tids, const char *dest, int id, TrainMode mode );
 void shell_initTrain 	( TIDs *tids, int trainNum );
 
+TSReply trackCmd		( TSRequest *req, TIDs *tids );
+
 /**
  * Given an input command, error check it and execute it.
  */
@@ -259,7 +261,12 @@ void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
 void shell_initTrain( TIDs *tids, int i ) {
 	TrainReq	req;
 	char 		input[INPUT_LEN];
-	
+	TSRequest   tsReq;
+		
+	// Reset the switches!
+	tsReq.type = SWS;
+	trackCmd( &tsReq, tids );
+
 	assert( i >= 0 && i < array_size( tids->tr ) );
 	TID			trainTid = tids->tr[i];
 	req.type = TRAIN_INIT;
@@ -333,7 +340,7 @@ RPShellReply rpCmd( RPRequest *req, TID rpTid ) {
 
 // Execute the command passed in
 void shell_exec( TIDs *tids, char *command ) {
-	char 			 tmpStr1[INPUT_LEN];
+	char 			tmpStr1[INPUT_LEN];
 	char 		 	tmpStr2[INPUT_LEN];
 	int			 	tmpInt;
 

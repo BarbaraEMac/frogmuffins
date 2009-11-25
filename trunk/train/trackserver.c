@@ -36,6 +36,8 @@ typedef struct {
 	int  		lstSensorPoll;
     char 		speeds   [NUM_TRNS];
     SwitchDir 	switches [NUM_SWTS];
+    SwitchDir 	defaultLow  [NUM_SWTS - 4];
+    SwitchDir 	defaultHigh [4];
 	TID 	 	iosTid;
 	TID  		csTid;
 	TID			uiTid;
@@ -91,6 +93,10 @@ void ts_run () {
 				reply.ret = ts_switchSet( &ts, req.sw, req.dir );
 				break;
 			
+			case SWS:
+				reply.ret = ts_switchSetAll( &ts, ts.defaultLow, ts.defaultHigh );
+				break;
+			
 			case TR:
 				reply.ret = ts_trainSet( &ts, req.train, req.speed );
 				break;
@@ -130,8 +136,6 @@ int ts_init( TS *ts ) {
 	debug ("ts_init: track server=%x \r\n", ts);
 	int i;
 	int err = NO_ERROR;
-	SwitchDir dirLow[NUM_SWTS - 4];
-	SwitchDir dirHigh[4];
 
 	ts->lstSensor  = -1;
 	ts->lstSensorUpdate = 0;
@@ -154,17 +158,17 @@ int ts_init( TS *ts ) {
 	
 	for ( i = 0; i < NUM_SWTS - 4; i ++ ) {
 		if ( i == 11 ) {
-			dirLow[i] = SWITCH_CURVED;
+			ts->defaultLow[i] = SWITCH_CURVED;
 		} else {
-			dirLow[i] = SWITCH_STRAIGHT;
+			ts->defaultLow[i] = SWITCH_STRAIGHT;
 		}
 	}
 	
 	for ( i = 0; i < 4; i ++ ) {
-		dirHigh[i] = SWITCH_CURVED;	
+		ts->defaultHigh[i] = SWITCH_CURVED;	
 	}
 	
-	ts_switchSetAll( ts, dirLow, dirHigh );
+	//ts_switchSetAll( ts, ts->defaultLow, ts->defaultHigh );
 	
 	err = Create(OTH_SERVER_PRTY, &det_run );
 	if( err < NO_ERROR ) return err;
@@ -242,7 +246,7 @@ int ts_switchSet( TS *ts, int sw, SwitchDir dir ) {
 
 // set all the switches to given direction
 int ts_switchSetAll( TS *ts, SwitchDir *dirLow, SwitchDir *dirHigh ) {
-    int err = 0;
+	int err = 0;
 
 	int i;
     for( i = 1; i <= 18; i ++ ) {
