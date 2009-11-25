@@ -107,9 +107,15 @@ speed_add( Speed sp1, Speed sp2 ) {
 	return sp;
 }
 
+inline Speed 
+speed_sub( Speed sp1, Speed sp2 ) {
+	sp2.mm = - sp2.mm;
+	return speed_add( sp1, sp2 );
+}
+
 void 		train_init    		( Train *tr );
 Speed 		train_avgSpeed		( Train *tr );
-void 		train_adjustSpeed	( Train *tr, int distLeft, enum StopAction action );
+void 		train_adaptSpeed	( Train *tr, int distLeft, enum StopAction action );
 int 		train_getStopDist	( Train *tr, int gear );
 
 // Route Planner Commands
@@ -149,6 +155,8 @@ void train_run () {
 	int			timeout = LOCATE_TIMEOUT;
 	bool		routeWatcherAwake = false;
 
+	predct.tid = MyTid();
+
 	// Initialize this train
 	train_init ( &tr );
 
@@ -163,13 +171,14 @@ void train_run () {
 		switch (req.type) {
 
 			case TIME_UPDATE:		// heartbeat
-				if( tr.mode == DRIVE || tr.mode == CAL_STOP ) {
+				if( speed( tr.velocity ) > 0 ) {
 					// Update current location (NOTE: This is an estimate!)
 					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
 					train_updateUI( &tr, distFromSensor );
 					// Adjust speed
-					train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor, rpReply.stopAction );
+					train_adaptSpeed( &tr, rpReply.stopDist - distFromSensor, 
+							rpReply.stopAction );
 					// Only update predictions if train is not lost 
 					if( predct.type == WATCH_FOR ) {
 						// Resend detective request
@@ -242,9 +251,10 @@ void train_run () {
 				}
 
 			case POS_UPDATE: 		// got a position update
-//				printf ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
-//					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ), tr.dest );
+				printf ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
+					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ), tr.dest );
 				
+				timeout = LOCATE_TIMEOUT; 
 				// Do not reply twice for a DEST_UPDATE
 				if ( req.type == POS_UPDATE ) {
 					Reply( senderTid, 0, 0 );
@@ -286,7 +296,7 @@ void train_run () {
 				debug( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
 
 				// Adjust the speed according to distance
-				train_adjustSpeed( &tr, rpReply.stopDist, rpReply.stopAction );
+				train_adaptSpeed( &tr, rpReply.stopDist, rpReply.stopAction );
 
 				// If we have reached our destination, 
 				 if ( rpReply.stopDist == 0 ) {
@@ -408,7 +418,7 @@ Speed train_avgSpeed( Train *tr ) {
 	return total;
 }
 
-void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
+void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	int bestGear = tr->defaultGear;
 	int stopDist = 0;
 	int defaultStopDist = train_getStopDist( tr, tr->defaultGear );
@@ -455,9 +465,21 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	train_drive( tr, bestGear );
 
 	Speed base = train_avgSpeed( tr );
-	
+	Speed accel = { HEARTBEAT_MS, 10000 }; // 100 mm/s^2
+
 	// Adjust calibrated speed based on gear
-	tr->velocity = speed_adjust( base, tr->defaultGear, tr->gear );
+	Speed set = speed_adjust( base, tr->defaultGear, tr->gear );
+
+	// The current speed does not change rapidly
+	int diff = speed( set ) - speed( tr->velocity );
+	if( diff > speed( accel ) ) {
+		tr->velocity = speed_add( tr->velocity, accel ); // positive accel
+	} else if( diff >= -speed( accel ) ) {
+		tr->velocity = set; 							// minimal accel
+	} else {
+		tr->velocity = speed_sub( tr->velocity, accel ); // negative accel
+	}
+
 	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
 
@@ -492,15 +514,12 @@ int train_getStopDist( Train *tr, int gear ) {
 }
 
 void train_updatePos( Train *tr, int sensor, int ticks ) {
-	int 		last, pred, diff;
+	int 		diff;
 	Speed		sp;
 
+	// Calculate the average speed over the last segment
 	sp.ms = ( ticks - tr->trigger ) * MS_IN_TICK;
 	sp.mm = train_distance( tr, sensor );
-	last  = speed( sp );
-	
-	// Calculate the predicted speed
-	pred = speed( tr->velocity );
 	
 	// Update the mean speed
 	if( tr->gearChanged == false && tr->gear == tr->defaultGear ) { //TODO: this is wrong
@@ -518,7 +537,7 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 	else if( abs(diff) > 20 ) 	{ printf("\033[36m"); }
 	else 						{ printf("\033[32m"); }
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
-			sp.mm, sp.ms, last, pred, tr->sd, diff);
+			sp.mm, sp.ms, speed( sp ), speed( tr->velocity ) , tr->sd, diff);
 	
 	tr->sensor  = sensor; 
 	tr->trigger = ticks;
@@ -565,7 +584,6 @@ RPReply train_planRoute( Train *tr ) {
 void train_locate( Train *tr, int timeout, DeRequest *predct ) {
 	predct->type	= GET_STRAY;
 	predct->expire	= timeout + Time( tr->csTid );
-	predct->tid 	= MyTid();//tr->coTid; // TODO save this somewhere
 	
 	// Drive at locate speed
 	train_drive( tr, LOCATE_GEAR );
@@ -577,8 +595,7 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 
 	Speed		window = { variation * 3 , 1000 };
 	Speed		upper = speed_add( tr->velocity, window );
-	window.mm *= -1;
-	Speed		lower = speed_add( tr->velocity, window );
+	Speed		lower = speed_sub( tr->velocity, window );
 
 	lower		= speed_adjust( lower, tr->defaultGear, tr->gear );
 	upper		= speed_adjust( upper, tr->defaultGear, tr->gear );
@@ -588,7 +605,6 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 	predct->type 		= WATCH_FOR;
 	predct->numEvents	= sensor->len;
 	predct->expire 		= 0;
-	predct->tid 		= MyTid(); //tr->coTid; TODO save this somewhere
 
 	debug("predicting sensors:");
 
@@ -605,8 +621,6 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 		predct->expire = max( predct->expire, predct->events[i].end );
 	}
 	debug( "\r\n" );
-	//if( req.expire > tr->trigger + SENSOR_TIMEOUT ) { }
-//	debug( "train: req.expire=%dms in future\r\n", (req.expire - ticks) * MS_IN_TICK );
 //	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
 //		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
 	
