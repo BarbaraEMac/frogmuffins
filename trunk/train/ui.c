@@ -92,7 +92,7 @@ void ui_run () {
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-			//	ui_displayTimeAt( &ui, 46, 2, req.time );
+				ui_displayTimeAt( &ui, 46, 2, req.time );
 				break;
 			
 			case TRACK_SERVER:
@@ -178,7 +178,7 @@ void ui_init (UI *ui) {
 	strPrintAt (ui->ios2Tid, 53, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 53, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
 	
-	strPrintAt (ui->ios2Tid, 41, 2, "Time:", CYAN_FC, WHITE_BC);
+//	strPrintAt (ui->ios2Tid, 41, 2, "Time:", CYAN_FC, WHITE_BC);
 	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
@@ -308,7 +308,7 @@ void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId ) {
 	}
 
 	// Determine the x-coord
-	int x = (trainId == ui->train1Id) ? 34 : 42;
+	int x = (trainId == ui->train1Id) ? 34 : 64;
 
 	// Clear distance
 	strPrintAt( ui->ios2Tid, x, 10, bank,
@@ -438,7 +438,7 @@ void ui_drawMap( UI *ui ) {
 "                mk          mqqk                      lqqj                  ",
 "tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
 "                                                                            "};
-    	char mapB[][90] = {	
+   	char mapB[][90] = {	
 "tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
 "            lj         lqqj                                            mk   ",
 "tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqk     mk  ",
