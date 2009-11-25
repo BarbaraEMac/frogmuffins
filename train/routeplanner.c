@@ -3,7 +3,7 @@
  * becmacdo
  * dgoc
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -15,7 +15,7 @@
 #include "servers.h"
 #include "train.h"
 
-#define REVERSE_COST 	1000
+#define REVERSE_COST 	0
 #define INT_MAX			0xFFFF
 
 // Private Stuff
@@ -67,7 +67,7 @@ void rp_predictHelper	(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred, Nod
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
 // Reservation Functions
-void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor);
+//void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor);
 void rsv_cancel			(Reservation *rsv, TrackModel *model);
 void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int lastSensor);
 int  mapTrainId   		(int trainId);
@@ -244,7 +244,7 @@ void rp_run() {
 				// Predict the nodes you could hit
 				rp_predict( &rp, &sensPred, &nodePred, tmp );
 				// Reserve them all.
-				rp_reserve( &rp, &nodePred, req.trainId, tmp );
+				//rp_reserve( &rp, &nodePred, req.trainId, tmp );
 				
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
@@ -292,7 +292,7 @@ int rp_init(RoutePlanner *rp) {
 		err = INVALID_TRACK;
 	}
 	Reply  (shellTid,  (char*)&err, sizeof(int));
-	debug ("routeplanner: Using track %c\r\n", ch);
+	//debug ("routeplanner: Using track %c\r\n", ch);
 
 	// Parse the model for this track
 	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
@@ -446,7 +446,8 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	if ( totalDist >= INT_MAX ) {
 		debug ("There is no path from %s to dest!\r\n", 
 				rp->model.nodes[currentIdx].name);
-		trReply->err = NO_PATH;
+		trReply->err      = NO_PATH;
+		trReply->stopDist = 0;
 		return;
 	}
 
@@ -486,19 +487,20 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Predict the next sensors the train could hit
  	rp_predict( rp, &trReply->nextSensors, &nodePred, req->lastSensor );
+	debug ("predicted %d sensors\r\n", &trReply->nextSensors.len);
 	// Get the next switches 
 	rp_getNextSwitchSettings( rp, &p, (SwitchSetting*)trReply->switches );
 	// Reserve the next nodes
 	rsv_make( rsv, &rp->model, &nodePred, req->lastSensor );
 
-/*	
+/*
+  	int i;
 	debug ("Predicted Sensors: ");
 	for ( i = 0; i < trReply->nextSensors.len; i ++ ) {
 		printf ("%c%d, ", sensor_bank(trReply->nextSensors.idxs[i]), 
 				sensor_num(trReply->nextSensors.idxs[i]) );
 	}
 	printf("\r\n");
-	int i;
 	for ( i = 0; i < NUM_SETTINGS; i ++ ) {
 		if ( trReply->switches[i].dist == -1 ) {
 			break;
@@ -802,7 +804,7 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //-----------------------------------------------------------------------------
 //--------------------------- Reservation Stuff -------------------------------
 //-----------------------------------------------------------------------------
-
+/*
 void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor ) {
 	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
 
@@ -816,7 +818,7 @@ void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor 
 	// TODO: dijkstra ?
 	//floyd_warshall( rp, rp->model.num_nodes );
 }
-
+*/
 void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 	int i;
 	int index;
