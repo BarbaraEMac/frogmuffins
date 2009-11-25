@@ -232,7 +232,7 @@ void shell_initTrack( TIDs *tids ) {
 }
 
 void shell_cmdTrain( TIDs *tids, const char *dest, int id, TrainMode mode ) {
-	assert( i >= 0 && i < array_size( tids->tr ) );
+	assert( id >= 0 && id < array_size( tids->tr ) );
 	
 	TrainReq	 trReq;
 	RPRequest	 rpReq;
@@ -534,10 +534,10 @@ void shell_exec( TIDs *tids, char *command ) {
 			rpCmd( &rpReq, tids->rp );
 		}
 	// go
-	} else if( sscanf( command, "go %d %s", tmpInt, tmpStr1 )>= 0 ) {
+	} else if( sscanf( command, "go %d %s", &tmpInt, tmpStr1 )>= 0 ) {
 		shell_cmdTrain( tids, tmpStr1, tmpInt, DRIVE );
 	// cal
-	} else if( sscanf( command, "cal %d %s", tmpInt, tmpStr1 )>= 0 ) {
+	} else if( sscanf( command, "cal %d %s", &tmpInt, tmpStr1 )>= 0 ) {
 		shell_cmdTrain( tids, tmpStr1, tmpInt, CAL_STOP );
     // Help
 	} else if( sscanf( command, "h" )>=0 ) {
