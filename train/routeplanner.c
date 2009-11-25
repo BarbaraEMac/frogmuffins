@@ -453,7 +453,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 
 	// Construct the path from current sensor to destination node
 	makePath ( rp, &p, currentIdx, req->destIdx );
-	rp_displayPath ( rp, &p );
+//	rp_displayPath ( rp, &p );
 	
 	// Get the distance to the next reverse
 	nextRv = rp_distToNextRv (rp, &p);
