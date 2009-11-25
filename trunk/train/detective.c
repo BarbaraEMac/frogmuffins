@@ -15,6 +15,7 @@
 #include "string.h"
 #include "task.h"
 #include "trackserver.h"
+#include "train.h"
 #include "ui.h"
 
 #define NUM_REQUESTS	64
@@ -45,7 +46,7 @@ typedef struct {
 int  det_init	( Det *det );
 int  det_wake	( Det *det, int sensor, int ticks );	
 int	 det_expire ( Det *det, int ticks );
-void det_reply	( DeRequest *req, int sensor, int ticks );
+void det_reply  ( DeRequest *req, int sensor, int ticks, TrainCode type );
 void poll		();
 void watchDog	();
 // ----------------------------------------------------------------------------
@@ -76,9 +77,11 @@ void det_run () {
 		assert( len == sizeof(DeRequest) );
 		sensor = -1;
 		
+		// Do not block
+		Reply ( senderTid, 0, 0 );
+		
 		switch (req.type) {
 			case POLL:
-				Reply ( senderTid, 0, 0 );
 				for( i = 0; i < NUM_SENSOR_BANKS*2; i++ ) {
 					for( k = 0; k < 8; k++ ) {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
@@ -92,8 +95,8 @@ void det_run () {
 							uiReq.idx  = sensor;
 							
 							// Tell the UI about the triggered sensor
-							Send( uiTid, (char*)&uiReq, sizeof(UIRequest), 
-									 	 (char*)&uiReq.time, sizeof(int) );
+							Send( uiTid, &uiReq, sizeof(UIRequest), 
+									 	 &uiReq.time, sizeof(int) );
 
 							// Update the history
 							det.sensorHist[sensor] = req.ticks;
@@ -110,8 +113,6 @@ void det_run () {
 				break;
 
 			case WATCH_DOG:
-				Reply ( senderTid, 0, 0 );
-				
 				//debug("det: Watchdog stamp %d ticks\r\n", req.ticks);
 				if( det.lstPoll < req.ticks ) {
 					error( TIMEOUT, "ts: Polling timed out. Retrying." );
@@ -131,7 +132,9 @@ void det_run () {
 				req.tid = senderTid;
 				// Hash
 				i = senderTid % MAX_NUM_TRAINS; // simple hash function
-				assert( det.requests[i].type == UNUSED_REQ );
+				if( det.requests[i].type != UNUSED_REQ ) {
+				//	error( 0, "det: overwriting precious request (WATCH_FOR)." );
+				}
 				det.requests[i] = req;
 				break;
 
@@ -143,34 +146,17 @@ void det_run () {
 				// Hash
 				i = senderTid % MAX_NUM_TRAINS; // simple hash function
 				if( det.requests[i].type != UNUSED_REQ ) {
-					error( 0, "det: overwriting precious request." );
+		//			error( 0, "det: overwriting precious request (GET_STRAY)." );
 				}
 				det.requests[i] = req;
 				break;
 
-			case RETRACT:
-				debug( "det: Retract task (%d) by task (%d) \r\n", req.tid, senderTid );
-				// Remove the request associated with this task
-				// Hash
-				i = req.tid % MAX_NUM_TRAINS; // simple hash function
-				if( det.requests[i].type != UNUSED_REQ ) {
-					// Reply properly
-					det_reply( &det.requests[i], DET_RETRACTED, det.lstPoll );
-					det.requests[i].type = UNUSED_REQ;
-				}
-				reply.ret = NO_ERROR;
-				Reply ( senderTid, &reply, sizeof(reply) );
-				break;
-
-		
 			default:
 				reply.ret = DET_INVALID_REQ_TYPE;
 				error (reply.ret, "Detective request type is not valid.");
 				Reply ( senderTid, &reply, sizeof(reply) );
 				break;
 		}
-
-
 	}
 }
 
@@ -185,7 +171,6 @@ int det_init( Det *det ) {
 	det->lstPoll = POLL_GRACE; // wait 5 seconds before complaining
 
 	rb_init(&(det->stray), det->strayBuf ) ;
-//	rb_init(&(det->request), det->reqBuf, sizeof(DeRequest), MAX_NUM_TRAINS ) ;
 	memoryset ( det->sensorHist, 0, sizeof(det->sensorHist) );
 
 	DeRequest * req;
@@ -203,12 +188,16 @@ int det_init( Det *det ) {
 	return RegisterAs( DETECTIVE_NAME );
 }
 
-void det_reply( DeRequest *req, int sensor, int ticks ) {
+void det_reply( DeRequest *req, int sensor, int ticks, TrainCode type ) {
 	debug("waking up (%d) with sensor %d at time %dms\r\n", req->tid, sensor, ticks * MS_IN_TICK);
-	DeReply	rpl = { {sensor}, {ticks} };
+	TrainReq  trReq;
+
+	trReq.type   = type; 
+	trReq.sensor = sensor;
+	trReq.ticks  = ticks;
 	
 	// Wake up the train
-	 Reply( req->tid, (char*) &rpl, sizeof( TSReply ) );
+	Send( req->tid, &trReq, sizeof(TrainReq), 0, 0 );
 
 	// Remove the request
 	req->type = UNUSED_REQ;
@@ -222,14 +211,14 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 	foreach( req, det->requests ) {
 		for( i = 0; (req->type == WATCH_FOR) && (i < req->numEvents); i ++ ) {
 			if(req->events[i].sensor == sensor ) {
-				det_reply( req, sensor, ticks );
+				det_reply( req, sensor, ticks, POS_UPDATE );
 				woken++;
 			}
 		}
 	}
 	foreach( req, det->requests ) {
 		if( req->type == GET_STRAY ) {
-				det_reply( req, sensor, ticks );
+				det_reply( req, sensor, ticks, POS_UPDATE );
 		}
 	}
 	return woken;
@@ -239,16 +228,23 @@ int det_expire ( Det *det, int ticks ) {
 	debug ("det_expire: time: %dms\r\n", ticks * MS_IN_TICK );
 	DeRequest  *req;
 	int			woken = 0;
+	TrainCode 	type;
 	
 	foreach( req, det->requests ) {
 		if( (req->type != UNUSED_REQ) && (req->expire < ticks) ) {
-			det_reply( req, TIMEOUT, ticks );
+			type = ( req->type == WATCH_FOR ) ? WATCH_TIMEOUT : STRAY_TIMEOUT;
+	
+			det_reply( req, TIMEOUT, ticks, type);
+
 			woken++;
 		}
 	}
 	return woken;
 }
 
+//-----------------------------------------------------------------------------
+//-------------------------------- POLL ---------------------------------------
+//-----------------------------------------------------------------------------
 void poll() {
 	debug( "det: polling task started\r\n" );
 
@@ -288,6 +284,9 @@ void poll() {
 	}
 }
 
+//-----------------------------------------------------------------------------
+//--------------------------------- WATCH DOG ---------------------------------
+//-----------------------------------------------------------------------------
 void watchDog () {
 	debug( "det: poll watchdog task started\r\n" );
 
