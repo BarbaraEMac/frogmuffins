@@ -39,7 +39,10 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 	Route Planner
 	=============
 	The Route Planner for P2 has a more robust reservation system. Other than
-	that, it has remained mostly the same.
+	that, it has remained mostly the same. We've made some minor modifications
+	to our shortest distance calculator (Floyd-Warshall) to consider the extra
+	distance required for a reverse in the middle of a path. This change may
+	or may not be included in this version of our project.
 	
 		Sensor Predictions
 		==================
@@ -55,14 +58,18 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 
 		Reservations
 		============
-		Given the last triggered sensor by a train, we are able to predict the next 
-		path it will head along and reserve it. 
-		
+		When a train first asks for a new route, we cancel all of its previous 
+		reservations and recompute the distance tables. This distance recompute will 
+		observe the reservations made by any other trains during their new route calls.
+		Cancelling the reservations at the beginning of the plan route call ensures
+		that a train's shortest path route does not interfere with any of its 
+		previous reservations.
+
 		Once a train asks for a new path and gives the Route Planner the last 
-		triggered sensor, the list of predicted nodes is created. Then, we reserve 
-		all of those nodes. If a train is facing backwards along the desired path,
-		all of the nodes behind the train will also be reserved in case it does
-		not reverse properly. 
+		triggered sensor, the list of predicted nodes that the train could potentially
+		trigger is created. Then, we reserve all of those nodes. If a train is 
+		facing backwards along the desired path, all of the nodes behind the 
+		train will also be reserved in case it does not reverse properly. 
 
 		We also make sure to reserve the last triggered sensor so that a train
 		sitting idle between 2 sensors will never allow another train to travel
@@ -80,20 +87,9 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		for 1 time step (where we define 1 time step to be the time for a train
 		to move from 1 sensor to the next).
 
-		Here is the pseudo-code for the reservation function in the Route Planner:
-			Grab the reservation for this train using the id.
-			Cancel the previous reservation:
-				For each node in the reservation,
-					Set the reserved flag to 0.
-					Set the node index (in the reservation) to -1 (error val). 
-				Set the number of reserved nodes (in the reservation) to 0.
-			Make the new reservation:
-				For each node in the predicted nodes list:
-					Set the reserved flag to 1.
-					Save the node index in the reservation.
-				Add the last triggered sensor to the reservation and set the flag.
-				Set the length of the reservation to the number of nodes.
-			Recompute the distances given these new reservations.
+		Note: After a train makes its reservations, we do not call Floyd-Warshall
+		to determine the new shortest paths. We do this because the next train to
+		ask for a route will call Floyd-Warshall when it cancels its reservations.
 
 		Reservation Struct
 		==================
@@ -109,21 +105,151 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		have at most 8 nodes. We hope to reduce this number in the future to make 
 		it more aggressive.
 
+		No Path for a Train & Deadlocks
+		===============================
+		If another train's reservations have fully blocked in a train, the Route
+		Planner replies with NO_PATH and a stopping distance of 0.
+
+		In this case, the trapped train will stop moving and wake up a Route 
+		Watcher task. This task will mimic a position / sensor update. The task 
+		delays for a few seconds and then tells the train that it is at 
+		a "new position". 
+
+		Whenever a train has a new position, it asks for a new route. If the trapping
+		train has moved, then the trapped train will have a valid path and can move 
+		along it. If the trapping train has not moved far enough, the Route Watcher
+		is woken up and this cycle continues.
+
+		When we say "new position", the Route Watcher passes back the current
+		stopped location and a new time stamp. Therefore, it is not actually a
+		new location, but this call will trigger a plan route call with valid input.
+
+		So long as two trains are always moving, our system will not result in a 
+		deadlock since a train will always eventually move out of the way. 
+
+		We can have a deadlock if a train 1 needs to go to destination B and 
+		train 2 is sitting at B and not moving. We do not currently have
+		the intelligence to reverse train 1 out of the way, let train 2 move off B, and
+		then let train 1 stop on B. Depending on our project, we hope to have this
+		working.
+
+		Unfortunately, we do not currently have a systematic way to determine if a
+		deadlock has occurred systematically. When testing, we are able to notice 
+		this situation ourselves and assign new destinations for the trains to have 
+		them move out of each other's way.
+
+		Floyd-Warshall
+		==============
+		At a quick glance of our code, you will notice that we have implemented
+		Dijkstra's Algorithm to determine the shortest path between 2 nodes.
+
+		When reservations are cancelled and we want to recompute the distances,
+		we found that running Floyd-Warshall is fast enough for what we need.
+
+		Also, this allows us to "cache" our results for free. A train can always
+		make a call to the Route Planner to determine the distance to the 
+		nearest sensor and we don't need to recompute anything. We simply use the
+		results that we already have.
+
+		Therefore, while we realize that Floyd-Warshall might be overkill and,
+		theoretically, too slow, it has worked in all of our tests so far.
+
 	Detective
 	=========
 
 	Track Server
 	============
+	We have not modified how our project sends commands to the train controller.
+	Therefore, the Track Server has not changed since the first project.
 
 	Train
 	=====
+	Since the first iteration of our train was not working as smoothly as we would
+	have liked, we have scrapped most of it and started again. The majority of the
+	time spent on this assignment was spent on recoding this task.
+
+		Server
+		======
+		Since the train has so many helper tasks, we've turned it into a server
+		to simplify the code. Any Send call made by the train is guaranteed to be
+		non-blocking. 
+
+		Helper Tasks
+		============
+		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher
+		These are all notifier tasks so their priorities' are all one higher than 
+		that of the train.
+
+			Heart
+			=====
+			The heart is a timer task that delays for a set period of time and Sends
+			to the train. Upon the wake up, a train can update it's location on the 
+			track in between sensors.
+
+			Hence, we can estimate the train's location anywhere on the track within
+			the train's standard deviation worth of error. 
+			(See Standard Deviation below).
+
+			Calibration
+			===========
+			The goal of calibration is to be able to track the train and correctly
+			estimate its speed and distance within a small standard deviation of
+			error.
+
+TODO:
+			Thus, we run the train around the large loop of the track 3 times and 
+			gather data to make these estimations. While estimating, we calculate
+			the standard deviation of the estimations.
+
+			The calibrator task moves the train to D9 and then E11 so that we 
+			force a direction for it to travel around the loop.
+
+			From E11, the calibrator tells the train to travel around the loop
+			without changing speed until we have run around 3 times. After this
+			third time, the train stops once it hits E11. It will usually travel
+			much farther before actually stopping.
+
+			At the shell, this actual stopping distance is manually entered into the
+			train so that we can calibrate the hardcoded stopping distances.
+
+			After this, the calibration tasks Exits.
+
+			Route Watcher
+			============
+			This task has already been briefly explained in the Route Planner above.
+			It is only woken up when a train cannot create any vaild path. After
+			Delaying for a set time, it Sends to the train to wake it up and try
+			to plan a new route. If the blocking train has moved and made new
+			reservations, then this train will be free to plan a route.
+
+		Stopping Distances
+		==================
+		During calibration, a manual stopping distance for the calibration speed
+		is stored in the train.
+
+		When determining which speed to travel at, we do the following
+
+
+		
 	
 	UI / Shell
 	==========
+	Not much has changed with these two user tasks since they were mostly working
+	for our Project 1 demo. The following is a list of the changes.
+
+		UI
+		==
+		Since we are now tracking 2 trains, we will display the location of each
+		train separately on the map.
+
+		Shell
+		=====
+		During train calibration, the shell will now be blocked until a train is 
+		fully calibrated.
 
 	Error Codes
 	===========
-	We created the following error codes for this assignment:
+	We created the following error codes for the project:
 		TIMEOUT,				// A timeout has occurred
 		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
 		INVALID_NODE_NAME,		// Invalid node name
@@ -132,7 +258,8 @@ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____
 		INVALID_SENSOR_IDX,		// Invalid sensor index
 		INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
 		INVALID_TRACK			// Invalid track identifier
-
+		NO_PATH					// There is no path for the train
+	
 	Whenever a server request is made, we always check for these error values
 	in the reply. If there is an error, the user task should attempt to handle
 	it.
