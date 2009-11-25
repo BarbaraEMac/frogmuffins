@@ -85,14 +85,14 @@ void ui_run () {
 		
 		// Reply immediately
 		Reply  ( senderTid, (char*)&senderTid, sizeof(int) );
-/*
+
 		// Save the shell's cursor location
 		ui_saveCursor(&ui);
 
 		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
-				ui_displayTimeAt( &ui, 46, 2, req.time );
+			//	ui_displayTimeAt( &ui, 46, 2, req.time );
 				break;
 			
 			case TRACK_SERVER:
@@ -112,7 +112,7 @@ void ui_run () {
 		}
 
 		// Restore the location of the cursor for the shell
-		ui_restoreCursor(&ui);*/
+		ui_restoreCursor(&ui);
 	}
 	Exit();	// This will never be called.
 }
@@ -161,7 +161,7 @@ void ui_init (UI *ui) {
 	ui_clearScreen( ui );
 
 	// Limit the scroll range of the shell
-	//cprintf( ui->ios2Tid , "\033[20;24r" );
+	cprintf( ui->ios2Tid , "\033[20;24r" );
 	// Turn off cursor
 	cprintf( ui->ios2Tid, "\033[?25l");
 
@@ -182,9 +182,9 @@ void ui_init (UI *ui) {
 	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
-	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
-	Send( uiclkTid, (char*)&ch, sizeof(char),
-					(char*)&ch, sizeof(char) );
+//	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
+//	Send( uiclkTid, (char*)&ch, sizeof(char),
+//					(char*)&ch, sizeof(char) );
 
 	// REGISTER WITH THE NAME SERVER
 	RegisterAs( UI_NAME );
@@ -247,15 +247,14 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 	if ( state == 1 ) {
 		if ( idx == 1 || idx == 2 || idx == 14 ) {
 			ch[3] = 'q';
-		} else if ( idx == 5 || idx == 8 || idx == 16 ) {
+		} else if ( idx == 5 || idx == 8 || idx == 16 || idx == 21 ) {
 			ch[3] = 'j';
-		} else if ( idx == 6 || idx == 9 || idx == 13 || idx == 15 ) {
+		} else if ( idx == 6 || idx == 9 || idx == 13 || idx == 15 || 
+					idx == 22) {
 			ch[3] = 'k';
 		} else if ( idx == 4 || idx == 7 || idx == 10 || idx == 11 ||
-					idx == 12 ) {
+					idx == 12 || idx == 19 ) {
 			ch[3] = 'l';
-		} else if ( idx >= 19 ) {
-			ch[3] = 'C';
 		} else {
 			ch[3] = 'm';
 		}
@@ -271,8 +270,6 @@ void ui_updateMap( UI* ui, int idx, int state ) {
 					idx == 13 || idx == 15 || idx == 16 || idx == 17 || 
 					idx == 18 ) {
 			ch[3] = 'q';
-		} else if ( idx >= 19 ) {
-			ch[3] = 'S';
 		} else  {
 			ch[3] = 'x';
 		}
@@ -428,10 +425,10 @@ void ui_drawMap( UI *ui ) {
 "        lj        lj                 mk        lj                 mk     x  ",
 "tqqqqqqqj        lj                   mk   w  lj                   mk    x  ",
 "                lj                     mk  x lj                     mqk  x  ",
-"              lqj                       mk nqj                        mqqn  ",
-"              x                          mqn                             x  ",
-"              x                            nqk                           x  ",
-"              mqk                        lqn mk                       lqqn  ",
+"              lqj                       mk tqj                        mqqu  ",
+"              x                          mqu                             x  ",
+"              x                            tqk                           x  ",
+"              mqk                        lqu mk                       lqqu  ",
 "                mk                      lj x  mk                    lqj  x  ",
 "tqqqqqqqk        mk                    lj  v   mk                  lj    x  ",
 "        mk        mk                  lj        mk                lj     x  ",
@@ -444,18 +441,18 @@ void ui_drawMap( UI *ui ) {
     	char mapB[][90] = {	
 "tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
 "            lj         lqqj                                            mk   ",
-"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqwqqqqqqqqqqqqqwqqqqqqqqqqqqqqqk     mk  ",
-"        lj        lj                mk           lj               mk     x  ",
-"       lj        lj                  mk    w    lj                 mk    x  ",
-"      lj        lj                    mk   x   lj                   mqk  x  ",
-"     lj       lqj                      mqk x lqj                      mqqn  ",
-"     x        x                          mqnqj                           x  ",
-"     x        x                          lqnqk                           x  ",
-"     mk       mqk                      lqj x mqk                      lqqn  ",
-"      mk        mk                    lj   x   mk                   lqj  x  ",
-"       mk        mk                  lj    v    mk                 lj    x  ",
-"        mk        mk                lj           mk               lj     x  ",
-"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqj     lj  ",
+"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqk     mk  ",
+"        lj        lj                 mk        lj                 mk     x  ",
+"       lj        lj                   mk   w  lj                   mk    x  ",
+"      lj        lj                     mk  x lj                     mqk  x  ",
+"     lj       lqj                       mk tqj                        mqqu  ",
+"     x        x                          mqu                             x  ",
+"     x        x                            tqk                           x  ",
+"     mk       mqk                        lqu mk                       lqqu  ",
+"      mk        mk                      lj x  mk                    lqj  x  ",
+"       mk        mk                    lj  v   mk                  lj    x  ",
+"        mk        mk                  lj        mk                lj     x  ",
+"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqqqvqqqqqqqqqqvqqqqqqqqqqqqqqqqj     lj  ",
 "            mk         mk                                              lj   ",
 "tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
 "                mk          mqqk                      lqqj                  ",
