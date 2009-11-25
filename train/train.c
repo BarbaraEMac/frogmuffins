@@ -121,8 +121,8 @@ int 		train_distance		( Train *tr, int sensor ); // in mm
 
 // Detective Commands
 void 		train_locate		( Train *tr, int timeout );
-void 		train_detect		( Train *tr, SensorsPred *pred, int mm );
-void 		train_update		( Train *tr, int sensor, int ticks );
+void 		train_predictSensors( Train *tr, SensorsPred *pred, int mm );
+void 		train_updatePos		( Train *tr, int sensor, int ticks );
 
 // Track Server Commands
 void 		train_reverse		( Train *tr );
@@ -146,7 +146,7 @@ void train_run () {
 	Train 	 	tr;
 	RPReply   	rpReply;		// Reply from the Route Planner
 	TrainReq	req;
-	int 		senderTid, len, distTraveled = 0;
+	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
 
 	// Initialize this train
@@ -171,13 +171,13 @@ void train_run () {
 				if( tr.mode == DRIVE ) {
 					Reply( senderTid, 0, 0 );
 					// Update current location (NOTE: This is an estimate!)
-					distTraveled += speed_dist( tr.velocity, HEARTBEAT_MS );
+					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
-					train_updateUI( &tr, distTraveled );
+					train_updateUI( &tr, distFromSensor );
 					// Adjust speed
-					train_adjustSpeed( &tr, rpReply.stopDist - distTraveled );
+					train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor );
 					// Resend detective request
-					train_detect( &tr, &rpReply.nextSensors, distTraveled );
+					train_predictSensors( &tr, &rpReply.nextSensors, distFromSensor );
 				}
 				
 				break;
@@ -231,9 +231,6 @@ void train_run () {
 				req.sensor = tr.sensor;
 				req.ticks  = Time( tr.csTid );
 
-				//HACK
-				tr.gearChanged = true;
-
 			case POS_UPDATE: 		// got a position update
 				debug ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
 					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ), tr.dest );
@@ -242,13 +239,13 @@ void train_run () {
 				if ( req.type == POS_UPDATE ) {
 					//printf ("REPLYING IN POS_UPDATE to %d\r\n", senderTid);
 					Reply( senderTid, 0, 0 );
+					
+					// Update the train's information
+					train_updatePos( &tr, req.sensor, req.ticks );
 				}
 					
 				// Reset the distance counter
-				distTraveled = 0;
-
-				// Update the train's information
-				train_update( &tr, req.sensor, req.ticks );
+				distFromSensor = 0;
 				
 				// Ask the Route Planner for an efficient route!
 				rpReply = train_planRoute ( &tr );
@@ -274,11 +271,12 @@ void train_run () {
 					train_reverse( &tr );			// TODO: Timeout incorrect for this mode.
 					rpReply.stopDist = -rpReply.stopDist;
 				}
-				printf( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
+				debug( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
 
 				// Adjust the speed according to distance
 				train_adjustSpeed( &tr, rpReply.stopDist );
 
+				// If we have reached our destination, 
 				if ( rpReply.stopDist == 0 ) {
 					if ( tr.mode == CAL_SPEED ) {
 						// Reply to the Calibration task
@@ -288,15 +286,15 @@ void train_run () {
 						// Reply to the shell
 						Reply( tr.shTid, 0, 0 );
 					}
+				// Otherwise, continue along your path towards the destination.
+				} else {
 
-					break;
+					// Flip the switches along the path.
+					train_flipSwitches( &tr, &rpReply );
+		
+					// Resend detective request
+					train_predictSensors( &tr, &rpReply.nextSensors, distFromSensor );
 				}
-
-				// Flip the switches along the path.
-				train_flipSwitches( &tr, &rpReply );
-
-				// Resend detective request
-				train_detect( &tr, &rpReply.nextSensors, distTraveled );
 				
 				break;
 
@@ -476,7 +474,7 @@ int train_getStopDist( Train *tr, int gear ) {
 	}
 }
 
-void train_update( Train *tr, int sensor, int ticks ) {
+void train_updatePos( Train *tr, int sensor, int ticks ) {
 	int 		last, pred, diff;
 	Speed		sp;
 
@@ -488,7 +486,7 @@ void train_update( Train *tr, int sensor, int ticks ) {
 	pred = speed( tr->velocity );
 	
 	// Update the mean speed
-	if(  tr->gearChanged == false ) { //TODO: this is wrong
+	if( tr->gearChanged == false ) { //TODO: this is wrong
 		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
 		rb_force( &tr->hist, &sp );
 	}
@@ -557,7 +555,7 @@ void train_locate( Train *tr, int timeout ) {
 	Send( tr->deTid, &req, sizeof(DeRequest), 0, 0 );
 }
 
-void train_detect( Train *tr, SensorsPred *pred, int mm ) {
+void train_predictSensors( Train *tr, SensorsPred *pred, int mm ) {
 	DeRequest	req;
 	int 		i, dist, ticks = Time( tr->csTid );
 	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
@@ -720,24 +718,22 @@ void heart() {
 //--------------------------------- Calibration -------------------------------
 //-----------------------------------------------------------------------------
 void calibration () {
-	int dests[] = { 37, 23, 15, 1, 22, 27 };
-	int i, j, sd;
+	int 	 dests[] = { 37, 23, 15, 1, 22, 27 };
+	int 	 i, j, sd;
 	TrainReq req;
 	TID 	 parent = MyParentTid();
 
-	
 	// Find D9
-	printf ("CALI: Finding D9\r\n");
+	printf ("CALIBRATION: Finding D9\r\n");
 	req.type = DEST_UPDATE;
 	req.dest = INIT_DEST;		// D9
 	req.mode = CAL_SPEED;	
 	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
 	
-	// Change your mode to calibrate the speed
-	
+	// Travel in a loop
 	for ( i = 0; i < CAL_LOOPS; i ++ ) {
 		for ( j = 0; j < 6; j ++ ) {
-			printf ("CALIBRATE: Train finding %d\r\n", dests[j]);
+			printf ("CALIBRATION: Train finding %d\r\n", dests[j]);
 			req.dest = dests[j];
 
 			Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
@@ -754,16 +750,7 @@ void calibration () {
 
 	req.dest = 37;				// E11
 	req.mode = CAL_STOP;		
-	printf ("CALIBRATE: Finding E11\r\n");
 	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
-	printf ("			CALIBRATION TASK IS EXITING\r\n");
-/*
-	// Go park at A5
-	req.dest = 2;				// A5
-	req.mode = DRIVE;		
-	printf ("CALIBRATE: Parking at A5\r\n");
-	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
-*/
 
 	Exit();
 }
