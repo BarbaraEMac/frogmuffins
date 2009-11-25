@@ -111,7 +111,7 @@ void det_run () {
 
 			case WATCH_DOG:
 				if( det.lstPoll + POLL_GRACE < req.ticks ) {
-					error( TIMEOUT, "ts: Polling timed out. Retrying." );
+				//	error( TIMEOUT, "ts: Polling timed out. Retrying." );
 					// Don't tell me for another 5 seconds
 					det.lstPoll = req.ticks;
 					PutStr( POLL_STR, sizeof(POLL_STR), det.iosTid );
@@ -122,7 +122,7 @@ void det_run () {
 			case WATCH_FOR:
 				debug("det: WatchFor request for sensor(s):");
 				for( i = 0; i < req.numEvents; i ++ ) {
-					debug("%d", req.events[i].sensor);
+					debug("%d ", req.events[i].sensor);
 				}
 				debug(" expires at %d\r\n", req.expire);
 				//req.tid = senderTid;
@@ -172,9 +172,9 @@ int det_init( Det *det ) {
 	}
 
 	// Create the helper tasks
-	err =  Create( OTH_NOTIFIER_PRTY, &poll );
+	err =  Create( OTH_NOTIFIER_PRTY - 1, &poll );
 	if( err < NO_ERROR ) return err;
-	err = Create( OTH_NOTIFIER_PRTY, &watchDog );
+	err = Create( OTH_NOTIFIER_PRTY - 1, &watchDog );
 	if( err < NO_ERROR ) return err;
 	
 	// Register with the Name Server
