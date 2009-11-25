@@ -147,6 +147,7 @@ void train_run () {
 	DeRequest	predct;
 	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
+	bool		routeWatcherAwake = false;
 
 	// Initialize this train
 	train_init ( &tr );
@@ -162,7 +163,7 @@ void train_run () {
 		switch (req.type) {
 
 			case TIME_UPDATE:		// heartbeat
-				if( tr.mode == DRIVE ) {
+				if( tr.mode == DRIVE || tr.mode == CAL_STOP ) {
 					// Update current location (NOTE: This is an estimate!)
 					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
@@ -207,20 +208,30 @@ void train_run () {
 			
 			case DEST_UPDATE: 		// got a new destination to go to
 			//	debug ( "train: #%d is at sensor %d going to destidx %d\r\n",
-			//				tr.id, tr.sensor, req.dest);
+			//				tr.id, tr.sensor, req);
 			//	printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
 				
 				if( req.mode == DRIVE ) { 
+					debug ("drive mode replying to %d\r\n", senderTid );
 					// If not calibration, reply right away
-			//		Reply( senderTid, 0, 0 );
-				} else {
+					Reply( senderTid, 0, 0 );
+				}
+			//	else {
 					// Don't reply until we have the info we need.
-					assert( senderTid == tr.caTid );
+			//		assert( senderTid == tr.caTid );
+			//	}
+			//
+			//
+
+				// Make sure the route watcher is not blocked on the train.
+				if ( routeWatcherAwake == true ) {
+					routeWatcherAwake = false;
+					Reply( tr.rwTid, 0, 0 );
 				}
 
 				// Update the internal dest variable
-				tr.dest = req.dest;
-				tr.mode = req.mode;
+				tr.dest 		 = req.dest;
+				tr.mode		 	 = req.mode;
 
 				// Set up the request to mimic a position update
 				req.sensor = tr.sensor;
@@ -231,8 +242,8 @@ void train_run () {
 				}
 
 			case POS_UPDATE: 		// got a position update
-				debug ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
-					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ), tr.dest );
+//				printf ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
+//					tr.id, sensor_bank( req.sensor ), sensor_num( req.sensor ), tr.dest );
 				
 				// Do not reply twice for a DEST_UPDATE
 				if ( req.type == POS_UPDATE ) {
@@ -249,7 +260,7 @@ void train_run () {
 				rpReply = train_planRoute ( &tr );
 
 				// If there is no path available,
-				if ( rpReply.err == NO_PATH ) {
+				if ( rpReply.err <= NO_PATH ) {
 					debug ("The train has no route. Stopping.\r\n");
 					
 					assert ( rpReply.stopDist == 0 );
@@ -257,12 +268,13 @@ void train_run () {
 					printf("train: waking up routewatcher.\r\n");
 					// Wake up the route watcher so that we can try again later
 					// Non-Blocking
+					routeWatcherAwake = true;
 					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
 				
 				// If there is another error, then we can't handle it.
-				} else if( rpReply.err < NO_ERROR ) {
-					error( rpReply.err,  "Route Planner failed." );
-					assert( 1 == 0 );
+			//	} else if( rpReply.err < NO_ERROR ) {
+			//		error( rpReply.err,  "Route Planner failed." );
+			//		assert( 1 == 0 );
 				}
 				
 				// Reverse if the train is backwards
@@ -277,11 +289,14 @@ void train_run () {
 				train_adjustSpeed( &tr, rpReply.stopDist, rpReply.stopAction );
 
 				// If we have reached our destination, 
-				if ( rpReply.stopDist == 0 ) {
+				 if ( rpReply.stopDist == 0 ) {
 					if ( tr.mode == CAL_SPEED ) {
+						debug ("replying to the calibrator\r\n");
 						// Reply to the Calibration task
-						Reply( tr.caTid, &tr.sd, sizeof(int) );
-					} else {
+						Reply( tr.caTid, 0, 0 );
+					} else if ( tr.mode == CAL_STOP ) {
+						debug ("cal stopped. replying to the shell.\r\n");
+						tr.mode = IDLE; // HACk
 						// Reply to the shell
 						Reply( tr.shTid, 0, 0 );
 					}
@@ -411,8 +426,8 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 			stopDist *= tr->stopDist;
 			stopDist /= defaultStopDist;
 
-			// Multiply by 2 to account for acc/deceleration
-			if ( (stopDist*4) <= distLeft ) {
+			// Multiply by  to account for acc/deceleration
+			if ( (stopDist*3) <= distLeft ) {
 				bestGear = i;
 				break;
 			}
@@ -520,7 +535,7 @@ int train_distance( Train *tr, int sensor ) {
 	req.sensor1		= tr->sensor;
 	req.sensor2		= sensor;
 
-	printf("train: asking for distance.\r\n");
+//	printf("train: asking for distance.\r\n");
 	Send( tr->rpTid, &req,  sizeof(RPRequest), &dist, sizeof(int) );
 
 	//debug( "train: distance returned %d \r\n", dist );
@@ -538,7 +553,7 @@ RPReply train_planRoute( Train *tr ) {
 	req.destIdx		= tr->dest;
 	req.avgSpeed	= min( speed( tr->velocity ), 0 );
 
-	printf("train: asking for route.\r\n");
+//	printf("train: asking for route.\r\n");
 	Send( tr->rpTid, &req, sizeof(RPRequest), &reply, sizeof(RPReply) );
 	
 	return reply;
@@ -626,7 +641,7 @@ void train_drive( Train *tr, int gear ) {
 	// Don't change your speed while calibrating
 	if( tr->mode == CAL_SPEED && tr->gear != tr->defaultGear ) {
 		gear = tr->defaultGear;
-	} else if ( tr->mode == CAL_SPEED ) {
+	} else if ( tr->mode == CAL_SPEED || (tr->mode == CAL_STOP && gear > tr->gear) ) {
 		return;
 	}
 	
@@ -729,7 +744,7 @@ void heart() {
 //-----------------------------------------------------------------------------
 void calibration () {
 	int 	 dests[] = { 37, 23, 15, 1, 22, 27 };
-	int 	 i, j, sd;
+	int 	 i, j;
 	TrainReq req;
 	TID 	 parent = MyParentTid();
 
@@ -738,7 +753,7 @@ void calibration () {
 	req.type = DEST_UPDATE;
 	req.dest = INIT_DEST;		// D9
 	req.mode = CAL_SPEED;	
-	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
+	Send( parent, &req, sizeof(TrainReq), 0, 0 );
 	
 	// Travel in a loop
 	for ( i = 0; i < CAL_LOOPS; i ++ ) {
@@ -746,21 +761,13 @@ void calibration () {
 			printf ("CALIBRATION: Train finding %d\r\n", dests[j]);
 			req.dest = dests[j];
 
-			Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
-			if ( sd < SD_THRESHOLD ) {
-				break;
-			}
-		}
-			
-		if ( sd < SD_THRESHOLD ) {
-//			printf ("Train is done calibration with sd=%d.\r\n", sd);
-			break;
+			Send( parent, &req, sizeof(TrainReq), 0, 0 );
 		}
 	}
 
 	req.dest = 37;				// E11
 	req.mode = CAL_STOP;		
-	Send( parent, &req, sizeof(TrainReq), &sd, sizeof(int) );
+	Send( parent, &req, sizeof(TrainReq), 0, 0 );
 
 	Exit();
 }
@@ -781,15 +788,15 @@ void routeWatchDog () {
 		// Wait until the path is blocked
 		Receive( &trainTid, &lastHitSensor, sizeof(int) );
 		assert ( trainTid == parent );
-		Reply  ( trainTid, &req, sizeof(TrainReq) );
-		
-		debug ("routeWatchDog: Waking up the train. There may be a path.\r\n");
+		Reply  ( trainTid, 0, 0 );
 
 		// Wait a bit
 		req.ticks = Delay( 500 / MS_IN_TICK, clockTid );
 
 		// Wake up the train with a fake position update
 		req.sensor = lastHitSensor;
+		
+		printf ("routeWatchDog: Waking up the train. There may be a path.\r\n");
 		Send( trainTid, &req, sizeof(TrainReq), 0, 0 );
 	}
 
