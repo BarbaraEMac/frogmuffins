@@ -34,6 +34,7 @@
 #define CAL_LOOPS				1
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
+#define REVERSE_DIST			400
 #define	NO_DEST					-1
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -63,7 +64,6 @@ typedef struct {
 	TID			csTid;			// Id of the Clock Server
 	TID			uiTid;			// Id of the UI server
 	TID			caTid;			// ID of the calibration task
-	//TID			coTid;			// ID of the courier task
 	TID			rwTid;			// ID of the route watch dog task
 	TID			shTid;			// ID of the shell
 
@@ -237,12 +237,6 @@ void train_run () {
 					// If not calibration, reply right away
 					Reply( senderTid, 0, 0 );
 				}
-			//	else {
-					// Don't reply until we have the info we need.
-			//		assert( senderTid == tr.caTid );
-			//	}
-			//
-			//
 
 				// Make sure the route watcher is not blocked on the train.
 				if ( routeWatcherAwake == true ) {
@@ -253,14 +247,6 @@ void train_run () {
 				// Update the internal dest variable
 				tr.dest 		 = req.dest;
 				tr.mode		 	 = req.mode;
-
-				// Set up the request to mimic a position update
-				req.sensor = tr.sensor;
-
-				// TODO:
-				if ( tr.mode != CAL_SPEED ) {
-					req.ticks  = Time( tr.csTid );
-				}
 
 			case POS_UPDATE: 		// got a position update
 				printf ( "train: POS UP #%d is at sensor %c%d. Going to %d\r\n",
@@ -302,18 +288,24 @@ void train_run () {
 					Send( tr.rwTid, &req.sensor, sizeof(int), 0, 0 );
 				
 				// If there is another error, then we can't handle it.
-			//	} else if( rpReply.err < NO_ERROR ) {
-			//		error( rpReply.err,  "Route Planner failed." );
-			//		assert( 1 == 0 );
+				} else if( rpReply.err < NO_ERROR ) {
+					error( rpReply.err,  "Route Planner failed." );
+					assert( 1 == 0 );
 				}
 				
 				// Reverse if the train is backwards
-				if( rpReply.stopDist < 0 ) {
+				if( rpReply.stopDist < 0) {
 					debug ("Train is backwards. It's reversing.\r\n");
+					// TODO : possibly have a reversing mode here and don't 
+					// reverse if already in reversing mode
 					train_reverse( &tr );			// TODO: Timeout incorrect for this mode.
 					rpReply.stopDist = -rpReply.stopDist;
 				}
-				debug( "train: has route stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
+				if( rpReply.stopAction == STOP_AND_REVERSE ) {
+					rpReply.stopDist += REVERSE_DIST;
+				}
+
+				//printf( "stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
 
 				// Adjust the speed according to distance
 				train_adaptSpeed( &tr, rpReply.stopDist, rpReply.stopAction );
@@ -329,21 +321,19 @@ void train_run () {
 						Reply( tr.caTid, 0, 0 );
 					} else if ( tr.mode == CAL_STOP ) {
 						debug ("cal stopped. replying to the shell.\r\n");
-						tr.mode = IDLE; // HACk
+						tr.mode = IDLE; // TODO HACk
 						// Reply to the shell
 						Reply( tr.shTid, 0, 0 );
 					}
 				// Otherwise, continue along your path towards the destination.
 				} else {
-
 					// Flip the switches along the path.
 					train_flipSwitches( &tr, &rpReply );
-					
-					// Update the detective request
-					train_predictSensors( &tr, &rpReply.nextSensors,
-							distFromSensor, &predct );
 				}
 				
+				// Update the detective request
+				train_predictSensors( &tr, &rpReply.nextSensors,
+							distFromSensor, &predct );
 				break;
 
 			case STOP_UPDATE:
@@ -378,20 +368,16 @@ void train_init ( Train *tr ) {
 	// The train talks to several servers
 	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
-	//tr->deTid = WhoIs (DETECTIVE_NAME);
 	tr->csTid = WhoIs (CLOCK_NAME);
 	tr->uiTid = WhoIs (UI_NAME);
 	Create( TRAIN_PRTY - 1, &heart );
-	//tr->coTid = Create( TRAIN_PRTY - 1, &courier );
 	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
 	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
 	assert( tr->rpTid >= NO_ERROR );
 	assert( tr->tsTid >= NO_ERROR );
-	//assert( tr->deTid >= NO_ERROR );
 	assert( tr->csTid >= NO_ERROR );
 	assert( tr->uiTid >= NO_ERROR );
 	assert( tr->caTid >= NO_ERROR );
-//	assert( tr->coTid >= NO_ERROR );
 
 	// Initialize internal variables
 	tr->mode   = CAL_SPEED;
@@ -469,20 +455,20 @@ void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		if ( action == STOP_AND_REVERSE && bestGear < 3 ) {
 			bestGear = 3;
 		}
-
-		// If we need to stop,
-		if ( distLeft == 0 ) {
+		if ( action == JUST_STOP && distLeft <= 0 ) {//If we need to stop,
 			bestGear = 0;
 			tr->mode = IDLE;
 		}
 		
-//		printf ("picking %d as best gear for %d left.\r\n", bestGear, distLeft);
+	//	printf ("picking %d as best gear for %d left.\r\n", bestGear, distLeft);
 	} 
 
-	// If you are stopping calibration,
-	if ( tr->mode == CAL_STOP && distLeft == 0 ) {
+	// If you are stopping calibration, or in idle mode
+	if ( tr->mode == CAL_STOP && distLeft == 0 
+		|| tr->mode == IDLE ) {
 		bestGear = 0;
 	}
+
 
 	// Change your speed to this new gear.
 	train_drive( tr, bestGear );
@@ -492,7 +478,7 @@ void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 
 	// Adjust calibrated speed based on gear
 	Speed set = speed_adjust( base, tr->defaultGear, tr->gear );
-
+/*
 	// The current speed does not change rapidly
 	int diff = speed( set ) - speed( tr->velocity );
 	if( diff > speed( accel ) ) {
@@ -501,7 +487,8 @@ void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		tr->velocity = set; 							// minimal accel
 	} else {
 		tr->velocity = speed_sub( tr->velocity, accel ); // negative accel
-	}
+	}*/
+	tr->velocity = set;
 
 	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
@@ -545,8 +532,9 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 	sp.mm = train_distance( tr, sensor );
 	
 	// Update the mean speed
-	if( tr->gearChanged == false && tr->gear == tr->defaultGear ) { //TODO: this is wrong
-//		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
+	if( tr->mode == CAL_SPEED ) {
+			//tr->gearChanged == false && tr->gear == tr->defaultGear ) { //TODO: this is wrong
+		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
 		
 		rb_force( &tr->hist, &sp );
 	}
