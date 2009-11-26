@@ -172,22 +172,12 @@ void train_run () {
 		switch (req.type) {
 
 			case TIME_UPDATE:		// heartbeat
-				if( tr.mode == DRIVE || tr.mode == IDLE ) {
 				if( speed( tr.velocity ) > 0 ) {
 					// Update current location (NOTE: This is an estimate!)
 					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
 					train_updateUI( &tr, distFromSensor );
 					
-					if( tr.mode == DRIVE ) {
-						// Adjust speed
-						train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor, rpReply.stopAction );
-						// Only update predictions if train is not lost 
-						if( predct.type == WATCH_FOR ) {
-							// Resend detective request
-							train_predictSensors( &tr, &rpReply.nextSensors, 
-									distFromSensor, &predct );
-						}
 					// Adjust speed
 					train_adaptSpeed( &tr, rpReply.stopDist - distFromSensor, 
 							rpReply.stopAction );
@@ -464,8 +454,8 @@ void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	} 
 
 	// If you are stopping calibration, or in idle mode
-	if ( tr->mode == CAL_STOP && distLeft == 0 
-		|| tr->mode == IDLE ) {
+	if ( (tr->mode == CAL_STOP && distLeft == 0 )
+		|| (tr->mode == IDLE) ) {
 		bestGear = 0;
 	}
 
@@ -828,5 +818,4 @@ void routeWatchDog () {
 	}
 
 	Exit(); // This task will never reach here
-}r
-
+}
