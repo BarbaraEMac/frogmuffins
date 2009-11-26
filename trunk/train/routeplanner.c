@@ -285,7 +285,6 @@ int rp_init(RoutePlanner *rp) {
 	int  shellTid;
 	int  track;
 	int	 err = NO_ERROR;
-	int  i;
 
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
@@ -303,8 +302,9 @@ int rp_init(RoutePlanner *rp) {
 	floyd_warshall (rp, rp->model.num_nodes); 
 
 	// Initialize track reservation system (nothing is reserved)
-	for ( i = 0; i < MAX_NUM_TRAINS; i ++ ) {
-		rp->reserves[i].len = 0;
+	Reservation *res;
+	foreach( res, rp->reserves ) {
+		res->len = 0;
 	}
 
 	// Register with the Name Server
