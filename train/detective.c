@@ -131,7 +131,7 @@ void det_run () {
 				assert( det.requests[i].type == UNUSED_REQ 
 						|| det.requests[i].tid == req.tid );
 				det.requests[i] = req;
-				det_checkHist( &det, &req );
+				//det_checkHist( &det, &req );
 				break;
 
 			case GET_STRAY:
@@ -224,7 +224,8 @@ void det_checkHist( Det *det, DeRequest *req ) {
 		int sensor 	= req->events[i].sensor;
 		int ticks 	= det->sensorHist[sensor];
 		if(req->events[i].start <= ticks ) {
-			printf( "det: sensor: %d from the past.\r\n", sensor );
+			printf( "det: sensor: %d from the past (%d ms ago).\r\n", 
+					sensor, (Time( det->csTid ) - ticks) * MS_IN_TICK );
 			det_reply( req, sensor, ticks, POS_UPDATE );
 			// Reset the History to prevent another train from grabbing it
 			det->sensorHist[sensor] = 0;
