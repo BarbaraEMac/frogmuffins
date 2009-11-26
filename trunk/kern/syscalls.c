@@ -125,7 +125,6 @@ int reply (TD *from, TDM *mgr, TID tid) {
 	}
 	
 	// If the sender is not reply blocked, we should error.
-	assert (to->state == RPLY_BLKD);
 	if ( to->state != RPLY_BLKD ) {
 		return SNDR_NOT_RPLY_BLKD;
 	}
