@@ -23,8 +23,14 @@ typedef enum {
 } SwitchDir;
 
 typedef struct {
-  int dest;
-  int distance;
+  int 	dest;			// TODO: Remove this?
+  int 	distance;
+
+  Node *node1;			// just the index?
+  Node *node2;
+
+  int	node1ResDist;	// init to 0 - reserved distance in mm along edge
+  int	node2ResDist;
 } Edge;
 
 typedef struct {
@@ -37,7 +43,6 @@ typedef struct {
   Edge ahead;
   Edge behind;
   Edge filler[1];
-  char trig_forward, trig_back;
 } Sensor;
 
 typedef struct {
