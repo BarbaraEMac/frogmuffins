@@ -12,6 +12,7 @@
 #define NUM_SENSORS			(NUM_SENSOR_BANKS * SIZE_BANK)
 #define MAX_NUM_TRAINS 		10
 #define MAX_NUM_NODES		80
+#define MAX_NUM_EDGES		160
 #define NODE_MAX_EDGES 		3
 #define TRACK_A				0
 #define	TRACK_B				1
@@ -22,8 +23,10 @@ typedef enum {
 	SWITCH_CURVED = 1
 } SwitchDir;
 
+typedef struct _node Node;
+
 typedef struct {
-  int 	dest;			// TODO: Remove this?
+  //int 	dest;			// TODO: Remove this?
   int 	distance;
 
   Node *node1;			// just the index?
@@ -34,23 +37,23 @@ typedef struct {
 } Edge;
 
 typedef struct {
-  Edge 		ahead[2]; // (curved, straight)
-  Edge 		behind;
+  Edge 		*ahead[2]; // (curved, straight)
+  Edge 		*behind;
   SwitchDir set;
 } Switch;
 
 typedef struct {
-  Edge ahead;
-  Edge behind;
-  Edge filler[1];
+  Edge 		*ahead;
+  Edge 		*behind;
+  Edge 		*filler[1];
 } Sensor;
 
 typedef struct {
-  Edge ahead;
-  Edge filler[2];
+  Edge 		*ahead;
+  Edge 		*filler[2];
 } Stop;
 
-typedef struct {
+struct _node {
   enum {
     NODE_SWITCH = 3,
     NODE_SENSOR = 2,
@@ -59,18 +62,20 @@ typedef struct {
   char name[NODE_NAME_LEN];
   int id, idx;
   union {
-    Switch sw;
-    Sensor se;
-    Stop st;
-    Edge edges[3];
+    Switch 	sw;
+    Sensor 	se;
+    Stop 	st;
+    Edge 	*edges[3];
   };
   int reserved;
   int x, y; // location (for GUI)
-} Node;
+};
 
 typedef struct {
   int 	num_nodes;
+  int	num_edges;
   Node 	nodes[MAX_NUM_NODES];
+  Edge	edges[MAX_NUM_EDGES];
   int 	sensor_nodes[NUM_SENSORS];
 } TrackModel;
 
