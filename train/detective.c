@@ -85,9 +85,9 @@ void det_run () {
 						if( req.rawSensors[i] & (0x80 >> k) ) {
 							sensor = i*8 + k;
 
-							printf("sensor %c%d last %dms ago\r\n", 
+							/*printf("sensor %c%d last %dms ago\r\n", 
 									sensor_bank(sensor), sensor_num(sensor),
-									(req.ticks - det.lstPoll) * MS_IN_TICK);
+									(req.ticks - det.lstPoll) * MS_IN_TICK);*/
 
 							// Send to the UI Server
 							debug ("Detective: sending to the ui server\r\n");
