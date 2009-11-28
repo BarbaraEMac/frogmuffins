@@ -31,7 +31,7 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				1
+#define CAL_LOOPS				2
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 #define REVERSE_DIST			400
@@ -595,12 +595,11 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 	int 		i, dist, ticks = Time( tr->csTid );
 	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
 
-	Speed		window = { variation * 3 , 1000 };
-	Speed		upper = speed_add( tr->velocity, window );
-	Speed		lower = speed_sub( tr->velocity, window );
-
+	Speed		window = { variation * 3 , 1000 }, upper, lower;
 	lower		= speed_adjust( lower, tr->defaultGear, tr->gear );
 	upper		= speed_adjust( upper, tr->defaultGear, tr->gear );
+	upper		= speed_add( tr->velocity, window );
+	lower 		= speed_sub( tr->velocity, window );
 
 	assert( sensor->len <= array_size( predct->events ) );
 	
