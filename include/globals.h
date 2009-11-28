@@ -22,6 +22,8 @@
 #define false 0
 #define	true 1
 
+#define	NULL 0
+
 // booleans are integers
 typedef int bool;
 
