@@ -448,10 +448,11 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	debug ("totalDist = %d\r\n", totalDist);
 	
 	if ( totalDist >= INT_MAX ) {
-		debug ("There is no path from %s to dest!\r\n", 
+		printf ("There is no path from %s to dest!\r\n", 
 				rp->model.nodes[currentIdx].name);
 		trReply->err      = NO_PATH;
 		trReply->stopDist = 0;
+		trReply->stopAction = JUST_STOP;
 		return;
 	}
 
@@ -829,7 +830,7 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 
 	for ( i = 0; i < rsv->len; i ++ ) {
 		index = rsv->idxs[i];
-		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
+//		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
 
 		// Make sure the sensor node is actually reserved
 		assert ( model->nodes[index].reserved == 1 );
@@ -844,35 +845,40 @@ void rsv_cancel( Reservation *rsv, TrackModel *model ) {
 }
 
 void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSensor ) {
-	int i;
+	int i, len = 0;
 	int index;
 	
 	for ( i = 0; i < nodes->len; i ++ ) {
 		index = nodes->idxs[i];
-
-		printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
-
-		// Make sure this node is not already reserved
-		assert ( model->nodes[index].reserved == 0 );
-		
-		// Reserve the node
-		model->nodes[index].reserved = 1;
-
-		// Store the node index in the reservation
-		rsv->idxs[i] = index;
+		// Do not step on other train's reserves
+		if( model->nodes[index].reserved == 0 ) {
+		//	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+			
+			// Store the node index in the reservation
+			rsv->idxs[len++] = index;
+			
+			// Reserve the node
+			model->nodes[index].reserved = 1;
+		}
 	}
 
 	// Reserve the last triggered sensor
 	index = sIdxToIdx( lastSensor );
-	model->nodes[index].reserved = 1;	
-	// Store the node index in the reservation
-	rsv->idxs[nodes->len] = index;
-
-	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
 	
+	// Do not step on other train's reserves
+	if( model->nodes[index].reserved == 0 ) {
+	//	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
+		
+		// Store the node index in the reservation
+		rsv->idxs[len++] = index;
+		
+		// Reserve the node
+		model->nodes[index].reserved = 1;	
+	}
+
 	// Save the number of nodes in this reservation
-	rsv->len = nodes->len + 1;
-	printf ("Reserved %d nodes in total.\r\n", rsv->len);
+	rsv->len = len;
+//	printf ("Reserved %d nodes in total.\r\n", rsv->len);
 	assert ( rsv->len < 20 );
 }
 
@@ -943,7 +949,7 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 					bwgetc( COM2 );
 				}*/
 				// Consider the reservations while computing the distances
-				if (rp->rsvDists[i][j] > (rp->rsvDists[i][k] + rp->rsvDists[k][j] + distMod)) {
+				if (rp->rsvDists[i][j] > (rp->rsvDists[i][k] + rp->rsvDists[k][j] + distMod) ) {
 					rp->rsvDists[i][j] = rp->rsvDists[i][k] + rp->rsvDists[k][j] + distMod;
 
 	  				// Store how we got here
@@ -1022,7 +1028,7 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
 	if ( (rsvDist == 1) && 
-		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) {
+		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) 	{
 		return INT_MAX;
 	}
 
