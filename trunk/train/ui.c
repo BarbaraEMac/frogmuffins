@@ -6,7 +6,7 @@
 #define DEBUG 1
 
 #include <string.h>
-#include <ts7200.h>
+#include <math.h>
 
 #include "buffer.h"
 #include "debug.h"
@@ -17,6 +17,7 @@
 #include "ui.h"
 
 #define NUM_DISP_SENSORS	4	
+#define NUM_POINTS			30	
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -25,6 +26,12 @@ typedef struct {
 	int time;
 	int idx;
 } SensorData;
+
+typedef struct {
+	int x;
+	int y;
+	char display[2];
+} SwitchData;
 
 typedef struct {
 	SensorData 	sensorsBuf[NUM_DISP_SENSORS]; 
@@ -53,7 +60,7 @@ void ui_drawMap (UI *ui);
 // Update a last hit sensor information
 void ui_updateSensor( UI *ui, int idx, int time );
 // Update a changed switch / sensor on the map
-void ui_updateMap( UI *ui, int idx, int state );
+void ui_updateMap( UI* ui, int idx, SwitchDir state );
 // Display the current time at a particular location on the screen
 void ui_displayTimeAt( UI *ui, int x, int y, int time );
 // Update a train's location on the screen
@@ -130,7 +137,6 @@ void ui_init (UI *ui) {
 	char ch;
 	int  shellTid;
 	int	 err = NO_ERROR;
-	int  uiclkTid;
 	int i;
 
 	// Init private members
@@ -168,18 +174,18 @@ void ui_init (UI *ui) {
 	// Draw the map on the screen
 	ui_drawMap( ui );
 		
-	strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 7 ,  "   Train1 Data   ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 8 ,  " Last Hit        ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 9 ,  " Sensor  :       ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 22, 10 , " Dist(mm):       ", RED_FC, WHITE_BC);
 
-	strPrintAt (ui->ios2Tid, 53, 7 ,  "   Train2 Data   ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 53, 8 ,  " Last Hit        ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 53, 9 ,  " Sensor  :       ", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 53, 10 , " Dist(mm):       ", CYAN_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 7 ,  "   Train2 Data   ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 8 ,  " Last Hit        ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 9 ,  " Sensor  :       ", RED_FC, WHITE_BC);
+	strPrintAt (ui->ios2Tid, 53, 10 , " Dist(mm):       ", RED_FC, WHITE_BC);
 	
 //	strPrintAt (ui->ios2Tid, 41, 2, "Time:", CYAN_FC, WHITE_BC);
-	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", CYAN_FC, BLACK_BC);
+	strPrintAt (ui->ios2Tid, 1, 19, "Sensors:", WHITE_FC, BLACK_BC);
 
 	// CREATE THE TIMER NOTIFIER
 //	uiclkTid = Create( OTH_NOTIFIER_PRTY, &uiclk_run );
@@ -228,67 +234,51 @@ void ui_updateSensor( UI *ui, int idx, int time ) {
 	}
 }
 
-void ui_updateMap( UI* ui, int idx, int state ) {
+void ui_updateMap( UI* ui, int idx, SwitchDir state ) {
 	
-	if ( idx == 153 ) {
-		idx = 22;
-	} else if ( idx == 154 ) {
-		idx = 19;
-	} else if ( idx == 155 ) {
-		idx = 20;
-	} else if ( idx == 156 ) {
-		idx = 21;
+	if ( idx >= 153 ) {
+		idx -= 134;
 	}
+	idx --;
 
-	Node *n = &ui->model.nodes[idx+39]; // you get a switch idx
+
 	char  ch[] = "\033(0q\033(B";
 
-	// Curved
-	if ( state == 1 ) {
-		if ( idx == 1 || idx == 2 || idx == 14 ) {
-			ch[3] = 'q';
-		} else if ( idx == 5 || idx == 8 || idx == 16 || idx == 21 ) {
-			ch[3] = 'j';
-		} else if ( idx == 6 || idx == 9 || idx == 13 || idx == 15 || 
-					idx == 22) {
-			ch[3] = 'k';
-		} else if ( idx == 4 || idx == 7 || idx == 10 || idx == 11 ||
-					idx == 12 || idx == 19 ) {
-			ch[3] = 'l';
-		} else {
-			ch[3] = 'm';
-		}
-	} else {
-		if ( idx == 1 || idx == 2 ) {
-			ch[3] = 'm';
-		} else if ( idx == 4 ) {
-			ch[3] = 'l';
-		} else if ( idx == 14 ) {
-			ch[3] = 'j';
-		} else if ( idx == 3  || idx == 4  || idx == 5  || idx == 6 ||
-					idx == 7  || idx == 10 || idx == 11 || idx == 12 || 
-					idx == 13 || idx == 15 || idx == 16 || idx == 17 || 
-					idx == 18 ) {
-			ch[3] = 'q';
-		} else  {
-			ch[3] = 'x';
-		}
-	}
+	SwitchData switches[] ={
+		{12,	14,	{'m',	'q'}},	// SW1
+		{16,	16,	{'m',	'q'}},	// SW2
+		{20,	18,	{'q',	'm'}},	// SW3
+		{12,	3,	{'l',	'l'}},	// SW4
+		{57,	18,	{'q',	'j'}},	// SW5
+		{31,	16,	{'q',	'k'}},	// SW6
+		{60,	16,	{'q',	'l'}},	// SW7
+		{76,	10,	{'x',	'j'}},	// SW8
+		{76,	7,	{'x',	'k'}},	// SW9
+		{51,	3,	{'q',	'l'}},	// SW10
+		{29,	1,	{'q',	'l'}},	// SW11
+		{16,	1,	{'q',	'l'}},	// SW12
+		{40,	3,	{'q',	'k'}},	// SW13
+		{26,	3,	{'q',	'm'}},	// SW14
+		{26,	14,	{'q',	'k'}},	// SW15
+		{41,	14,	{'q',	'j'}},	// SW16
+		{52,	14,	{'q',	'm'}},	// SW17
+		{34,	18,	{'q',	'm'}},	// SW18
+		{46,	10,	{'x',	'j'}},	// SW99
+		{46,	9,	{'x',	'm'}},	// SW9A
+		{46,	7,	{'x',	'l'}},	// SW9B
+		{46,	8,	{'x',	'k'}}};	// SW9C
+	
+	assert( idx >= 0 && idx < array_size( switches ) );
+	assert( state >= 0 && state < 2 );
+
+	ch[3] = switches[idx].display[state];
 
 //	debug ("name:%s idx:%d newST:%s\r\n", n->name, idx, ch);
-	switch (n->type) {
-		case NODE_SWITCH:
-			strPrintAt( ui->ios2Tid, 
-						   n->x, 
-						   n->y, 
-						   ch,
-						   BLUE_FC, GREEN_BC);
-			break;
-		case NODE_STOP:
-		case NODE_SENSOR:
-			// Do nothing.
-			break;
-	}
+	strPrintAt( ui->ios2Tid, 
+					switches[idx].x, 
+					switches[idx].y, 
+					ch,
+					RED_FC, BLACK_BC);
 }
 
 void ui_updateTrainLocation( UI *ui, int idx, int dist, int trainId ) {
@@ -436,7 +426,7 @@ void ui_drawMap( UI *ui ) {
 "            mk         mk                                              lj   ",
 "tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
 "                mk          mqqk                      lqqj                  ",
-"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqu  ",
 "                                                                            "};
    	char mapB[][90] = {	
 "tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
@@ -456,20 +446,20 @@ void ui_drawMap( UI *ui ) {
 "            mk         mk                                              lj   ",
 "tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
 "                mk          mqqk                      lqqj                  ",
-"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqu         ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqu  ",
 "                                                                            "};
 	int  i;
 	if ( ui->trackId == TRACK_A ) {
 		for ( i = 0; i < 18; i ++ ) {
-			cprintf( ui->ios2Tid, "\033(0" );
-			strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], BLACK_FC, GREEN_BC );
-			cprintf( ui->ios2Tid, "\033(B" );
+			cprintf( ui->ios2Tid, "\033(0\033[1m" );
+			strPrintAt( ui->ios2Tid, 3, i+1, mapA[i], YELLOW_FC, BLACK_BC );
+			cprintf( ui->ios2Tid, "\033(B\033[0m" );
 		}
 	} else {
 		for ( i = 0; i < 18; i ++ ) {
-			cprintf( ui->ios2Tid, "\033(0" );
-			strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], BLACK_FC, GREEN_BC );
-			cprintf( ui->ios2Tid, "\033(B" );
+			cprintf( ui->ios2Tid, "\033(0\033[1m" );
+			strPrintAt( ui->ios2Tid, 3, i+1, mapB[i], YELLOW_FC, BLACK_BC );
+			cprintf( ui->ios2Tid, "\033(B\033[0m" );
 		}
 	}
 }
@@ -482,8 +472,8 @@ void uiclk_run () {
 	int 		uiTid;
 	UIRequest 	req;
 
-	Receive( &uiTid, (char*)&ch, sizeof(char) );
-	Reply  ( uiTid,  (char*)&ch, sizeof(char) );
+	Receive( &uiTid, &ch, sizeof(char) );
+	Reply  ( uiTid,  &ch, sizeof(char) );
 	
 	req.type = CLOCK;
 	
