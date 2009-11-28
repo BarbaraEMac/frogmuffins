@@ -738,6 +738,16 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 	}
 }*/
 
+Node *
+node_neighbour( Node *node, Edge *edge ) {
+	if( edge->node1 == node ) {
+		return edge->node2;
+	} else {
+		assert( edge->node2 == node );
+		return edge->node1; 
+	}
+}
+
 int model_nameToIdx ( TrackModel *model, const char *name ) {
 	int	 n = model->num_nodes;
 	int	 i;

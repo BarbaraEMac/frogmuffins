@@ -578,20 +578,12 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 		itr     = &rp->model.nodes[path[i]];
 		
 		if ( itr->type == NODE_SWITCH ) {
-//			debug ("Switch: %s (%d), \r\n", itr->name, path[i]);
-			// If going to a behind edge, you don't need to 
-			// change a switch direction.
-			if ( (itr->sw.ahead[0].dest == path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
-//				debug ("adding this setting: \r\n");
-				settings[n].dist = rp->dists[path[0]][path[i]];
-				settings[n].id   = itr->id;
-				settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
-//				debug ("n:%d dist:%d id:%d dir:%d\r\n",
-//						n, settings[n].dist, settings[n].id, settings[n].dir);
-				n ++;
+			settings[n].dist = rp->dists[path[0]][path[i]];
+			settings[n].id   = itr->id;
+			settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
+			n ++;
 
-				assert ( n < NUM_SETTINGS );
-			}
+			assert ( n < NUM_SETTINGS );
 		}
 
 		// Subtract from the distance as we travel further
