@@ -55,14 +55,11 @@ inline void clearReply  (RPReply *trReply);
 void rp_planRoute 		(RoutePlanner *rp, RPReply *trReply, RPRequest *req);
 int  rp_turnAround 		(RoutePlanner *rp, Path *p, int sensorId);
 int  rp_distToNextRv   	(RoutePlanner *rp, Path *p);
-int  rp_distToNextSw   	(RoutePlanner *rp, Path *p);
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings);
 
 // Node and Sensor Prediction Functions
 void rp_predict 		(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred,
 						 int sensorId);
-void rp_predictHelper	(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred, Node *n, 
-						 int prevIdx, int startIdx);
 
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 
@@ -73,7 +70,6 @@ void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int las
 int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
-void rp_displayFirstSw	(RoutePlanner *rp, RPRequest *req);
 void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
 void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
@@ -81,7 +77,7 @@ void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 void floyd_warshall 	(RoutePlanner *rp, int n);
 int  cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
-int  rev 				(RoutePlanner *rp, int i, int j, int k);
+int  rev				(RoutePlanner *rp, Node *prev, Node *mid, Node *next);
 void dijkstra		 	(TrackModel *model, int source, int dest);
 
 // Convert a sensor index into a node index
@@ -102,9 +98,9 @@ inline int idxTosIdx (int idx, char *name) {
 // ahead[0] = straight
 // ahead[1] = curved
 inline SwitchDir getSwitchDir (Node *sw, Node *next) {
-	Edge *e = &sw->sw.ahead[0];
+	Edge *e = sw->sw.ahead[0];
 
-	return ( e->dest == next->idx ) ? SWITCH_STRAIGHT : SWITCH_CURVED;
+	return (node_neighbour( sw, e ) == next) ? SWITCH_STRAIGHT : SWITCH_CURVED;
 }
 
 void rp_run() {
@@ -175,7 +171,7 @@ void rp_run() {
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				
-				rp_displayFirstSw (&rp, &req);
+				//rp_displayFirstSw (&rp, &req);
 
 				break;
 
@@ -527,72 +523,35 @@ int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
 //	debug ("TURNAROUND:\r\n");
 
 	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
-	int   even   = (sensorId %2) == 0;
-//	debug ("sIdx=%d idx=%d node=%s even?%d \r\n", sensorId, sIdxToIdx(sensorId), sensor->name, even);
-
-//	debug ("nextNode=%d Behind=%d ahead=%d\r\n", p->path[1], sensor->se.behind.dest, sensor->se.ahead.dest);
-	if ( (sensor->se.behind.dest  == p->path[1] && even) ||
-		 (sensor->se.ahead.dest == p->path[1] && !even) ) {
-		
-		return 1;
-	}
+	Node *next = &rp->model.nodes[p->path[1]];
+	// next edge
+	Edge *e = ((sensorId % 2) == 0) ? sensor->se.ahead : sensor->se.behind; 
 	
-//	debug (" DONE TURN AROUND\r\n");
-	return 0;
+	return( node_neighbour( sensor, e ) == next );
 }
 
 int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 	int  i;
 	int  *path = p->path;
-	Node *itr;
 	
+	if( p->len < 2 ) return INT_MAX;
+
+	Node *prev;
+	Node *curr = &rp->model.nodes[path[0]];
+	Node *next = &rp->model.nodes[path[1]];
 	for ( i = 1; i < p->len - 1; i ++ ) {
-		itr = &rp->model.nodes[path[i]];
-
+		prev = curr;
+		curr = next;
+		next = &rp->model.nodes[path[i+1]];
 		// If you pass a switch, you might need to reverse.
-		if ( itr->type == NODE_SWITCH ) {
-			//Node *prev = &rp->model.nodes[path[i-1]];
-			//Node *next = &rp->model.nodes[path[i+1]];
-
-			// If you need to follow BOTH "ahead" edges of a switch,
-			// REVERSE.
-			if ( ((itr->sw.ahead[0].dest == path[i+1]) ||
-				  (itr->sw.ahead[1].dest == path[i+1])) &&
-				 ((itr->sw.ahead[0].dest == path[i-1]) ||
-				  (itr->sw.ahead[1].dest == path[i-1])) ) {
+		if ( curr->type == NODE_SWITCH ) {
+			if( rev( rp, prev, curr, next ) ) {
 //				debug ("Next reverse is %s\r\n", rp->model.nodes[path[i]].name);
 				return rp->dists[path[0]][path[i]];
 			}
 		}
 	}
 	
-	return INT_MAX;
-}
-
-int rp_distToNextSw (RoutePlanner *rp, Path *p) {
-	int *path = p->path;
-	Node *itr;
-
-	// Start at i=1 to skip first node
-	// Stop at len - 1 since we don't have to switch the last node if we
-	// want to stop on it
-	int i;
-	for ( i = 1; i < p->len - 1; i ++ ) {
-		itr = &rp->model.nodes[path[i]];
-		
-		if ( itr->type == NODE_SWITCH ) {
-		//	Node *prev = &rp->model.nodes[path[i-1]];
-			
-			// If coming from either "ahead" edges, you don't need to 
-			// change a switch direction.
-			if ( !((itr->sw.ahead[0].dest == path[i-1]) || 
-				 (itr->sw.ahead[1].dest == path[i-1])) ) {
-//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
-				return rp->dists[path[0]][path[i]];
-			}
-		}
-	}
-
 	return INT_MAX;
 }
 
@@ -620,18 +579,9 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 		
 		if ( itr->type == NODE_SWITCH ) {
 //			debug ("Switch: %s (%d), \r\n", itr->name, path[i]);
-			// If coming from either "ahead" edges, you don't need to 
+			// If going to a behind edge, you don't need to 
 			// change a switch direction.
 			if ( (itr->sw.ahead[0].dest == path[i+1]) || (itr->sw.ahead[1].dest == path[i+1]) ) {
-//				debug ("behind=%d ahead[0]=%d ahead[1]=%d next along path=(%d) %s\r\n", 
-//					itr->sw.behind.dest, 
-//					itr->sw.ahead[0].dest, 
-//					itr->sw.ahead[1].dest,
-//					path[i+1], 
-//					rp->model.nodes[path[i+1]].name);
-//			if ( !((() && (itr->sw.ahead[0].dest == path[i-1])) || ((itr->sw.ahead[0].dest != path[i+1]) && (itr->sw.ahead[1].dest == path[i-1]))) ) {
-//				debug ("Next switch is %s\r\n", rp->model.nodes[path[i]].name);
-				
 //				debug ("adding this setting: \r\n");
 				settings[n].dist = rp->dists[path[0]][path[i]];
 				settings[n].id   = itr->id;
@@ -663,20 +613,8 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 // ----------------------------------------------------------------------------
 // ---------------------- Node & Sensor Predictions  --------------------------
 // ----------------------------------------------------------------------------
-void rp_predict( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred, int sensorId ) {
-	int idx = sIdxToIdx ( sensorId );
-	Node *n = &rp->model.nodes[idx];
-	Edge *e = ((sensorId % 2) == 0) ? &n->se.ahead : &n->se.behind; // next edge
-	
-	// Get next node along the path
-	n = &rp->model.nodes[e->dest]; 
-
-	// Fill the "path" with sensor ids
-	rp_predictHelper ( rp, pred, nodePred, n, idx, idx );
-}
-
 void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
-							  Node *n, int prevIdx, int startIdx ) {
+							  Node *n, Node *prev, int startIdx ) {
 	Node *n1, *n2;
 	
 	// Save this node.
@@ -688,31 +626,28 @@ void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
 			// Progress on an edge you didn't just come from
 			
 			// Get next nodes along the path
-			if ( n->sw.ahead[0].dest == prevIdx ) {
-				n1 = &rp->model.nodes[n->sw.behind.dest]; 
+			if ( (node_neighbour( n, n->sw.ahead[0] ) == prev) ||
+				 (node_neighbour( n, n->sw.ahead[1] ) == prev) ) {
+				n1 = node_neighbour( n, n->sw.behind ); 
 				
 				// Recurse on the next node
-				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n1, n, startIdx );
 			
-			} else if ( n->sw.ahead[1].dest == prevIdx ) {
-				n1 = &rp->model.nodes[n->sw.behind.dest]; 
-				
-				// Recurse on the next node
-				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
 			} else { //behind
-				n1 = &rp->model.nodes[n->sw.ahead[0].dest]; 
-				n2 = &rp->model.nodes[n->sw.ahead[1].dest]; 
+				n1 = node_neighbour( n, n->sw.ahead[0] ); 
+				n2 = node_neighbour( n, n->sw.ahead[1] ); 
 				
 				// Recurse on these next nodes
-				rp_predictHelper ( rp, pred, nodePred, n1, n->idx, startIdx );
-				rp_predictHelper ( rp, pred, nodePred, n2, n->idx, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n1, n, startIdx );
+				rp_predictHelper ( rp, pred, nodePred, n2, n, startIdx );
 			}
 			break;
 		
 		case NODE_SENSOR:
 			// Store the sensor id
 			pred->idxs[pred->len] = (n->idx * 2);
-			if ( n->se.ahead.dest == prevIdx ) {
+			// These are the even numbered (odd indexed) sensors
+			if ( node_neighbour( n, n->se.ahead ) == prev ) {
 				pred->idxs[pred->len] += 1;
 			}
 			
@@ -728,6 +663,18 @@ void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
 	}
 }
 
+void rp_predict( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred, int sensorId ) {
+	int idx = sIdxToIdx ( sensorId );
+	Node *n = &rp->model.nodes[idx];
+	Edge *e = ((sensorId % 2) == 0) ? n->se.ahead : n->se.behind; // next edge
+	
+	// Get next node along the path
+	n = node_neighbour( n, e ); 
+
+	// Fill the "path" with sensor ids
+	rp_predictHelper ( rp, pred, nodePred, n, n, idx );
+}
+
 int rp_minSensorDist ( RoutePlanner *rp, int sensor1, int sensor2 ) {
 	int idx1 = sIdxToIdx (sensor1);
 	int idx2 = sIdxToIdx (sensor2);
@@ -739,32 +686,6 @@ int rp_minSensorDist ( RoutePlanner *rp, int sensor1, int sensor2 ) {
 //--------------------- Displaying To Monitor ---------------------------------
 //-----------------------------------------------------------------------------
 
-void rp_displayFirstSw (RoutePlanner *rp, RPRequest *req) {
-	Path p;
-	int dist;
-	int i = 0;
-	
-	makePath ( rp, &p, req->nodeIdx1, req->nodeIdx2 );
-	dist = rp_distToNextSw(rp, &p);
-	
-	if ( dist == INT_MAX ) {
-		printf ("No switch to change along path from %s to %s.\r\n", 
-				rp->model.nodes[req->nodeIdx2].name, 
-				rp->model.nodes[p.path[i]].name);
-		return;
-	}
-
-	while ( (rp->dists[req->nodeIdx1][p.path[i]] != dist) && 
-			(i < p.len) ) {
-		i++;
-	}
-	printf("%s %s to %s is %s. Distance to it is %d.\r\n",
-			"First switch to change from",
-			rp->model.nodes[req->nodeIdx1].name, 
-			rp->model.nodes[req->nodeIdx2].name, 
-			rp->model.nodes[p.path[i]].name,
-			dist);
-}
 
 void rp_displayFirstRv (RoutePlanner *rp, RPRequest *req) {
 	int i = 0;
@@ -940,7 +861,7 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 
 				//if ( i == j ) break;
 
-				distMod = rev( rp, rp->pred[i][k], rp->succ[k][j], k ) ? REVERSE_COST : 0;
+				distMod = 0;//rev( rp, rp->pred[i][k], rp->succ[k][j], k ) ? REVERSE_COST : 0;
 			/*	if( distMod > 0 ) {
 					printf("reversing at %s-%s-%s\r\n",
 						rp->model.nodes[rp->pred[i][k]].name, 
@@ -994,13 +915,14 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 	
 }  //end of floyd_warshall()
 
-
-int rev( RoutePlanner *rp, int i, int j, int k ) {
-	Node *mid = &rp->model.nodes[k];
+int rev( RoutePlanner *rp, Node *prev, Node *mid, Node *next ) {
 
 	if ( mid->type == NODE_SWITCH ) {
-		if( ((mid->sw.ahead[0].dest == i) && (mid->sw.ahead[1].dest == j)) ||
-			((mid->sw.ahead[0].dest == j) && (mid->sw.ahead[1].dest == i)) ) {
+		Node *straight 	= node_neighbour( mid, mid->sw.ahead[0] );
+		Node *curved 	= node_neighbour( mid, mid->sw.ahead[1] );
+
+		if(		((straight == prev) || (curved == prev))
+			&&	((straight == next) || (curved == next)) ) {
 			return 1;
 		}	
 	}
@@ -1008,9 +930,9 @@ int rev( RoutePlanner *rp, int i, int j, int k ) {
 }
 int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 //	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
-	int itr = 0;
-	int i, j;
+	int itr;
 	Node *node;
+	Node *next;
 
 	if ( idx1 == idx2 ) {
 		return 0;
@@ -1018,31 +940,27 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 
 	// Find the lower # of edges to reduce search time
 	if ( model->nodes[idx1].type < model->nodes[idx2].type ) {
-		i = idx1;
-		j = idx2;
+		node = &model->nodes[idx1];
+		next = &model->nodes[idx2];
 	} else {
-		i = idx2;
-		j = idx1;
+		node = &model->nodes[idx2];
+		next = &model->nodes[idx1];
 	}
-	
+	/*
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
 	if ( (rsvDist == 1) && 
 		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) 	{
 		return INT_MAX;
-	}
+	}*/
 
 	// Check each edge in O(3) time
-	node = &model->nodes[i];
-	while ( itr < (int) node->type ) {
+	for ( itr = 0; itr < (int) node->type; itr ++ ) {
 		// If the edge reaches the destination,
-		if ( node->edges[itr].dest == j ) {
+		if ( node_neighbour( node, node->edges[itr] ) == next ) {
 			// Return the distance between them
-			return node->edges[itr].distance; 
+			return node->edges[itr]->distance; 
 		}
-
-		// Advance the iterator
-		itr += 1;
 	}
 	return INT_MAX;
 }
