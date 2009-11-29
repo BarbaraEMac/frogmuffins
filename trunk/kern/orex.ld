@@ -9,6 +9,12 @@ rom : ORIGIN = 0x60000000, LENGTH = 8M
 SECTIONS
 {
 	. = 0x00218000;
+	
+	.rodata :
+	{
+		*(.rodata)
+	}
+	
 	.data : /* Initialized data. */
 	{
 		_DataStart = . ;
@@ -28,7 +34,6 @@ SECTIONS
 		*(.text)
 		*(.got)
 		*(.got.plt)
-		*(.rodata)
 		*(.glue_7)
 		*(.glue_7t)
 	}
