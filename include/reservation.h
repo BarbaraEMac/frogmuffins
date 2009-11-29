@@ -10,7 +10,7 @@
 #define RESERVATION_NAME 		"Reserver"
 
 enum ResReqType {
-	TRAIN = 1,
+	TRAIN_TASK = 1,
 	ROUTE_PLANNER
 };
 
@@ -25,7 +25,6 @@ typedef struct {
 typedef struct {
 	int stopDist;			// The safe stopping distance for the train
 } ResReply;
-
 
 // The main server loop
 void res_run ();
