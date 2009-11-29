@@ -2,7 +2,10 @@
  * Math Library
  */
 
+#include "debug.h"
 #include "math.h"
+
+#define TRAIN_WIDTH			40 	// mm
 
 int
 ctz( int x ) {
@@ -61,7 +64,7 @@ unsigned long x;
     return(res);
 }
 
-int sign ( int val ) {
+inline int sign ( int val ) {
 	if ( val == 0 ) return 0;
 
 	return (val < 0) ? NEG : POS;
@@ -85,14 +88,14 @@ Point findPointOnLine ( Point p1, Point p2, int len ) {
 	}
 }
 
-int pointDist( Point p1, Point p2 ) {
+inline int pointDist( Point p1, Point p2 ) {
 	int xDiff = p2.x - p1.x;
 	int yDiff = p2.y - p1.y;
 
 	return isqrt( xDiff*xDiff + yDiff*yDiff );
 }
 
-Point midpoint( Point p1, Point p2 ) {
+inline Point midpoint( Point p1, Point p2 ) {
 	Point ret;
 
 	ret.x = p1.x + p2.x;
@@ -104,7 +107,7 @@ Point midpoint( Point p1, Point p2 ) {
 	return ret;
 }
 
-int slope( Point p1, Point p2 ) {
+inline int slope( Point p1, Point p2 ) {
 	int xDiff = p2.x - p1.x;
 	int yDiff = p2.y - p1.y;
 
@@ -112,7 +115,7 @@ int slope( Point p1, Point p2 ) {
 }
 
 // --------------------------- Vector -----------------------------------------
-Vector makeVector( Point p1, Point p2 ) {
+inline Vector makeVector( Point p1, Point p2 ) {
 	Vector ret;
 
 	ret.x = p2.x - p1.x;
@@ -121,11 +124,11 @@ Vector makeVector( Point p1, Point p2 ) {
 	return ret;
 }
 
-int vectorLen( Vector v ) {
+inline int vectorLen( Vector v ) {
 	return isqrt( v.x*v.x + v.y*v.y );
 }
 
-Vector vectorAdd( Vector v1, Vector v2 ) {
+inline Vector vectorAdd( Vector v1, Vector v2 ) {
 	Vector ret;
 
 	ret.x = v1.x + v2.x;
@@ -134,44 +137,55 @@ Vector vectorAdd( Vector v1, Vector v2 ) {
 	return ret;
 }
 
+inline Vector vectorSub( Vector v1, Vector v2 ) {
+	Vector ret;
+
+	ret.x = v1.x - v2.x;
+	ret.y = v1.y - v2.y;
+
+	return ret;
+}
 // ------------------------ Rectangle -----------------------------------------
 Rectangle makeRectangle( Point p1, Point p2 ) {
 	Rectangle rect;
-	Vector 	  main = makeVector( p1, p2 );
-	Vector	  perp = { -main.y, main.x };
+	Vector 	  rectVect = makeVector( p1, p2 );
+	Vector	  perp = { -rectVect.y, rectVect.x };
 	int    	  len  = vectorLen ( perp );
 
-	perp.x *= (WIDTH / 2);
-	perp.y *= (WIDTH / 2);
-	perp /= len;
+	perp.x *= (TRAIN_WIDTH / 2);
+	perp.y *= (TRAIN_WIDTH / 2);
+	perp.x /= len;
+	perp.y /= len;
 
 	rect.p[0] = perp;
 
-	perp = { main.y, -main.x }
-	perp.x *= (WIDTH / 2);
-	perp.y *= (WIDTH / 2);
-	perp /= len;
+	perp.x = rectVect.y;
+	perp.y = rectVect.x;
+
+	perp.x *= (TRAIN_WIDTH / 2);
+	perp.y *= (TRAIN_WIDTH / 2);
+	perp.x /= len;
+	perp.y /= len;
 
 	rect.p[1] = perp;
 
-	rect.p[2].x = rect.c2.x + main.x;	
-	rect.p[2].y = rect.c2.y + main.y;	
+	rect.p[2].x = rect.p[1].x + rectVect.x;	
+	rect.p[2].y = rect.p[1].y + rectVect.y;	
 
-	rect.p[3].x = rect.c1.x + main.x;	
-	rect.p[3].y = rect.c1.y + main.y;	
+	rect.p[3].x = rect.p[0].x + rectVect.x;	
+	rect.p[3].y = rect.p[0].y + rectVect.y;	
 
-	rect.len = vectorLen( main );
+	rect.len = vectorLen( rectVect );
 	
 	return rect;
 }
 
-void rect_init( Rectangle *rect ) {
-	rect->x1 = NO_POINT;
-	rect->y1 = NO_POINT;
-
-	rect->x2 = NO_POINT;
-	rect->y2 = NO_POINT;
-
+inline void rect_init( Rectangle *rect ) {
+	int i;
+	for ( i = 0; i < 3; i ++ ) {
+		rect->p[i].x = NO_POINT;
+		rect->p[i].y = NO_POINT;
+	}
 	rect->len = 0;
 }
 
@@ -191,18 +205,20 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	assert ( q <= 2 );
 
-	Vector edge = r1.p[q+1] - r1.p[q];
+	Vector edge = vectorSub( r1->p[q+1], r1->p[q] );
 	Vector perp = { -edge.y, edge.x };
 	int i;
 	int side1, side2;
 	int r1Side;
 
 	// Determine the side of the other 2 points of R1
-	side1 = sign( perp.x * (r1->p3.x - r1->p2.x) + 
-				  perp.y * (r1->p3.y - r1->p2.x) );
+	i = (q+2) % 3;
+	side1 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
+				  perp.y * (r1->p[i].y - r1->p[q].x) );
 
-	side2 = sign( perp.x * (r1->p4.x - r1->p2.x) + 
-				  perp.y * (r1->p4.y - r1->p2.x) );
+	i = (q+3) % 3;
+	side2 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
+				  perp.y * (r1->p[i].y - r1->p[q].x) );
 
 	assert( side1 == side2 );
 	
@@ -212,8 +228,8 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	// Determine the side of each point in the second rect
 	for ( i = 0; i < 3; i ++ ) {
 
-		side1 = sign( perp.x * (r2->p1.x - r1->p2.x) + 
-					  perp.y * (r2->p1.y - r1->p2.x) );
+		side1 = sign( perp.x * (r2->p[i].x - r1->p[q].x) + 
+					  perp.y * (r2->p[i].y - r1->p[q].x) );
 
 		// TODO: ZERO return case
 		if ( side1 == r1Side ) {
