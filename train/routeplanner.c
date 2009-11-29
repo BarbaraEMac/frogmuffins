@@ -67,7 +67,6 @@ int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
 //void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor);
 void rsv_cancel			(Reservation *rsv, TrackModel *model);
 void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int lastSensor);
-int  mapTrainId   		(int trainId);
 
 // Display to Monitor Functions
 void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
@@ -410,7 +409,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	NodePred   nodePred;
 	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
 	
-	printf ("TRAIN %d has reservation %x at indx=%d. len =%d\r\n", req->trainId, rsv, mapTrainId(req->trainId), rsv->len);
+	debug ("TRAIN %d has reservation %x at indx=%d. len =%d\r\n", req->trainId, rsv, mapTrainId(req->trainId), rsv->len);
 	
 	debug ("GOING TO NODE %s(%d) from %s\r\n", 
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);

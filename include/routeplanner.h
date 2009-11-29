@@ -91,4 +91,6 @@ typedef struct {
 
 void rp_run();
 
+// Given a trainId, return the corresponding array index
+int  mapTrainId   		(int trainId);
 #endif
