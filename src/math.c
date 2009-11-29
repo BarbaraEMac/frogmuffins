@@ -65,7 +65,7 @@ unsigned long x;
 }
 
 inline int sign ( int val ) {
-	if ( val == 0 ) return 0;
+	if ( val == 0 ) return ZERO;
 
 	return (val < 0) ? NEG : POS;
 }
@@ -149,8 +149,8 @@ inline Vector vectorSub( Vector v1, Vector v2 ) {
 Rectangle makeRectangle( Point p1, Point p2 ) {
 	Rectangle rect;
 	Vector 	  rectVect = makeVector( p1, p2 );
-	Vector	  perp = { -rectVect.y, rectVect.x };
-	int    	  len  = vectorLen ( perp );
+	Vector	  perp 	   = { -rectVect.y, rectVect.x };
+	int    	  len  	   = vectorLen ( perp );
 
 	perp.x *= (TRAIN_WIDTH / 2);
 	perp.y *= (TRAIN_WIDTH / 2);
@@ -169,11 +169,8 @@ Rectangle makeRectangle( Point p1, Point p2 ) {
 
 	rect.p[1] = perp;
 
-	rect.p[2].x = rect.p[1].x + rectVect.x;	
-	rect.p[2].y = rect.p[1].y + rectVect.y;	
-
-	rect.p[3].x = rect.p[0].x + rectVect.x;	
-	rect.p[3].y = rect.p[0].y + rectVect.y;	
+	rect.p[2] = vectorAdd( rect.p[1], rectVect );
+	rect.p[3] = vectorAdd( rect.p[0], rectVect );
 
 	rect.len = vectorLen( rectVect );
 	
