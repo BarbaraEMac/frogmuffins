@@ -125,11 +125,11 @@ void ui_run () {
 }
 
 void ui_saveCursor(UI *ui) {
-	cprintf (ui->ios2Tid, "\0337");
+	cprintf (ui->ios2Tid, "\033[?25l\0337");
 }
 
 void ui_restoreCursor (UI *ui) {
-	cprintf (ui->ios2Tid, "\0338");
+	cprintf (ui->ios2Tid, "\0338\033[?25h");
 }
 
 void ui_init (UI *ui) {
@@ -248,27 +248,27 @@ void ui_updateMap( UI* ui, int idx, SwitchDir state ) {
 		{12,	14,	{'m',	'q'}},	// SW1
 		{16,	16,	{'m',	'q'}},	// SW2
 		{20,	18,	{'q',	'm'}},	// SW3
-		{12,	3,	{'l',	'l'}},	// SW4
+		{12,	3,	{'l',	'q'}},	// SW4
 		{57,	18,	{'q',	'j'}},	// SW5
-		{31,	16,	{'q',	'k'}},	// SW6
+		{32,	16,	{'q',	'k'}},	// SW6
 		{60,	16,	{'q',	'l'}},	// SW7
-		{76,	10,	{'x',	'j'}},	// SW8
-		{76,	7,	{'x',	'k'}},	// SW9
-		{51,	3,	{'q',	'l'}},	// SW10
-		{29,	1,	{'q',	'l'}},	// SW11
+		{75,	11,	{'x',	'j'}},	// SW8
+		{75,	6,	{'x',	'k'}},	// SW9
+		{53,	3,	{'q',	'l'}},	// SW10
+		{27,	1,	{'q',	'l'}},	// SW11
 		{16,	1,	{'q',	'l'}},	// SW12
-		{40,	3,	{'q',	'k'}},	// SW13
-		{26,	3,	{'q',	'm'}},	// SW14
-		{26,	14,	{'q',	'k'}},	// SW15
+		{41,	3,	{'q',	'k'}},	// SW13
+		{24,	3,	{'j',	'q'}},	// SW14
+		{24,	14,	{'k',	'q'}},	// SW15
 		{41,	14,	{'q',	'j'}},	// SW16
-		{52,	14,	{'q',	'm'}},	// SW17
-		{34,	18,	{'q',	'm'}},	// SW18
-		{46,	10,	{'x',	'j'}},	// SW99
-		{46,	9,	{'x',	'm'}},	// SW9A
-		{46,	7,	{'x',	'l'}},	// SW9B
-		{46,	8,	{'x',	'k'}}};	// SW9C
+		{53,	14,	{'q',	'm'}},	// SW17
+		{35,	18,	{'q',	'm'}},	// SW18
+		{47,	10,	{'x',	'j'}},	// SW99
+		{47,	9,	{'x',	'm'}},	// SW9A
+		{47,	7,	{'x',	'l'}},	// SW9B
+		{47,	8,	{'x',	'k'}}};	// SW9C
 	
-	assert( idx >= 0 && idx < array_size( switches ) );
+	if( idx < 0 && idx >= array_size( switches ) ) return; // fail silently
 	assert( state >= 0 && state < 2 );
 
 	ch[3] = switches[idx].display[state];
@@ -409,45 +409,45 @@ void ui_drawMap( UI *ui ) {
 	Delay( 200 / MS_IN_TICK, WhoIs(CLOCK_NAME) );
 	
 	char mapA[][90] = {	
-"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
-"            lj         lqqj                                            mk   ",
-"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqk     mk  ",
-"        lj        lj                 mk        lj                 mk     x  ",
-"tqqqqqqqj        lj                   mk   w  lj                   mk    x  ",
-"                lj                     mk  x lj                     mqk  x  ",
-"              lqj                       mk tqj                        mqqu  ",
-"              x                          mqu                             x  ",
-"              x                            tqk                           x  ",
-"              mqk                        lqu mk                       lqqu  ",
-"                mk                      lj x  mk                    lqj  x  ",
-"tqqqqqqqk        mk                    lj  v   mk                  lj    x  ",
-"        mk        mk                  lj        mk                lj     x  ",
-"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqqqvqqqqqqqqqqvqqqqqqqqqqqqqqqqj     lj  ",
-"            mk         mk                                              lj   ",
-"tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
-"                mk          mqqk                      lqqj                  ",
-"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqu  ",
+"tqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk      ",
+"            lj       lqqj                                            mqk    ",
+"tqqqqqqqqwqqj       lvqqqqqqqqqqqqqqqqwqqqqqqqqqqqwqqqqqqqqqqqqqqqqqk  mk   ",
+"        lj        lqj                 mqk       lqj                 mqk x   ",
+"tqqqqqqqj        lj                     mk  w  lj                     mkx   ",
+"                lj                       mk x lj                       mu   ",
+"               lj                         mktqj                         mk  ",
+"               x                           mu                            x  ",
+"               x                            tk                           x  ",
+"               mk                         lqumk                         lj  ",
+"                mk                       lj x mk                       lu   ",
+"tqqqqqqqk        mk                     lj  v  mk                     ljx   ",
+"        mk        mqk                 lqj       mqk                 lqj x   ",
+"tqqqqqqqqvqqk       mwqqqqqqqqqqqqqqqqvqqqqqqqqqqqvqqqqqqqqqqqqqqqqqj  lj   ",
+"            mk       mqqk                                            lqj    ",
+"tqqqqqqqqqqqqvqqk       mqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqj      ",
+"                mk           mqqk                     lqqj                  ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqu   ",
 "                                                                            "};
    	char mapB[][90] = {	
-"tqqqqqqqqqqqqwqqqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk    ",
-"            lj         lqqj                                            mk   ",
-"tqqqqqqqqwqqj      lqqqvqqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqk     mk  ",
-"        lj        lj                 mk        lj                 mk     x  ",
-"       lj        lj                   mk   w  lj                   mk    x  ",
-"      lj        lj                     mk  x lj                     mqk  x  ",
-"     lj       lqj                       mk tqj                        mqqu  ",
-"     x        x                          mqu                             x  ",
-"     x        x                            tqk                           x  ",
-"     mk       mqk                        lqu mk                       lqqu  ",
-"      mk        mk                      lj x  mk                    lqj  x  ",
-"       mk        mk                    lj  v   mk                  lj    x  ",
-"        mk        mk                  lj        mk                lj     x  ",
-"tqqqqqqqqvqqk      mqqqwqqqqqqqqqqqqqqvqqqqqqqqqqvqqqqqqqqqqqqqqqqj     lj  ",
-"            mk         mk                                              lj   ",
-"tqqqqqqqqqqqqvqqk       mqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqqqj    ",
-"                mk          mqqk                      lqqj                  ",
-"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqu  ",
-"                                                                            "};
+"tqqqqqqqqqqqqwqqqqqqqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk      ",
+"            lj       lqqj                                            mqk    ",
+"tqqqqqqqqwqqj       lvqqqqqqqqqqqqqqqqwqqqqqqqqqqqwqqqqqqqqqqqqqqqqqk  mk   ",
+"        lj        lqj                 mqk       lqj                 mqk x   ",
+"       lj        lj                     mk  w  lj                     mkx   ",
+"      lj        lj                       mk x lj                       mu   ",
+"     lj        lj                         mktqj                         mk  ",
+"     x         x                           mu                            x  ",
+"     x         x                            tk                           x  ",
+"     mk        mk                         lqumk                         lj  ",
+"      mk        mk                       lj x mk                       lu   ",
+"       mk        mk                     lj  v  mk                     ljx   ",
+"        mk        mqk                 lqj       mqk                 lqj x   ",
+"tqqqqqqqqvqqk       mwqqqqqqqqqqqqqqqqvqqqqqqqqqqqvqqqqqqqqqqqqqqqqqj  lj   ",
+"            mk       mqqk                                            lqj    ",
+"tqqqqqqqqqqqqvqqk       mqqqqwqqqqqqqqqqqqqqqqqqqqqqqqqqqwqqqqqqqqqqqj      ",
+"                mk           mqqk                     lqqj                  ",
+"tqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqqqqqvqqqqqqqqqqqqqqqqqu   ",
+"                                                                           "};
 	int  i;
 	if ( ui->trackId == TRACK_A ) {
 		for ( i = 0; i < 18; i ++ ) {
