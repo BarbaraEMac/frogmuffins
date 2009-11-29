@@ -14,6 +14,7 @@
 #include "error.h"
 #include "globals.h"
 #include "requests.h"
+#include "reservation.h"
 #include "routeplanner.h"
 #include "servers.h"
 #include "shell.h"
@@ -59,13 +60,14 @@ typedef struct {
 	Speed		velocity;		// The actual current speed (in mm/s)
 	int			stopDist;		// The measured stopping distance		
 	
-	TID 		rpTid;			// Id of the Route Planner
-	TID 		tsTid;			// Id of the Track Server
-	TID			csTid;			// Id of the Clock Server
-	TID			uiTid;			// Id of the UI server
 	TID			caTid;			// ID of the calibration task
+	TID			csTid;			// Id of the Clock Server
+	TID			resTid;			// Id of the Reservation Server
+	TID 		rpTid;			// Id of the Route Planner
 	TID			rwTid;			// ID of the route watch dog task
 	TID			shTid;			// ID of the shell
+	TID			uiTid;			// Id of the UI server
+	TID 		tsTid;			// Id of the Track Server
 
 	int			sd;				// Standard deviation
 	Speed		histBuf[SPEED_HIST];
@@ -134,7 +136,9 @@ void 		train_drive			( Train *tr, int gear );
 void		train_flipSwitches	( Train *tr, RPReply *rpReply );
 SwitchDir	train_dir			( Train *tr, int sw );
 
-		
+// Reservation Server Commands		
+int 		train_makeReservation( Train *tr, int stopDist, int distPast );
+
 // UI Server
 void train_updateUI( Train *tr, int mm );
 
@@ -147,7 +151,6 @@ void 		routeWatchDog 		();
 //----------------------------------------------------------------------------
 
 void train_run () {
-
 	Train 	 	tr;
 	RPReply   	rpReply;		// Reply from the Route Planner
 	TrainReq	req;
@@ -177,6 +180,10 @@ void train_run () {
 					distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 					// Send this information to the UI
 					train_updateUI( &tr, distFromSensor );
+					
+					// Make a reservation
+					rpReply.stopDist = train_makeReservation( &tr, rpReply.stopDist, 
+															  distFromSensor );
 					
 					// Adjust speed
 					train_adaptSpeed( &tr, rpReply.stopDist - distFromSensor, 
@@ -284,7 +291,7 @@ void train_run () {
 				}
 				
 				// Reverse if the train is backwards
-				if( rpReply.stopDist < 0) {
+				if( rpReply.stopDist < 0 ) {
 					debug ("Train is backwards. It's reversing.\r\n");
 					// TODO : possibly have a reversing mode here and don't 
 					// reverse if already in reversing mode
@@ -294,6 +301,9 @@ void train_run () {
 				if( rpReply.stopAction == STOP_AND_REVERSE ) {
 					rpReply.stopDist += REVERSE_DIST;
 				}
+
+				// Make a reservation
+				rpReply.stopDist = train_makeReservation( &tr, rpReply.stopDist, 0 );
 
 				//printf( "stopDist=%d to %d\r\n", rpReply.stopDist, tr.dest );
 
@@ -341,6 +351,7 @@ void train_run () {
 	}
 }
 
+
 void train_init ( Train *tr ) {
 	TrainReq init;
 	
@@ -354,20 +365,25 @@ void train_init ( Train *tr ) {
 	// Copy the data to the train
 	tr->id   		= init.id;
 	tr->defaultGear = init.gear;
+	
+	Create( TRAIN_PRTY - 1, &heart );
 
 	// The train talks to several servers
-	tr->rpTid = WhoIs (ROUTEPLANNER_NAME);
-	tr->tsTid = WhoIs (TRACK_SERVER_NAME);
-	tr->csTid = WhoIs (CLOCK_NAME);
-	tr->uiTid = WhoIs (UI_NAME);
-	Create( TRAIN_PRTY - 1, &heart );
-	tr->caTid = Create( TRAIN_PRTY - 1, &calibration );
-	tr->rwTid = Create( TRAIN_PRTY - 1, &routeWatchDog );
-	assert( tr->rpTid >= NO_ERROR );
-	assert( tr->tsTid >= NO_ERROR );
-	assert( tr->csTid >= NO_ERROR );
-	assert( tr->uiTid >= NO_ERROR );
-	assert( tr->caTid >= NO_ERROR );
+	tr->csTid  = WhoIs (CLOCK_NAME);
+	tr->resTid = WhoIs (RESERVATION_NAME);
+	tr->rpTid  = WhoIs (ROUTEPLANNER_NAME);
+	tr->tsTid  = WhoIs (TRACK_SERVER_NAME);
+	tr->uiTid  = WhoIs (UI_NAME);
+	
+	tr->caTid  = Create( TRAIN_PRTY - 1, &calibration );
+	tr->rwTid  = Create( TRAIN_PRTY - 1, &routeWatchDog );
+	
+	assert( tr->caTid  >= NO_ERROR );
+	assert( tr->csTid  >= NO_ERROR );
+	assert( tr->rpTid  >= NO_ERROR );
+	assert( tr->resTid >= NO_ERROR );
+	assert( tr->tsTid  >= NO_ERROR );
+	assert( tr->uiTid  >= NO_ERROR );
 
 	// Initialize internal variables
 	tr->mode   = CAL_SPEED;
@@ -717,7 +733,24 @@ SwitchDir train_dir( Train *tr, int sw ) {
 	return reply.dir;
 }
 
-		
+//-----------------------------------------------------------------------------
+//--------------------------------- Reservation Server ------------------------
+//-----------------------------------------------------------------------------
+int train_makeReservation( Train *tr, int stopDist, int distPast ) {
+	ResRequest  req;
+	ResReply	reply;
+
+	req.type     = TRAIN_TASK;
+	req.trainId  = tr->id;
+	req.sensor   = tr->sensor;
+	req.distPast = distPast;
+	req.stopDist = stopDist;
+
+	Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
+
+	return reply.stopDist;
+}	
+
 //-----------------------------------------------------------------------------
 //--------------------------------- UI Server ---------------------------------
 //-----------------------------------------------------------------------------
