@@ -9,7 +9,25 @@
 
 #define RESERVATION_NAME 		"Reserver"
 
-void res_run ();
+enum ResReqType {
+	TRAIN = 1,
+	ROUTE_PLANNER
+};
 
+typedef struct {
+	enum ResReqType type;	// Request type
+	int trainId;			// The train's identifying number
+	int sensor;				// The last triggered sensor
+	int distPast;			// The estimated distance past this sensor
+	int stopDist;			// The estimated stopping distance
+} ResRequest;
+
+typedef struct {
+	int stopDist;			// The safe stopping distance for the train
+} ResReply;
+
+
+// The main server loop
+void res_run ();
 
 #endif

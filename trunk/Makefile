@@ -33,6 +33,7 @@ OBJECTS = arch/drivers.o \
 		  task/task.o \
 		  train/detective.o \
 		  train/model.o \
+		  train/reservation.o \
 		  train/routeplanner.o \
 		  train/trackserver.o \
 		  train/train.o \
