@@ -1,10 +1,10 @@
 #
-# Makefile for busy-wait IO tests
+# Makefile for frogmuffins kernel
 #
 XCC     = gcc
 AS	= as
 LD      = ld
-CFLAGS  = -c -fPIC -Wall -I. -Iinclude -mcpu=arm920t -msoft-float 
+CFLAGS  = -c -fPIC -Wall -I. -Iinclude -mcpu=arm920t -msoft-float -O2
 # -g: include hooks for gdb
 # -c: only compile
 # -mcpu=arm920t: generate code for the 920t architecture
@@ -16,8 +16,6 @@ ASFLAGS	= -mcpu=arm920t -mapcs-32
 
 LDFLAGS = -init main -Map kern/main.map -N  -T kern/orex.ld -L/u/wbcowan/gnuarm-4.0.2/lib/gcc/arm-elf/4.0.2 -Llib
 
-		  #arch/drivers.o \
-# NOTE: the first file must not be oprimized or we lose the loader data
 OBJECTS = arch/drivers.o \
 		  arch/requests.o \
 		  arch/primitives.o \
@@ -44,15 +42,10 @@ HEADERS = include/*.h
 
 all: kern/main.elf 
 
-# do not optimize requests code-this is the first file so it can't be optimized
-#.PRECIOUS: arch/drivers.s
-#arch/drivers.s: arch/drivers.c $(HEADERS)
-#	$(XCC) -S $(CFLAGS)  -o $@ $<
-
 # the following line assumes that each .c file depends on all the header files
 .PRECIOUS: %.s
 %.s: %.c $(HEADERS)
-	$(XCC) -S $(CFLAGS) -O2 -o $@ $<
+	$(XCC) -S $(CFLAGS) -o $@ $<
 
 %.o: %.c
 
