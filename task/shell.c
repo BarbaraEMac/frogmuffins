@@ -96,11 +96,11 @@ void bootstrap(  ) {
 
 	// Create the clock server
 	tids.cs = Create( HW_SERVER_PRTY, &cs_run );
-//	output( "Initializing the clock server. \r\n" );
+	output( "Initializing the clock server (tid=%d). \r\n", tids.cs );
 	
 	// Create the routeplanner
 	tids.rp = Create( LOW_SERVER_PRTY, &rp_run );
-//	output( "Initializing the route planner. \r\n" );
+	output( "Initializing the route planner (tid=%d). \r\n", tids.rp );
 
 	// Create the ui 
 	// Makes 1 clock notifying task
@@ -108,20 +108,22 @@ void bootstrap(  ) {
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
 //	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
+	// Create the reservation server
+	tids.res = Create( OTH_SERVER_PRTY, &res_run );
+	output( "Initializing the reservation server (tid=%d). \r\n", 
+			tids.res );
+	
 	// Initialize the track we want to use.
 	shell_initTrack( &tids );
 
 	// Create the train controller
 	// TID = 13, 14
 	tids.ts = Create( OTH_SERVER_PRTY, &ts_run );
-//	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
+	output( "Initializing the track server (tid=%d). \r\n", tids.ts );
 	
-	// Create the reservation server
-	tids.res = Create( OTH_SERVER_PRTY, &res_run );
-
 	// Create the first train!
 	tids.tr[0] = Create( TRAIN_PRTY, &train_run );
-//	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
+	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
 	
 	// Create the second train!
 //	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
@@ -232,6 +234,9 @@ void shell_initTrack( TIDs *tids ) {
 
 	// Tell the Route Planner which track we are using
 	Send( tids->rp, &input[0], sizeof( char ), &err, sizeof( int ) );
+	
+	// Tell the Reservation Server which track we are using
+	Send( tids->res, &input[0], sizeof( char ), &err, sizeof( int ) );
 	
 	if( err < NO_ERROR ) {
 		output( "Invalid Track ID. Using Track B.\r\n" );
