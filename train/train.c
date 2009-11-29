@@ -32,7 +32,7 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				2
+#define CAL_LOOPS				1
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 #define REVERSE_DIST			400
@@ -480,11 +480,11 @@ void train_adaptSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	train_drive( tr, bestGear );
 
 	Speed base = train_avgSpeed( tr );
-	Speed accel = { HEARTBEAT_MS, 10000 }; // 100 mm/s^2
 
 	// Adjust calibrated speed based on gear
 	Speed set = speed_adjust( base, tr->defaultGear, tr->gear );
 /*
+	Speed accel = { HEARTBEAT_MS, 10000 }; // 100 mm/s^2
 	// The current speed does not change rapidly
 	int diff = speed( set ) - speed( tr->velocity );
 	if( diff > speed( accel ) ) {
@@ -524,7 +524,7 @@ int train_getStopDist( Train *tr, int gear ) {
 		case 2:
 		case 1:
 			return 100;
-		case 0:
+		default:
 			return 0;
 	}
 }
