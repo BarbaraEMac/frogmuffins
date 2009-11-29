@@ -85,6 +85,8 @@ int parse_model(int trackId, TrackModel* model);
 void free_model(TrackModel* model);
 
 
+Node * node_neighbour( Node *node, Edge *edge );
+
 /**
  * Given a current location and the previous node passed,
  * will return the next node you will pass.
@@ -92,8 +94,8 @@ void free_model(TrackModel* model);
  * behind edge, the next 2 possible nodes are returned.
  * Otherwise, next2 will be 0.
  */
-void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
-						  Node *next1, Node *next2 );
+/*void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
+						  Node *next1, Node *next2 );*/
 	
 /**
  * Converts a node name into the index in O(n) time.
