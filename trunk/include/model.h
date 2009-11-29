@@ -7,6 +7,9 @@
 #ifndef __MODEL_H__
 #define __MODEL_H__
 
+#include <debug.h>
+#include <string.h>
+
 #define NUM_SENSOR_BANKS 	5
 #define SIZE_BANK			16
 #define NUM_SENSORS			(NUM_SENSOR_BANKS * SIZE_BANK)
@@ -114,5 +117,15 @@ char sensor_num( int sensor );
 char switch_dir( SwitchDir dir );
 SwitchDir switch_init ( char dir );
 
+// Return the distance between two neighbouring nodes
+int   node_dist		( Node *n1, Node *n2 );
+
+Node *node_neighbour( Node *node, Edge *edge );
+
+// Convert a sensor index into a node index
+inline int sIdxToIdx ( int sIdx );
+
+// Convert a node and name into a sensor index
+inline int idxTosIdx (int idx, char *name);
 
 #endif

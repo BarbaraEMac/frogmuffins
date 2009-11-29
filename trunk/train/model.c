@@ -5,11 +5,14 @@
  * Copied and modified from course webpage
  */
 
-#define DEBUG 1
-#include "model.h"
+#define DEBUG 	1
+#define INT_MAX	0x7FFFFFFF
+
+#include <debug.h>
 #include <string.h>
+
+#include "model.h"
 #include "servers.h"
-#include "debug.h"
 #include "requests.h"
 
 int parse_edges_str(FILE *file, TrackModel *model, Node *node) {
@@ -798,6 +801,31 @@ SwitchDir switch_init( char dir ) {
 		return INVALID_DIR;
 }
 
+int node_dist( Node *n1, Node *n2 ) {
+	int i;
+
+	for ( i = 0; i < n1->type; i ++ ) {
+		if ( node_neighbour( n1, n1->edges[i] ) == n2 ) {
+			return n1->edges[i]->distance;
+		}
+	}
+
+	return INT_MAX;
+}
+
+// Convert a sensor index into a node index
+inline int sIdxToIdx ( int sIdx ) {
+	return (int) (sIdx / 2);
+}
+
+inline int idxTosIdx (int idx, char *name) {
+	int ret = idx * 2;
+	if ( (atod(name[1]) % 2) == 0 ) {
+		ret += 1;
+	}
+	debug ("idx=%d ret=%d\r\n", idx, ret);
+	return ret;
+}
 
 /*
 char * model_idxToName ( TrackModel *model, int idx ) {

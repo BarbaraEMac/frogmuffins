@@ -80,21 +80,6 @@ void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 int  rev				(RoutePlanner *rp, Node *prev, Node *mid, Node *next);
 void dijkstra		 	(TrackModel *model, int source, int dest);
 
-// Convert a sensor index into a node index
-inline int sIdxToIdx ( int sIdx ) {
-	return (int) (sIdx / 2);
-}
-
-inline int idxTosIdx (int idx, char *name) {
-	int ret = idx * 2;
-	if ( (atod(name[1]) % 2) == 0 ) {
-		ret += 1;
-	}
-	debug ("idx=%d ret=%d\r\n", idx, ret);
-	return ret;
-}
-// ----------------------------------------------------------------------------
-
 // ahead[0] = straight
 // ahead[1] = curved
 inline SwitchDir getSwitchDir (Node *sw, Node *next) {
@@ -103,6 +88,7 @@ inline SwitchDir getSwitchDir (Node *sw, Node *next) {
 	return (node_neighbour( sw, e ) == next) ? SWITCH_STRAIGHT : SWITCH_CURVED;
 }
 
+// ----------------------------------------------------------------------------
 void rp_run() {
 	debug ("rp_run\r\n");
 	RoutePlanner	rp;
