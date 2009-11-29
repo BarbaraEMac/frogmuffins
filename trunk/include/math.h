@@ -17,7 +17,7 @@ typedef struct {
 	int y;
 } Point;
 
-typedef struct Point Vector;
+typedef Point Vector;
 
 typedef struct {
 	Point p[4];
