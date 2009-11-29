@@ -18,8 +18,7 @@ LDFLAGS = -init main -Map kern/main.map -N  -T kern/orex.ld -L/u/wbcowan/gnuarm-
 
 		  #arch/drivers.o \
 # NOTE: the first file must not be oprimized or we lose the loader data
-OBJECTS = arch/blank.o \
-		  arch/drivers.o \
+OBJECTS = arch/drivers.o \
 		  arch/requests.o \
 		  arch/primitives.o \
 		  arch/switch.o \
@@ -45,9 +44,6 @@ HEADERS = include/*.h
 
 all: kern/main.elf 
 
-.PRECIOUS: arch/blank.s
-arch/blank.s: arch/blank.c $(HEADERS)
-	$(XCC) -S $(CFLAGS)  -o $@ $<
 # do not optimize requests code-this is the first file so it can't be optimized
 #.PRECIOUS: arch/drivers.s
 #arch/drivers.s: arch/drivers.c $(HEADERS)
