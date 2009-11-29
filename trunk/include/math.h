@@ -11,6 +11,7 @@
 #define INTERSECTION	 1
 #define	NEG				-1
 #define	POS				 1
+#define	ZERO			 0
 
 typedef struct {
 	int x;
