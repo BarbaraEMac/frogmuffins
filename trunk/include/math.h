@@ -63,9 +63,9 @@ inline int	 	slope( Point p1, Point p2 );
 
 // --------------------------- Vector -----------------------------------------
 inline Vector 	makeVector( Point p1, Point p2 );
-inline int  	vectorLen( Vector v );
-inline Vector 	vectorAdd( Vector v1, Vector v2 );
-inline Vector 	vectorSub( Vector v1, Vector v2 );
+inline int  	vect_len( Vector v );
+inline Vector 	vect_add( Vector v1, Vector v2 );
+inline Vector 	vect_sub( Vector v1, Vector v2 );
 
 // ------------------------ Rectangle -----------------------------------------
 	   	Rectangle makeRectangle( Point p1, Point p2 );
