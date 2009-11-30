@@ -229,6 +229,7 @@ int parse_model_str(FILE *file, TrackModel* model)
 
 int parse_model(int trackId, TrackModel* model)
 {
+// A
 char * track[] = {
 " track 72 \
 0 A1 sensor 0 100 10 2 \
@@ -459,12 +460,12 @@ char * track[] = {
 	12 ahead 70 \
 71 DE10 stop 9 10 265 1 \
 	13 ahead 70",
-
+// B
 " track 70 \
-0 A1 sensor 0 100 10 2 \
+0 A1 sensor 0 733 67 2 \
 	51 ahead 218 \
 	66 behind 500 \
-1 A3 sensor 1 135 85 2 \
+1 A3 sensor 1 745 350 2 \
 	53 ahead 62 \
 	15 behind 440 \
 2 A5 sensor 2 160 285 2 \
@@ -473,28 +474,28 @@ char * track[] = {
 3 A7 sensor 3 100 265 2 \
 	13 ahead 473 \
 	41 behind 211 \
-4 A9 sensor 4 70 245 2 \
+4 A9 sensor 4 565 1020 2 \
 	11 ahead 289 \
 	40 behind 210 \
 5 A11 sensor 5 60 200 2 \
 	40 ahead 265 \
 	7 behind 774 \
-6 A13 sensor 6 70 30 2 \
+6 A13 sensor 6 565 147 2 \
 	43 ahead 215 \
 	65 behind 320 \
 7 A15 sensor 7 60 70 2 \
 	5 ahead 774 \
 	43 behind 260 \
-8 B1 sensor 8 290 235 2 \
+8 B1 sensor 8 1380 1020 2 \
 	30 ahead 398 \
 	55 behind 225 \
-9 B3 sensor 9 290 215 2 \
+9 B3 sensor 9 1380 953 2 \
 	16 ahead 230 \
 	55 behind 220 \
-10 B5 sensor 10 290 35 2 \
+10 B5 sensor 10 1380 147 2 \
 	25 ahead 405 \
 	52 behind 214 \
-11 B7 sensor 11 20 245 2 \
+11 B7 sensor 11 290 1020 2 \
 	4 ahead 289 \
 	67 behind 60 \
 12 B9 sensor 12 20 285 2 \
@@ -506,7 +507,7 @@ char * track[] = {
 14 B13 sensor 14 365 180 2 \
 	58 ahead 224 \
 	31 behind 202 \
-15 B15 sensor 15 135 185 2 \
+15 B15 sensor 15 745 786 2 \
 	1 ahead 440 \
 	54 behind 70 \
 16 C1 sensor 16 325 180 2 \
@@ -521,22 +522,22 @@ char * track[] = {
 19 C7 sensor 19 265 285 2 \
 	57 ahead 215 \
 	42 behind 145 \
-20 C9 sensor 20 200 235 2 \
+20 C9 sensor 20 1020 1020 2 \
 	54 ahead 305 \
 	55 behind 146 \
-21 C11 sensor 21 200 35 2 \
+21 C11 sensor 21 1020 147 2 \
 	52 ahead 140 \
 	53 behind 314 \
-22 C13 sensor 22 245 11 2 \
+22 C13 sensor 22 1210 67 2 \
 	35 ahead 785 \
 	50 behind 60 \
-23 C15 sensor 23 294 260 2 \
+23 C15 sensor 23 1380 1093 2 \
 	29 ahead 405 \
 	45 behind 223 \
-24 D1 sensor 24 365 90 2 \
+24 D1 sensor 24 1660 350 2 \
 	59 ahead 227 \
 	33 behind 200 \
-25 D3 sensor 25 400 35 2 \
+25 D3 sensor 25 1785 147 2 \
 	49 ahead 223 \
 	10 behind 405 \
 26 D5 sensor 26 550 70 2 \
@@ -548,25 +549,25 @@ char * track[] = {
 28 D9 sensor 28 550 225 2 \
 	37 ahead 284 \
 	47 behind 291 \
-29 D11 sensor 29 400 260 2 \
+29 D11 sensor 29 1785 1093 2 \
 	23 ahead 405 \
 	46 behind 220 \
-30 D13 sensor 30 400 235 2 \
+30 D13 sensor 30 1785 1020 2 \
 	8 ahead 398 \
 	56 behind 225 \
-31 D15 sensor 31 400 215 2 \
+31 D15 sensor 31 1785 953 2 \
 	14 ahead 202 \
 	56 behind 230 \
-32 E1 sensor 32 325 90 2 \
+32 E1 sensor 32 1530 350 2 \
 	60 ahead 222 \
 	39 behind 203 \
-33 E3 sensor 33 400 50 2 \
+33 E3 sensor 33 1785 210 2 \
 	24 ahead 200 \
 	49 behind 220 \
 34 E5 sensor 34 470 35 2 \
 	26 ahead 275 \
 	49 behind 74 \
-35 E7 sensor 35 470 11 2 \
+35 E7 sensor 35 1985 67 2 \
 	27 ahead 375 \
 	22 behind 785 \
 36 E9 sensor 36 550 200 2 \
@@ -578,7 +579,7 @@ char * track[] = {
 38 E13 sensor 38 470 235 2 \
 	56 ahead 62 \
 	36 behind 275 \
-39 E15 sensor 39 290 50 2 \
+39 E15 sensor 39 1380 210 2 \
 	52 ahead 230 \
 	32 behind 203 \
 40 SW1 switch 1 140 255 curved 3 \
@@ -593,7 +594,7 @@ char * track[] = {
 	2 straight 216 \
 	41 curved 182 \
 	19 behind 145 \
-43 SW4 switch 4 140 20 straight 3 \
+43 SW4 switch 4 775 110 straight 3 \
 	7 straight 260 \
 	6 curved 215 \
 	51 behind 185 \
@@ -617,31 +618,31 @@ char * track[] = {
 	27 straight 290 \
 	26 curved 213 \
 	47 behind 193 \
-49 SW10 switch 10 445 35 straight 3 \
+49 SW10 switch 10 2010 147 straight 3 \
 	25 straight 223 \
 	33 curved 220 \
 	34 behind 74 \
-50 SW11 switch 11 220 11 curved 3 \
+50 SW11 switch 11 1140 67 curved 3 \
 	51 straight 190 \
 	53 curved 445 \
 	22 behind 60 \
-51 SW12 switch 12 180 11 curved 3 \
+51 SW12 switch 12 750 67 curved 3 \
 	0 straight 218 \
 	43 curved 185 \
 	50 behind 190 \
-52 SW13 switch 13 245 35 straight 3 \
+52 SW13 switch 13 1170 147 straight 3 \
 	10 straight 214 \
 	39 curved 230 \
 	21 behind 140 \
-53 SW14 switch 14 150 70 curved 3 \
+53 SW14 switch 14 775 305 curved 3 \
 	50 straight 445 \
 	21 curved 314 \
 	1 behind 62 \
-54 SW15 switch 15 150 200 curved 3 \
+54 SW15 switch 15 775 885 curved 3 \
 	18 straight 411 \
 	20 curved 305 \
 	15 behind 70 \
-55 SW16 switch 16 245 235 straight 3 \
+55 SW16 switch 16 1170 1020 straight 3 \
 	8 straight 225 \
 	9 curved 220 \
 	20 behind 146 \
