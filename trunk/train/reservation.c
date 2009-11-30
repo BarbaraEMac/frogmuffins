@@ -64,7 +64,7 @@ void res_run () {
 
 		switch( req.type ) {
 
-			case TRAIN:
+			case TRAIN_TASK:
 				reply.stopDist = res_makeTrainRes( &res, &req );
 				
 				break;
