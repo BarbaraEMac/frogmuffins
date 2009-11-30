@@ -126,11 +126,11 @@ inline Vector makeVector( Point p1, Point p2 ) {
 	return ret;
 }
 
-inline int vectorLen( Vector v ) {
+inline int vect_len( Vector v ) {
 	return isqrt( v.x*v.x + v.y*v.y );
 }
 
-inline Vector vectorAdd( Vector v1, Vector v2 ) {
+inline Vector vect_add( Vector v1, Vector v2 ) {
 	Vector ret;
 
 	ret.x = v1.x + v2.x;
@@ -139,7 +139,7 @@ inline Vector vectorAdd( Vector v1, Vector v2 ) {
 	return ret;
 }
 
-inline Vector vectorSub( Vector v1, Vector v2 ) {
+inline Vector vect_sub( Vector v1, Vector v2 ) {
 	Vector ret;
 
 	ret.x = v1.x - v2.x;
@@ -148,21 +148,13 @@ inline Vector vectorSub( Vector v1, Vector v2 ) {
 	return ret;
 }
 
-inline Vector vectorMakePos( Vector v ) {
-	if ( v.x < 0 ) v.x = -v.x;
-	if ( v.y < 0 ) v.y = -v.y;
-
-	return v;
-}
-
-
 // ------------------------ Rectangle -----------------------------------------
 Rectangle makeRectangle( Point p1, Point p2 ) {
 	debug("make from (%d, %d) to (%d, %d)\r\n", p1.x, p1.y, p2.x, p2.y);
 	Rectangle rect;
 	Vector 	  rectVect = makeVector( p1, p2 );
 	Vector	  perp 	   = { -rectVect.y, rectVect.x };
-	int    	  len  	   = vectorLen ( perp );
+	int    	  len  	   = vect_len ( perp );
 
 	debug("rectVect=(%d, %d) Perp=(%d, %d)\r\n", rectVect.x, rectVect.y, perp.x, perp.y);
 
@@ -173,16 +165,16 @@ Rectangle makeRectangle( Point p1, Point p2 ) {
 
 	debug("perp:(%d, %d)\r\n", perp.x, perp.y);
 
-	rect.p[0] = vectorAdd( perp, p1 );
-	rect.p[3] = vectorAdd( perp, p2 );
+	rect.p[0] = vect_add( perp, p1 );
+	rect.p[3] = vect_add( perp, p2 );
 
 	perp.x = -perp.x;
 	perp.y = -perp.y;
 
-	rect.p[1] = vectorAdd( perp, p1 );
-	rect.p[2] = vectorAdd( perp, p2);
+	rect.p[1] = vect_add( perp, p1 );
+	rect.p[2] = vect_add( perp, p2);
 	
-	rect.len = vectorLen( rectVect );
+	rect.len = vect_len( rectVect );
 	
 	int i;
 	debug ("made a rect of len:%d\r\n", rect.len);
@@ -220,7 +212,7 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	assert ( q <= 2 );
 
-	Vector edge = vectorSub( r1->p[q+1], r1->p[q] );
+	Vector edge = vect_sub( r1->p[q+1], r1->p[q] );
 	Vector perp = { -edge.y, edge.x };
 	int i;
 	int side1, side2;
