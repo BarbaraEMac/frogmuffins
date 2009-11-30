@@ -2,6 +2,8 @@
  * Math Library
  */
 
+#define DEBUG 2
+
 #include "debug.h"
 #include "math.h"
 
@@ -145,41 +147,57 @@ inline Vector vectorSub( Vector v1, Vector v2 ) {
 
 	return ret;
 }
+
+inline Vector vectorMakePos( Vector v ) {
+	if ( v.x < 0 ) v.x = -v.x;
+	if ( v.y < 0 ) v.y = -v.y;
+
+	return v;
+}
+
+
 // ------------------------ Rectangle -----------------------------------------
 Rectangle makeRectangle( Point p1, Point p2 ) {
+	debug("make from (%d, %d) to (%d, %d)\r\n", p1.x, p1.y, p2.x, p2.y);
 	Rectangle rect;
 	Vector 	  rectVect = makeVector( p1, p2 );
 	Vector	  perp 	   = { -rectVect.y, rectVect.x };
 	int    	  len  	   = vectorLen ( perp );
 
-	perp.x *= (TRAIN_WIDTH / 2);
-	perp.y *= (TRAIN_WIDTH / 2);
-	perp.x /= len;
-	perp.y /= len;
-
-	rect.p[0] = perp;
-
-	perp.x = rectVect.y;
-	perp.y = rectVect.x;
+	debug("rectVect=(%d, %d) Perp=(%d, %d)\r\n", rectVect.x, rectVect.y, perp.x, perp.y);
 
 	perp.x *= (TRAIN_WIDTH / 2);
 	perp.y *= (TRAIN_WIDTH / 2);
 	perp.x /= len;
 	perp.y /= len;
 
-	rect.p[1] = perp;
+	debug("perp:(%d, %d)\r\n", perp.x, perp.y);
 
-	rect.p[2] = vectorAdd( rect.p[1], rectVect );
-	rect.p[3] = vectorAdd( rect.p[0], rectVect );
+	rect.p[0] = vectorAdd( perp, p1 );
+	rect.p[3] = vectorAdd( perp, p2 );
 
+	perp.x = -perp.x;
+	perp.y = -perp.y;
+
+	rect.p[1] = vectorAdd( perp, p1 );
+	rect.p[2] = vectorAdd( perp, p2);
+	
 	rect.len = vectorLen( rectVect );
 	
+	int i;
+	debug ("made a rect of len:%d\r\n", rect.len);
+	for ( i = 0; i < 4; i ++ ) {
+		if ( rect.p[i].x < 0 ) rect.p[i].x = 0;
+		if ( rect.p[i].y < 0 ) rect.p[i].y = 0;
+
+		debug("corner:%d (%d, %d)\r\n", i, rect.p[i].x, rect.p[i].y);
+	}
 	return rect;
 }
 
 inline void rect_init( Rectangle *rect ) {
 	int i;
-	for ( i = 0; i < 3; i ++ ) {
+	for ( i = 0; i < 4; i ++ ) {
 		rect->p[i].x = NO_POINT;
 		rect->p[i].y = NO_POINT;
 	}
@@ -209,11 +227,11 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	int r1Side;
 
 	// Determine the side of the other 2 points of R1
-	i = (q+2) % 3;
+	i = (q+2) % 4;
 	side1 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
 				  perp.y * (r1->p[i].y - r1->p[q].x) );
 
-	i = (q+3) % 3;
+	i = (q+3) % 4;
 	side2 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
 				  perp.y * (r1->p[i].y - r1->p[q].x) );
 
@@ -223,7 +241,7 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	r1Side = side1;
 
 	// Determine the side of each point in the second rect
-	for ( i = 0; i < 3; i ++ ) {
+	for ( i = 0; i < 4; i ++ ) {
 
 		side1 = sign( perp.x * (r2->p[i].x - r1->p[q].x) + 
 					  perp.y * (r2->p[i].y - r1->p[q].x) );
