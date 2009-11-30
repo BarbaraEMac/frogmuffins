@@ -468,22 +468,22 @@ char * track[] = {
 1 A3 sensor 1 745 350 2 \
 	53 ahead 62 \
 	15 behind 440 \
-2 A5 sensor 2 160 285 2 \
+2 A5 sensor 2 915 1170 2 \
 	42 ahead 216 \
 	12 behind 649 \
-3 A7 sensor 3 100 265 2 \
+3 A7 sensor 3 753 1093 2 \
 	13 ahead 473 \
 	41 behind 211 \
 4 A9 sensor 4 565 1020 2 \
 	11 ahead 289 \
 	40 behind 210 \
-5 A11 sensor 5 60 200 2 \
+5 A11 sensor 5 545 925 2 \
 	40 ahead 265 \
 	7 behind 774 \
 6 A13 sensor 6 565 147 2 \
 	43 ahead 215 \
 	65 behind 320 \
-7 A15 sensor 7 60 70 2 \
+7 A15 sensor 7 545 230 2 \
 	5 ahead 774 \
 	43 behind 260 \
 8 B1 sensor 8 1380 1020 2 \
@@ -498,28 +498,28 @@ char * track[] = {
 11 B7 sensor 11 290 1020 2 \
 	4 ahead 289 \
 	67 behind 60 \
-12 B9 sensor 12 20 285 2 \
+12 B9 sensor 12 250 1170 2 \
 	2 ahead 649 \
 	68 behind 70 \
-13 B11 sensor 13 20 265 2 \
+13 B11 sensor 13 270 1093 2 \
 	3 ahead 473 \
 	69 behind 70 \
-14 B13 sensor 14 365 180 2 \
+14 B13 sensor 14 1660 850 2 \
 	58 ahead 224 \
 	31 behind 202 \
 15 B15 sensor 15 745 786 2 \
 	1 ahead 440 \
 	54 behind 70 \
-16 C1 sensor 16 325 180 2 \
+16 C1 sensor 16 1530 850 2 \
 	9 ahead 230 \
 	61 behind 228 \
-17 C3 sensor 17 420 285 2 \
+17 C3 sensor 17 1895 1170 2 \
 	64 ahead 410 \
 	44 behind 226 \
-18 C5 sensor 18 220 260 2 \
+18 C5 sensor 18 1090 1093 2 \
 	45 ahead 79 \
 	54 behind 411 \
-19 C7 sensor 19 265 285 2 \
+19 C7 sensor 19 1275 1170 2 \
 	57 ahead 215 \
 	42 behind 145 \
 20 C9 sensor 20 1020 1020 2 \
@@ -540,13 +540,13 @@ char * track[] = {
 25 D3 sensor 25 1785 147 2 \
 	49 ahead 223 \
 	10 behind 405 \
-26 D5 sensor 26 550 70 2 \
+26 D5 sensor 26 2310 290 2 \
 	34 ahead 275 \
 	48 behind 213 \
-27 D7 sensor 27 550 42 2 \
+27 D7 sensor 27 2310 210 2 \
 	48 ahead 290 \
 	35 behind 375 \
-28 D9 sensor 28 550 225 2 \
+28 D9 sensor 28 2310 962 2 \
 	37 ahead 284 \
 	47 behind 291 \
 29 D11 sensor 29 1785 1093 2 \
@@ -564,33 +564,33 @@ char * track[] = {
 33 E3 sensor 33 1785 210 2 \
 	24 ahead 200 \
 	49 behind 220 \
-34 E5 sensor 34 470 35 2 \
+34 E5 sensor 34 2080 147 2 \
 	26 ahead 275 \
 	49 behind 74 \
 35 E7 sensor 35 1985 67 2 \
 	27 ahead 375 \
 	22 behind 785 \
-36 E9 sensor 36 550 200 2 \
+36 E9 sensor 36 2310 1020 2 \
 	47 ahead 215 \
 	38 behind 275 \
-37 E11 sensor 37 470 260 2 \
+37 E11 sensor 37 2065 1093 2 \
 	28 ahead 284 \
 	46 behind 65 \
-38 E13 sensor 38 470 235 2 \
+38 E13 sensor 38 2065 235 2 \
 	56 ahead 62 \
 	36 behind 275 \
 39 E15 sensor 39 1380 210 2 \
 	52 ahead 230 \
 	32 behind 203 \
-40 SW1 switch 1 140 255 curved 3 \
+40 SW1 switch 1 475 1045 curved 3 \
 	5 straight 245 \
 	4 curved 210 \
 	41 behind 191 \
-41 SW2 switch 2 180 275 curved 3 \
+41 SW2 switch 2 750 1125 curved 3 \
 	40 straight 191 \
 	3 curved 211 \
 	42 behind 182 \
-42 SW3 switch 3 230 285 curved 3 \
+42 SW3 switch 3 1130 1170 curved 3 \
 	2 straight 216 \
 	41 curved 182 \
 	19 behind 145 \
@@ -598,23 +598,23 @@ char * track[] = {
 	7 straight 260 \
 	6 curved 215 \
 	51 behind 185 \
-44 SW5 switch 5 375 285 curved 3 \
+44 SW5 switch 5 1680 1170 curved 3 \
 	17 straight 226 \
 	46 curved 334 \
 	57 behind 187 \
-45 SW6 switch 6 245 260 straight 3 \
+45 SW6 switch 6 1170 1093 straight 3 \
 	23 straight 223 \
 	57 curved 338 \
 	18 behind 79 \
-46 SW7 switch 7 447 260 straight 3 \
+46 SW7 switch 7 2010 1093 straight 3 \
 	29 straight 220 \
 	44 curved 334 \
 	37 behind 65 \
-47 SW8 switch 8 570 166 curved 3 \
+47 SW8 switch 8 2385 680 curved 3 \
 	28 straight 291 \
 	36 curved 215 \
 	48 behind 193 \
-48 SW9 switch 9 570 111 curved 3 \
+48 SW9 switch 9 2385 495 curved 3 \
 	27 straight 290 \
 	26 curved 213 \
 	47 behind 193 \
@@ -646,45 +646,45 @@ char * track[] = {
 	8 straight 225 \
 	9 curved 220 \
 	20 behind 146 \
-56 SW17 switch 17 445 235 straight 3 \
+56 SW17 switch 17 2010 1020 straight 3 \
 	30 straight 225 \
 	31 curved 230 \
 	38 behind 62 \
-57 SW18 switch 18 315 285 curved 3 \
+57 SW18 switch 18 1490 1170 curved 3 \
 	19 straight 215 \
 	45 curved 338 \
 	44 behind 187 \
-61 SW99 switch 0x99 345 155 curved 3 \
+61 SW99 switch 0x99 1595 620 curved 3 \
 	62 straight 230 \
 	16 curved 228 \
 	58 behind 24 \
-58 SW9A switch 0x9a 345 145 straight 3 \
+58 SW9A switch 0x9a 1595 600 straight 3 \
 	61 straight 24 \
 	14 curved 224 \
 	60 behind 32 \
-59 SW9B switch 0x9b 345 120 straight 3 \
+59 SW9B switch 0x9b 1595 540 straight 3 \
 	63 straight 247 \
 	24 curved 227 \
 	60 behind 24 \
-60 SW9C switch 0x9c 345 130 curved 3 \
+60 SW9C switch 0x9c 1595 560 curved 3 \
 	59 straight 24 \
 	32 curved 222 \
 	58 behind 32 \
-62 DE1 stop 0 345 200 1 \
+62 DE1 stop 0 1595 850 1 \
 	61 ahead 230 \
-63 DE2 stop 1 345 70 1 \
+63 DE2 stop 1 1595 320 1 \
 	59 ahead 247 \
-64 DE3 stop 2 500 285 1 \
+64 DE3 stop 2 2310 1170 1 \
 	17 ahead 410 \
-65 DE4 stop 3 10 30 1 \
+65 DE4 stop 3 230 147 1 \
 	6 ahead 320 \
-66 DE5 stop 4 10 10 1 \
+66 DE5 stop 4 210 67 1 \
 	0 ahead 500 \
-67 DE7 stop 6 10 245 1 \
+67 DE7 stop 6 290 1020 1 \
 	11 ahead 60 \
-68 DE9 stop 8 10 285 1 \
+68 DE9 stop 8 250 1170 1 \
 	12 ahead 70 \
-69 DE10 stop 9 10 265 1 \
+69 DE10 stop 9 270 1093 1 \
 	13 ahead 70"
 };
 
