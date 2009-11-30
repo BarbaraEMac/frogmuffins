@@ -28,11 +28,6 @@ typedef struct {
 } NodePred;
 
 typedef struct {
-	int len;		// Number of reserved sensors
-	int idxs[21];	// Indicies of the reserved sensor nodes
-} Reservation;
-
-typedef struct {
 	int 		rsvDists[MAX_NUM_NODES][MAX_NUM_NODES];
 	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
 	//int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
@@ -40,8 +35,6 @@ typedef struct {
 	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
 
 	TrackModel  model;
-
-	Reservation reserves[MAX_NUM_TRAINS];
 } RoutePlanner;
 
 inline SwitchDir getSwitchDir(Node *sw, Node *next);
@@ -62,11 +55,6 @@ void rp_predict 		(RoutePlanner *rp, SensorsPred *p, NodePred *nodePred,
 						 int sensorId);
 
 int  rp_minSensorDist 	(RoutePlanner *rp, int sensor1, int sensor2 );
-
-// Reservation Functions
-//void rp_reserve			(RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor);
-void rsv_cancel			(Reservation *rsv, TrackModel *model);
-void rsv_make			(Reservation *rsv, TrackModel *model, NodePred *sensors, int lastSensor);
 
 // Display to Monitor Functions
 void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
@@ -220,21 +208,6 @@ void rp_run() {
 
 				break;
 
-			case RESERVE:
-				// Empty out the predictions
-				sensPred.len = 0;
-				nodePred.len = 0;
-				tmp = idxTosIdx(req.nodeIdx1, req.name);
-				
-				// Predict the nodes you could hit
-				rp_predict( &rp, &sensPred, &nodePred, tmp );
-				// Reserve them all.
-				//rp_reserve( &rp, &nodePred, req.trainId, tmp );
-				
-				// Reply to the shell
-				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
-				break;
-			
 			case PLANROUTE:
 				// Determine the shortest path 
 				// Make a route
@@ -266,6 +239,8 @@ int rp_init(RoutePlanner *rp) {
 	int  shellTid;
 	int  track;
 	int	 err = NO_ERROR;
+	int  resTid;
+	TrackModel *modelPtr = &rp->model;
 
 	// Get the model from the shell
 	Receive(&shellTid, (char*)&ch, sizeof(ch));
@@ -279,14 +254,15 @@ int rp_init(RoutePlanner *rp) {
 	track = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
 	parse_model( track, &rp->model );
 	
+	// Receive the reservation server's tid from the shell
+	Receive(&shellTid, &resTid, sizeof(int));
+	Reply  (shellTid, 0, 0 );
+	
+	// HACK: Give the reservation server a pointer to our model.
+	Send( resTid, &modelPtr, sizeof(int), 0, 0 );
+	
 	// Initialize shortest paths using model
 	floyd_warshall (rp, rp->model.num_nodes); 
-
-	// Initialize track reservation system (nothing is reserved)
-	Reservation *res;
-	foreach( res, rp->reserves ) {
-		res->len = 0;
-	}
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
@@ -407,21 +383,12 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	int  actualDist;		// Actual distance if we don't consider reservations
 	int  currentIdx = sIdxToIdx(req->lastSensor);
 	NodePred   nodePred;
-	Reservation *rsv = &rp->reserves[mapTrainId(req->trainId)];
-	
-	debug ("TRAIN %d has reservation %x at indx=%d. len =%d\r\n", req->trainId, rsv, mapTrainId(req->trainId), rsv->len);
 	
 	debug ("GOING TO NODE %s(%d) from %s\r\n", 
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
 
-	// Cancel your previous reservations
-	if ( rsv->len > 0 ) {
-		rsv_cancel( rsv, &rp->model );
-	
-		// Calculate the new distances 
-		// (also picks up reservations made by other trains)
-		floyd_warshall( rp, rp->model.num_nodes );
-	}
+	// TODO: Every time?
+	floyd_warshall( rp, rp->model.num_nodes );
 	
 	// Distance from current sensor to destination node
 	actualDist = rp->dists[currentIdx][req->destIdx];
@@ -476,8 +443,6 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 	debug ("predicted %d sensors\r\n", &trReply->nextSensors.len);
 	// Get the next switches 
 	rp_getNextSwitchSettings( rp, &p, (SwitchSetting*)trReply->switches );
-	// Reserve the next nodes
-	rsv_make( rsv, &rp->model, &nodePred, req->lastSensor );
 
 /*
   	int i;
@@ -704,81 +669,6 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 
 	printf("\r\n");
 }
-//-----------------------------------------------------------------------------
-//--------------------------- Reservation Stuff -------------------------------
-//-----------------------------------------------------------------------------
-/*
-void rp_reserve( RoutePlanner *rp, NodePred *nodes, int trainId, int lastSensor ) {
-	Reservation *rsv = &rp->reserves[mapTrainId(trainId)];
-
-	// Cancel the old reservations
-	rsv_cancel( rsv, &rp->model );
-
-	// Make this new reservation
-	rsv_make( rsv, &rp->model, nodes, lastSensor );
-
-	// Recompute the distance tables
-	// TODO: dijkstra ?
-	//floyd_warshall( rp, rp->model.num_nodes );
-}
-*/
-void rsv_cancel( Reservation *rsv, TrackModel *model ) {
-	int i;
-	int index;
-
-	for ( i = 0; i < rsv->len; i ++ ) {
-		index = rsv->idxs[i];
-//		printf ("Cancelling %s(%d)\r\n", model->nodes[index].name, index);
-
-		// Make sure the sensor node is actually reserved
-		assert ( model->nodes[index].reserved == 1 );
-		
-		// Cancel the reservation
-		model->nodes[index].reserved = 0;
-	
-		rsv->idxs[i] = -1;
-	}
-
-	rsv->len = 0;
-}
-
-void rsv_make( Reservation *rsv, TrackModel *model, NodePred *nodes, int lastSensor ) {
-	int i, len = 0;
-	int index;
-	
-	for ( i = 0; i < nodes->len; i ++ ) {
-		index = nodes->idxs[i];
-		// Do not step on other train's reserves
-		if( model->nodes[index].reserved == 0 ) {
-		//	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
-			
-			// Store the node index in the reservation
-			rsv->idxs[len++] = index;
-			
-			// Reserve the node
-			model->nodes[index].reserved = 1;
-		}
-	}
-
-	// Reserve the last triggered sensor
-	index = sIdxToIdx( lastSensor );
-	
-	// Do not step on other train's reserves
-	if( model->nodes[index].reserved == 0 ) {
-	//	printf ("Reserving %s(%d)\r\n", model->nodes[index].name, index);
-		
-		// Store the node index in the reservation
-		rsv->idxs[len++] = index;
-		
-		// Reserve the node
-		model->nodes[index].reserved = 1;	
-	}
-
-	// Save the number of nodes in this reservation
-	rsv->len = len;
-//	printf ("Reserved %d nodes in total.\r\n", rsv->len);
-	assert ( rsv->len < 20 );
-}
 
 // And the hardcoding begins!
 int mapTrainId (int trainId) {
@@ -923,13 +813,19 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 		node = &model->nodes[idx2];
 		next = &model->nodes[idx1];
 	}
-	/*
+	
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
-	if ( (rsvDist == 1) && 
-		 ((model->nodes[i].reserved == 1) || (model->nodes[j].reserved == 1)) ) 	{
+	if ((rsvDist == 1) && ((node->reserved == 1) || (next->reserved == 1))){
+		
+		if (node->reserved == 1) {
+			printf ("%s(%d) is reserved.\r\n", node->name, node->idx);
+		}
+		if (next->reserved == 1) {
+			printf ("%s(%d) is reserved.\r\n", next->name, next->idx);
+		}
 		return INT_MAX;
-	}*/
+	}
 
 	// Check each edge in O(3) time
 	for ( itr = 0; itr < (int) node->type; itr ++ ) {
