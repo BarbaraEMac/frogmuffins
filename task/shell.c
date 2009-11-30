@@ -235,8 +235,8 @@ void shell_initTrack( TIDs *tids ) {
 	// Tell the Route Planner which track we are using
 	Send( tids->rp, &input[0], sizeof( char ), &err, sizeof( int ) );
 	
-	// Tell the Reservation Server which track we are using
-	Send( tids->res, &input[0], sizeof( char ), &err, sizeof( int ) );
+	// Tell the Route Planner the Reservation's tid so they can share a model
+	Send( tids->rp, &tids->res, sizeof( int ), 0, 0 );
 	
 	if( err < NO_ERROR ) {
 		output( "Invalid Track ID. Using Track B.\r\n" );
@@ -519,35 +519,6 @@ void shell_exec( TIDs *tids, char *command ) {
 		} else {
 			rpReq.type = DISPLAYPREDICT;
 			rpReq.nodeIdx1 = rpRpl.idx;
-			rpCmd( &rpReq, tids->rp );
-		}
-	// Reserve
-	} else if( sscanf( command, "reserve %s", tmpStr1 )>= 0 ) {
-		rpReq.type = CONVERT_IDX;
-		strncpy( rpReq.name, (const char *) tmpStr1, 5 );
-		rpRpl = rpCmd( &rpReq, tids->rp );
-		
-		if( ( rpRpl.idx == NOT_FOUND )||( rpRpl.err == INVALID_NODE_NAME ) ) {
-			output( "Invalid node name.\r\n" );
-		} else {
-			printf ("SHELL IS RESERVING\r\n");
-			rpReq.type 	   = RESERVE;
-			rpReq.nodeIdx1 = rpRpl.idx;
-			rpReq.trainId  = 12; // TODO:
-			rpCmd( &rpReq, tids->rp );
-		}
-
-	} else if( sscanf( command, "wolf %s", tmpStr1 )>= 0 ) {
-		rpReq.type = CONVERT_IDX;
-		strncpy( rpReq.name, (const char*) tmpStr1, 5 );
-		rpRpl = rpCmd( &rpReq, tids->rp );
-	
-		if( ( rpRpl.idx == NOT_FOUND )||( rpRpl.err == INVALID_NODE_NAME ) ) {
-			output( "Invalid node name.\r\n" );
-		} else {
-			rpReq.type     = RESERVE;
-			rpReq.nodeIdx1 = rpRpl.idx;
-			rpReq.trainId  = 12; // TODO: Remove this after Demo 1
 			rpCmd( &rpReq, tids->rp );
 		}
 	// go
