@@ -475,7 +475,7 @@ int rp_turnAround ( RoutePlanner *rp, Path *p, int sensorId ) {
 	Node *sensor = &rp->model.nodes[sIdxToIdx(sensorId)];
 	Node *next = &rp->model.nodes[p->path[1]];
 	// next edge
-	Edge *e = ((sensorId % 2) == 0) ? sensor->se.ahead : sensor->se.behind; 
+	Edge *e = ((sensorId % 2) == 0) ? sensor->se.behind : sensor->se.ahead; 
 	
 	return( node_neighbour( sensor, e ) == next );
 }
@@ -507,8 +507,9 @@ int rp_distToNextRv (RoutePlanner *rp, Path *p) {
 
 void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *settings) {
 	int *path = p->path;
-	Node *itr = &rp->model.nodes[path[0]];
-	Node *prevItr;
+	Node *prev;
+	Node *curr = &rp->model.nodes[path[0]];
+	Node *next = &rp->model.nodes[path[1]];
 	int n = 0;
 	int maxDist = 500;
 
@@ -524,20 +525,22 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 	// Stop at len - 1 since we don't have to switch the last node if we
 	// want to stop on it
 	for ( i = 1; i < p->len - 1; i ++ ) {
-		prevItr = itr;
-		itr     = &rp->model.nodes[path[i]];
-		
-		if ( itr->type == NODE_SWITCH ) {
-			settings[n].dist = rp->dists[path[0]][path[i]];
-			settings[n].id   = itr->id;
-			settings[n].dir  = getSwitchDir(itr, &rp->model.nodes[path[i+1]]);
-			n ++;
+		prev = curr;
+		curr = next;
+		next = &rp->model.nodes[path[i+1]];
+		if ( curr->type == NODE_SWITCH ) {
+			if ( node_neighbour( curr, curr->sw.behind ) == prev ) {
+				settings[n].dist = rp->dists[path[0]][path[i]];
+				settings[n].id   = curr->id;
+				settings[n].dir  = getSwitchDir(curr, next);
+				n ++;
 
-			assert ( n < NUM_SETTINGS );
+				assert ( n < NUM_SETTINGS );
+			}
 		}
 
 		// Subtract from the distance as we travel further
-		maxDist -= rp->dists[prevItr->idx][itr->idx];
+		maxDist -= rp->dists[prev->idx][curr->idx];
 
 		if ( (maxDist <= 0) && (n == 5) ) {
 			break;
