@@ -77,6 +77,10 @@ inline int sign ( int val ) {
 // ----------------------------------------------------------------------------
 // Find the coord, along the line p1->p2, that is len away from p1.
 Point findPointOnLine ( Point p1, Point p2, int len ) {
+	assert( !((p1.x == p2.x) && (p1.y == p2.y)) );
+	assert( len <= pointDist( p1, p2 ) );
+	
+	debug ("findPointOnLine: (%d, %d) and (%d, %d) at len=%d\r\n", p1.x,p1.y, p2.x,p2.y, len);
 	Point mid  = midpoint( p1, p2 );
 	int   dist = pointDist( p1, mid );
 
