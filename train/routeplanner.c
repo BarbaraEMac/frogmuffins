@@ -673,24 +673,6 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 	printf("\r\n");
 }
 
-// And the hardcoding begins!
-int mapTrainId (int trainId) {
-	switch (trainId) {
-		case 12:
-			return 0;
-		case 22:
-			return 1;
-		case 24:
-			return 2;
-		case 46:
-			return 3;
-		case 52:
-			return 4;
-	}
-	// ERROR
-	return 5;
-}
-
 //-----------------------------------------------------------------------------
 //------------------------------ Floyd Warshall -------------------------------
 //-----------------------------------------------------------------------------
