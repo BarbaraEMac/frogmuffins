@@ -1,0 +1,496 @@
+												becmacdo	Barbara Macdonald
+												dgoc 		Daniel Goc
+			________             ________           _____     ______ 
+			___  __ \__________________(_)____________  /_    __|__ \
+			__  /_/ /_  ___/  __ \____  /_  _ \  ___/  __/    ____/ /
+			_  ____/_  /   / /_/ /___  / /  __/ /__ / /_      _  __/ 
+			/_/     /_/    \____/___  /  \___/\___/ \__/      /____/ 
+								/___/                               
+____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||1 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The executable is located at: /u8/becmacdonald/cs452/p2/handin/main/main.elf.
+
+	To make the kernel, execute the following from the root directory:
+	cd src/
+	make clean && make all && make copy
+	cd ..
+	make clean && make all
+	cp main/main.elf /u/cs452/tftpboot/ARM/becmacdo_p2.elf
+
+	To load the program, type 'load ARM/becmacdo_p2.elf' at the command prompt.
+
+	Finally, to operate the program, type 'go' at the RedBoot command prompt.
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||2 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The following is a description of our train application.
+	
+	Model
+	=====
+	For this assignment, we simply use the reserved flag in each node to set it
+	as reserved or not. We have not modified our representation of the track for
+	P2.
+
+	Route Planner
+	=============
+	The Route Planner for P2 has a more robust reservation system. Other than
+	that, it has remained mostly the same. We've made some minor modifications
+	to our shortest distance calculator (Floyd-Warshall) to consider the extra
+	distance required for a reverse in the middle of a path. This change may
+	or may not be included in this version of our project.
+	
+		Sensor Predictions
+		==================
+		Since our sensor predictions worked for P1, we have not modified them for P2.
+		We've simply added some Node Predictions.
+	
+		Node Predictions
+		================
+		In addition to determining all of the next sensors we could possibly hit,
+		we now build a list of node predictions. This list includes every node
+		a train will pass until it reaches a sensor. These predictions include
+		each node a train could pass, independent of switch state or train direction.
+
+		Reservations
+		============
+		When a train first asks for a new route, we cancel all of its previous 
+		reservations and recompute the distance tables. This distance recompute will 
+		observe the reservations made by any other trains during their new route calls.
+		Cancelling the reservations at the beginning of the plan route call ensures
+		that a train's shortest path route does not interfere with any of its 
+		previous reservations.
+
+		Once a train asks for a new path and gives the Route Planner the last 
+		triggered sensor, the list of predicted nodes that the train could potentially
+		trigger is created. Then, we reserve all of those nodes. If a train is 
+		facing backwards along the desired path, all of the nodes behind the 
+		train will also be reserved in case it does not reverse properly. 
+
+		We also make sure to reserve the last triggered sensor so that a train
+		sitting idle between 2 sensors will never allow another train to travel
+		through it.
+
+		If a node is reserved, the cost of the path to that node is INT_MAX. Hence,
+		the shortest path from any node to any other will never include this node. 
+		This is how we ensure that no two trains will have them crossing the same
+		nodes at the same time. After a reservation is made, we recompute the 
+		shortest distances, observing these reservations.
+
+		The nodes stay reserved until the train hits another sensor and asks the 
+		Route Planner to change the path. At this point, the previous reservation
+		is cancelled and the new one is made. Therefore, nodes are only reserved 
+		for 1 time step (where we define 1 time step to be the time for a train
+		to move from 1 sensor to the next), unless a train has stopped.
+
+		Note: After a train makes its reservations, we do not call Floyd-Warshall
+		to determine the new shortest paths. We do this because the next train to
+		ask for a route will call Floyd-Warshall when it cancels its reservations.
+
+		Reservation Struct
+		==================
+		The following is the data structure for the reservations:
+
+		typedef struct {
+			int len;		// Number of reserved nodes
+			int idxs[8];	// Indicies of the reserved nodes
+		} Reservation;
+
+		There is 1 reservation stored for each train within the Route Planner.
+		We index this reservation by the train id. At this point, our reservations
+		have at most 8 nodes. We hope to reduce this number in the future to make 
+		it more aggressive.
+
+		No Path for a Train & Deadlocks
+		===============================
+		If another train's reservations have fully blocked in a train, the Route
+		Planner replies with NO_PATH and a stopping distance of 0.
+
+		In this case, the trapped train will stop moving and wake up a Route 
+		Watcher task. This task will mimic a position / sensor update. The task 
+		delays for a few seconds and then tells the train that it is at 
+		a "new position". 
+
+		Whenever a train has a new position, it asks for a new route. If the trapping
+		train has moved, then the trapped train will have a valid path and can move 
+		along it. If the trapping train has not moved far enough, the Route Watcher
+		is woken up and this cycle continues.
+
+		When we say "new position", the Route Watcher passes back the current
+		stopped location and a new time stamp. Therefore, it is not actually a
+		new location, but this call will trigger a plan route call with valid input.
+
+		So long as two trains are always moving, our system will not result in a 
+		deadlock since a train will always eventually move out of the way. 
+
+		We can have a deadlock if a train 1 needs to go to destination B and 
+		train 2 is sitting at B and not moving. We do not currently have
+		the intelligence to reverse train 1 out of the way, let train 2 move off B, and
+		then let train 1 stop on B. Depending on our project, we hope to have this
+		working.
+
+		Unfortunately, we do not currently have a systematic way to determine if a
+		deadlock has occurred. When testing, we are able to notice 
+		this situation ourselves and assign new destinations for the trains to have 
+		them move out of each other's way.
+
+		Floyd-Warshall
+		==============
+		At a quick glance of our code, you will notice that we have implemented
+		Dijkstra's Algorithm to determine the shortest path between 2 nodes.
+
+		When reservations are cancelled and we want to recompute the distances,
+		we found that running Floyd-Warshall is fast enough for what we need.
+
+		Also, this allows us to "cache" our results for free. A train can always
+		make a call to the Route Planner to determine the distance to the 
+		nearest sensor and we don't need to recompute anything. We simply use the
+		results that we already have.
+
+		Therefore, while we realize that Floyd-Warshall might be overkill and,
+		theoretically, too slow, it has worked in all of our tests so far.
+
+	Detective
+	=========
+	The detective group of tasks is not much different from the last code. There is still
+	one main server task, one poller task and a watchdog task. The few changes that were
+	made are: 
+
+	GET_STRAY and WATCH_FOR will overwrite any previous requests by a train. This is 
+	unlike before where a train had to wait for a request to return. Also these calls 
+	are non-blocking now, with the detective doing an explicit Send() to the train when 
+	the request is handled. We've made this change because the train task is now a server.
+
+	When a WATCH_FOR request comes in, it is checked against the history of the last 
+	time each sensor was hit. If a match occurs (in the past), the request is 
+	answered immediately. This is handy for times when we have just passed over 
+	a sensor.
+
+	Also, we increased the grace period on the watchdog to 5 seconds, as sometimes the
+	poll takes a bit longer to respond - especially when sending in other commands.
+	The reason for this change is that reseting it too early might mean we discard useful
+	sensor data.
+
+	Track Server
+	============
+	We have not modified how our project sends commands to the train controller.
+	Therefore, the Track Server has not changed since the first project.
+
+	Train
+	=====
+	Since the first iteration of our train was not working as smoothly as we would
+	have liked, we have scrapped most of it and started again. The majority of the
+	time spent on this assignment was spent on recoding this task.
+
+		Server
+		======
+		Since the train has so many helper tasks, we've turned it into a server
+		to simplify the code. Any Send call made by the train is guaranteed to be
+		non-blocking. 
+
+		Helper Tasks
+		============
+		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher.
+		These are all notifier tasks so their priorities' are all one higher than 
+		that of the train.
+
+			Heart
+			=====
+			The heart is a timer task that delays for a set period of time and Sends
+			to the train. Upon the wake up, a train can update its location on the 
+			track in between sensors.
+
+			Hence, we can estimate the train's location anywhere on the track within
+			the train's standard deviation worth of error. Assuming normal distribution
+			this will predict the sensor hit correcly 99% of the time.
+			(See Standard Deviation below).
+
+			Calibration
+			===========
+			The goal of calibration is to be able to track the train and correctly
+			estimate its speed and distance within a small standard deviation of
+			error.
+
+			Thus, we run the train around the large loop of the track 3 times and 
+			gather data to make these estimations. While estimating, we calculate
+			the standard deviation of the estimations. To do this we keep an array
+			of the last 10 recorded speeds (as in P1) and calculate the standard
+			deviation of this sample. We only add a speed to the buffer if the train 
+			has not changed speed over the last sector to prevent contamination of data.
+			This speed calibration remains enabled over the course of the run, 
+			meaning it will adjust for the train slowing down with wear.
+
+			The calibrator task moves the train to D9 and then E11 so that we 
+			force a direction for it to travel around the loop.
+
+			From E11, the calibrator tells the train to travel around the loop
+			without changing speed until we have run around 3 times. After this
+			third time, the train stops once it hits E11. It will usually travel
+			much farther before actually stopping.
+
+			At the shell, this actual stopping distance is manually entered into the
+			train so that we can calibrate the hardcoded stopping distances.
+
+			After this, the calibration tasks Exits.
+
+			Route Watcher
+			============
+			This task has already been briefly explained in the Route Planner above.
+			It is only woken up when a train cannot create any vaild path. After
+			Delaying for a set time, it Sends to the train to wake it up and try
+			to plan a new route. If the blocking train has moved and made new
+			reservations, then this train will be free to plan a route.
+
+		Stopping Distances
+		==================
+		During calibration, a manual stopping distance for the calibration speed
+		is stored in the train.
+
+		When determining which speed to travel at, we consider the stopping distance.
+		If we have a long way to go, the train can speed up. The closer a train gets
+		to the desired distance, the slower it should travel. 
+
+		We currently have some stopping distances hardcoded into the train task.
+		As trains are dropped, used more, oiled, etc, their stopping distances 
+		change. To get around this, we can slightly alter the hardcoded stopping
+		distances given the measured one as follows:
+
+			stopDist = Hardcoded distance for the current speed.
+
+			stopDist *= Measured stop distance for default speed.
+			stopDist /= Hardcoded stop distance for default speed.
+
+		We do it in this manner since it will avoid floating point calculations.
+		A similar approach is used for all speed calculations - careful ordering of
+		division and multiplication, coupled with normalizing the data at particular 
+		times.
+
+		Position Update
+		===============
+		When the detective gets a sensor that a train predicted, it tells the 
+		train in the form of a postion update. At that current point in time,
+		the train knows exactly where it is and its direction.
+
+		At this point we do the following:
+			Reply to the detective.
+			Ask for a new route given the new start location.
+				If there is no path,
+					Stop driving.
+					Wake up the Route Watcher.
+			If the train is facing backwards,
+				Reverse.
+			Adjust your speed given the new distance until stopping.
+			If the distance until stopping is not 0,
+				Flips the switches you need.
+				Tell the Detective about the predicted nodes.
+	
+		Route Planning
+		==============
+		In order to keep the train task simple and focussed on driving at the correct
+		speed, the train does not know anything about the landmarks on the track.
+
+		When the Route Planner returns, it simply gives the train a distance
+		until it needs to stop. While this is more complicated to handle within
+		the train, it makes the navigation code simple.
+
+		Prediction
+		==========
+		When the Route Planner returns, a list of all nodes the train could possibly
+		hit is returned. These predictions are forwarded on to the Detective with
+		an estimated time window for hitting them.
+
+		Reservations
+		============
+		The track is automatically reserved within the call to plan route. This 
+		ensures that the train stays as simple as possible and can just focus on 
+		driving and calibrating.
+	
+	UI / Shell
+	==========
+	Not much has changed with these two user tasks since they were mostly working
+	for our Project 1 demo. The following is a list of the changes.
+
+		UI
+		==
+		Since we are now tracking 2 trains, we will display the location of each
+		train separately on the map.
+
+		Shell
+		=====
+		During train calibration, the shell will now be blocked until a train is 
+		fully calibrated.
+
+	Error Codes
+	===========
+	We created the following error codes for the project:
+		TIMEOUT,				// A timeout has occurred
+		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
+		INVALID_NODE_NAME,		// Invalid node name
+		INVALID_NODE_IDX,		// Invalid node index
+		RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
+		INVALID_SENSOR_IDX,		// Invalid sensor index
+		INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
+		INVALID_TRACK			// Invalid track identifier
+		NO_PATH					// There is no path for the train
+	
+	Whenever a server request is made, we always check for these error values
+	in the reply. If there is an error, the user task should attempt to handle
+	it.
+
+	Neat Things
+	===========
+	We did some neat things for this assignment. Here's a brief discussion of
+	some of them.
+
+		Kernel
+		======
+		Since we started working on the project, we have not modified our kernel.
+
+	no global OR static vairables. Each class is completely self-contained. Reduces
+	coupling.
+
+	Except for the ROute PLanner and the Reservation system. It was more efficient to share the track model then to pass reservation data bck and forth in messages.
+
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+
+	The source code is located in: /u8/becmacdonald/cs452/p2/handin.
+	Since we have time between when this documentation is handed in 
+	and the demo, we will most likely change some of the files as we 
+	continue to improve the functionality of our code.
+
+	If we do, we will be sure to mention it during the demo.
+	
+	Here are the md5 hashes for each file:
+
+	ff334fdf2ea5232f8ff3e374b69e4245  ./kern/main.c
+	4749098b4d898c025e156b3705bbb9b8  ./kern/td.c
+	5ef12d7238e4be4ffe0bfcd1d4419e63  ./kern/orex.ld
+	c4f90105275b6228dfa8c5dbe221f40d  ./kern/syscalls.c
+	
+	5c79ef173674f2c84130aecda39abf67  ./task/gameserver.c
+	6152327419cbef8af5e19ce843e1eca3  ./task/task.c
+	43c84644f93f6e78930acf587f491930  ./task/gameplayer.c
+	ed45270c333e4c1875e8c908c7cb2a98  ./task/shell.c
+	
+	9312559f8df6a46f874cf4eadff47328  ./include/ui.h
+	90381c6299dd328ba7c1faba52772f69  ./include/math.h
+	fd1f7faece04ff0500d80c85a5018711  ./include/error.h
+	e190a73becbcbd7af79987ee8e51fd9f  ./include/servers.h
+	b42871f5f2eb8a1dff7011bd2d937753  ./include/trackserver.h
+	5efc2b57900cdd08ee04372ad606edde  ./include/syscalls.h
+	58e7ea88711ea3455cc9b65561e80c14  ./include/ts7200.h
+	9979e47e3560b3a694a7fd18077019ec  ./include/model.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./include/bwio.h
+	8146ed251b92ea06a95351da69340699  ./include/gameserver.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./include/task.h
+	67a9150395d1ba08a2061552601d24e6  ./include/string.h
+	660e3c8c27ef66e7e03a7f49b26f4fae  ./include/shell.h
+	9a9b2e58b88b5412afefe439cac97326  ./include/td.h
+	5a51907fa830160630d2f314a6390614  ./include/buffer.h
+	5e6d0e2468e92438607f8821ace1b835  ./include/requests.h
+	677715007e1853f1d0fb53a00854e23a  ./include/train.h
+	67e70e8647557c6d928f15eab1381a49  ./include/drivers.h
+	42c65b3d05826069be4afc8b638a4664  ./include/routeplanner.h
+	bf3d4171c16aa8649cb07da419eb7c02  ./include/globals.h
+	88790ee55eb595666ec820418bc74378  ./include/fifo.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./include/debug.h
+	
+	5b64f5e094563de356eafab30b23998d  ./lib/libbwio.a
+	52779600e0e02a41cadde4df65b5499b  ./lib/libdebug.a
+	aea092cb431c22728137cc63a45b948a  ./lib/libstring.a
+	a2eee848d0b584589e6c1f1e6d4ea78f  ./lib/libmath.a
+	86a9c8bf87cf5db467b738462b1eb1a1  ./lib/libbuffer.a
+	
+	9a0e976c1f786d68753dce3562e882a8  ./server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./server/nameserver.c
+	a7ce6cd7ae1805395cade0bfd137a25c  ./server/serialio.c
+	
+	ab667fc308f3a868abe305dde11d7589  ./src/bwio.c
+	4042844222d0cd3740b18f99b1c824a5  ./src/fifo.c
+	fe7345c32d27b7b615048b272de24c13  ./src/debug.c
+	c2c533982b37adfd03467601f58e40fa  ./src/string.c
+	74c148a7ff02b3b8ccc560ec8c106581  ./src/math.c
+	561ce06910fed4309b5f65dc401e9286  ./src/buffer.c
+	fa5e9c4e46d48e60b422286274aadeac  ./src/Makefile
+
+	6c6e0d45a99abd109342a7abcea9c85d  ./documentation/p2.txt
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./documentation/k3.txt
+	f2c08a56da789e93f3595bd099122a65  ./documentation/k4.txt
+	a1bd6b701571edfd0d7312fdb0bbf5a7  ./documentation/proposal.txt
+	012de728eb811b638c338260d779391c  ./documentation/p1.txt
+
+	af75127f35f286928b8e16153d07f7e7  ./arch/drivers.c
+	29632b3f08e1713528c1145dab2f6388  ./arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+	e8f4ccc1966ded6e40916fe10474aa63  ./arch/blank.c
+	8fb6754e34da4be7f442e9ada5eb310f  ./arch/requests.c
+	08936ac97b4e596a0ba49b026339cb6b  ./arch/primitives.S
+
+	baf5a93766dd99a7698e8af95b5ab648  ./train/routeplanner.c
+	2458fbe11fc021c55928252da74cae37  ./train/detective2.c
+	ac61ed6ceed3947118b13c5154cdbe7c  ./train/model.c
+	6c717b8c96daa222c431205e45cbb801  ./train/trackserver.c
+	df2431d02e99023ccf2131988294e384  ./train/detective.c
+	690e12263679e3bc87d1ba7e49c6edbb  ./train/train.c
+	0edb9670a730da2726baffe544ea1d52  ./train/ui.c
+	
+	de975f7952206ab06c7233a544c0106e  ./todo.txt
+	b713e7fce8154121fdc176acd2a9986c  ./wishlist
+	88a69bd7e5e322615b4cd908fad3c8f5  ./Makefile
+
+ ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
+||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
+||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
+|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
+	
+	Here are all of the files we are submitting:
+	.:
+	arch           include  lib       src   todo.txt  wishlist
+	documentation  kern     Makefile  server  task  train
+
+	./arch:
+	blank.c  drivers.c  ep93xx.c  primitives.S  requests.c  switch.c  switch.S
+
+	./documentation:
+	k1.txt  k2.out  k2.txt  k3.txt  k4.txt  p1.txt  p2.txt  proposal.txt  syscall.txt
+
+	./include:
+	buffer.h   error.h       globals.h   routeplanner.h  switch.h    trackserver.h
+	bwio.h     fifo.h        math.h      servers.h       syscalls.h  train.h
+	debug.h    gameplayer.h  model.h     shell.h         task.h      ts7200.h
+	drivers.h  gameserver.h  requests.h  string.h        td.h        ui.h
+
+	./kern:
+	main.c  orex.ld  syscalls.c  td.c
+
+	./lib:
+	libbuffer.a  libbwio.a  libdebug.a  libmath.a  libstring.a
+
+	./server:
+	clockserver.c  nameserver.c  serialio.c
+
+	./src:
+	buffer.c  bwio.c  debug.c  fifo.c  Makefile  math.c  string.c
+
+	./task:
+	gameplayer.c  gameserver.c  shell.c  task.c
+
+	./train:
+	detective2.c  detective.c  model.c  routeplanner.c  trackserver.c  train.c  ui.c
+
+
+	Note: Extra compilation files may be included in the directories (.o, .s etc).
