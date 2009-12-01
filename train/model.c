@@ -703,7 +703,7 @@ char * track[] = {
 		x = e->node1->x - e->node2->x;
 		y = e->node1->y - e->node2->y;
 		hyp = isqrt( x * x + y * y );
-		if( abs(e->distance - hyp) > 10 )
+		if( abs(e->distance - hyp) >= 20 )
 		printf("Edge %s-%s \tdist: %d, \thyp: %d, diff: %d\r\n",
 				e->node1->name, e->node2->name, e->distance,
 				hyp, e->distance - hyp );
