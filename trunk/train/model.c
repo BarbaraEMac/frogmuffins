@@ -10,6 +10,7 @@
 
 #include <debug.h>
 #include <string.h>
+#include <math.h>
 
 #include "model.h"
 #include "servers.h"
@@ -465,12 +466,12 @@ char * track[] = {
 0 A1 sensor 0 733 67 2 \
 	51 ahead 218 \
 	66 behind 500 \
-1 A3 sensor 1 745 350 2 \
+1 A3 sensor 1 740 350 2 \
 	53 ahead 62 \
 	15 behind 440 \
 2 A5 sensor 2 915 1170 2 \
 	42 ahead 216 \
-	12 behind 649 \
+	12 behind 665 \
 3 A7 sensor 3 753 1093 2 \
 	13 ahead 473 \
 	41 behind 211 \
@@ -490,7 +491,7 @@ char * track[] = {
 	30 ahead 398 \
 	55 behind 225 \
 9 B3 sensor 9 1380 953 2 \
-	16 ahead 230 \
+	16 ahead 205 \
 	55 behind 220 \
 10 B5 sensor 10 1380 147 2 \
 	25 ahead 405 \
@@ -499,19 +500,19 @@ char * track[] = {
 	4 ahead 289 \
 	67 behind 60 \
 12 B9 sensor 12 250 1170 2 \
-	2 ahead 649 \
+	2 ahead 665 \
 	68 behind 70 \
 13 B11 sensor 13 270 1093 2 \
 	3 ahead 473 \
 	69 behind 70 \
-14 B13 sensor 14 1660 850 2 \
+14 B13 sensor 14 1660 810 2 \
 	58 ahead 224 \
-	31 behind 202 \
-15 B15 sensor 15 745 786 2 \
+	31 behind 205 \
+15 B15 sensor 15 740 786 2 \
 	1 ahead 440 \
 	54 behind 70 \
-16 C1 sensor 16 1530 850 2 \
-	9 ahead 230 \
+16 C1 sensor 16 1530 810 2 \
+	9 ahead 205 \
 	61 behind 228 \
 17 C3 sensor 17 1895 1170 2 \
 	64 ahead 410 \
@@ -536,7 +537,7 @@ char * track[] = {
 	45 behind 223 \
 24 D1 sensor 24 1660 350 2 \
 	59 ahead 227 \
-	33 behind 200 \
+	33 behind 205 \
 25 D3 sensor 25 1785 147 2 \
 	49 ahead 223 \
 	10 behind 405 \
@@ -556,13 +557,13 @@ char * track[] = {
 	8 ahead 398 \
 	56 behind 225 \
 31 D15 sensor 31 1785 953 2 \
-	14 ahead 202 \
+	14 ahead 205 \
 	56 behind 230 \
 32 E1 sensor 32 1530 350 2 \
 	60 ahead 222 \
-	39 behind 203 \
+	39 behind 205 \
 33 E3 sensor 33 1785 210 2 \
-	24 ahead 200 \
+	24 ahead 205 \
 	49 behind 220 \
 34 E5 sensor 34 2080 147 2 \
 	26 ahead 275 \
@@ -570,23 +571,23 @@ char * track[] = {
 35 E7 sensor 35 1985 67 2 \
 	27 ahead 375 \
 	22 behind 785 \
-36 E9 sensor 36 2310 1020 2 \
+36 E9 sensor 36 2310 885 2 \
 	47 ahead 215 \
 	38 behind 275 \
 37 E11 sensor 37 2065 1093 2 \
 	28 ahead 284 \
 	46 behind 65 \
-38 E13 sensor 38 2065 235 2 \
+38 E13 sensor 38 2065 1020 2 \
 	56 ahead 62 \
 	36 behind 275 \
 39 E15 sensor 39 1380 210 2 \
 	52 ahead 230 \
-	32 behind 203 \
-40 SW1 switch 1 475 1045 curved 3 \
+	32 behind 205 \
+40 SW1 switch 1 775 1045 curved 3 \
 	5 straight 245 \
 	4 curved 210 \
 	41 behind 191 \
-41 SW2 switch 2 750 1125 curved 3 \
+41 SW2 switch 2 950 1125 curved 3 \
 	40 straight 191 \
 	3 curved 211 \
 	42 behind 182 \
@@ -626,7 +627,7 @@ char * track[] = {
 	51 straight 190 \
 	53 curved 445 \
 	22 behind 60 \
-51 SW12 switch 12 750 67 curved 3 \
+51 SW12 switch 12 950 67 curved 3 \
 	0 straight 218 \
 	43 curved 185 \
 	50 behind 190 \
@@ -638,7 +639,7 @@ char * track[] = {
 	50 straight 445 \
 	21 curved 314 \
 	1 behind 62 \
-54 SW15 switch 15 775 885 curved 3 \
+54 SW15 switch 15 775 845 curved 3 \
 	18 straight 411 \
 	20 curved 305 \
 	15 behind 70 \
@@ -694,8 +695,19 @@ char * track[] = {
 		eprintf("Invalid track id %d.\r\n", trackId);
 	}
 	f.curr = track[trackId];
-	return parse_model_str(&f, model);
-	
+	int ret = parse_model_str(&f, model);
+	int i, x, y, hyp;
+	Edge *e;
+	for( i = 0; i < model->num_edges; i++ ) {
+		e = &model->edges[i];
+		x = e->node1->x - e->node2->x;
+		y = e->node1->y - e->node2->y;
+		hyp = isqrt( x * x + y * y );
+		printf("Edge %s-%s \tdist: %d, \thyp: %d, diff: %d\r\n",
+				e->node1->name, e->node2->name, e->distance,
+				hyp, e->distance - hyp );
+	}
+	return ret;
 }
 /*
 void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
