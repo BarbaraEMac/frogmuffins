@@ -513,7 +513,7 @@ char * track[] = {
 	54 behind 70 \
 16 C1 sensor 16 1530 810 2 \
 	9 ahead 205 \
-	61 behind 228 \
+	61 behind 208 \
 17 C3 sensor 17 1895 1170 2 \
 	64 ahead 410 \
 	44 behind 226 \
@@ -526,7 +526,7 @@ char * track[] = {
 20 C9 sensor 20 1020 1020 2 \
 	54 ahead 305 \
 	55 behind 146 \
-21 C11 sensor 21 1020 147 2 \
+21 C11 sensor 21 1035 147 2 \
 	52 ahead 140 \
 	53 behind 314 \
 22 C13 sensor 22 1210 67 2 \
@@ -536,7 +536,7 @@ char * track[] = {
 	29 ahead 405 \
 	45 behind 223 \
 24 D1 sensor 24 1660 350 2 \
-	59 ahead 227 \
+	59 ahead 207 \
 	33 behind 205 \
 25 D3 sensor 25 1785 147 2 \
 	49 ahead 223 \
@@ -657,7 +657,7 @@ char * track[] = {
 	44 behind 187 \
 61 SW99 switch 0x99 1595 620 curved 3 \
 	62 straight 230 \
-	16 curved 228 \
+	16 curved 208 \
 	58 behind 24 \
 58 SW9A switch 0x9a 1595 600 straight 3 \
 	61 straight 24 \
@@ -665,7 +665,7 @@ char * track[] = {
 	60 behind 32 \
 59 SW9B switch 0x9b 1595 540 straight 3 \
 	63 straight 247 \
-	24 curved 227 \
+	24 curved 207 \
 	60 behind 24 \
 60 SW9C switch 0x9c 1595 560 curved 3 \
 	59 straight 24 \
@@ -703,6 +703,7 @@ char * track[] = {
 		x = e->node1->x - e->node2->x;
 		y = e->node1->y - e->node2->y;
 		hyp = isqrt( x * x + y * y );
+		if( abs(e->distance - hyp) > 10 )
 		printf("Edge %s-%s \tdist: %d, \thyp: %d, diff: %d\r\n",
 				e->node1->name, e->node2->name, e->distance,
 				hyp, e->distance - hyp );
