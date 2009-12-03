@@ -11,7 +11,7 @@
 
 enum ResReqType {
 	TRAIN_TASK = 1,
-	ROUTE_PLANNER
+	COURIER
 };
 
 typedef struct {

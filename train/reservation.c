@@ -21,6 +21,7 @@
 
 #define NUM_RECTS		20
 #define NUM_IDXS		20
+#define NUM_TRAINS		6
 
 #define TRAIN_LEN		340 // mm
 #define	ERROR_MARGIN	50	// mm
@@ -30,6 +31,7 @@
 // ----------------------------------------------------------------------------
 typedef struct {
 	int 		trainId;			// Train identifier
+	int			trainTid;			// Tid for this train
 	int 		rectLen;			// Number of rectangles
 	Rectangle  	rects[NUM_RECTS];	// TrainRes rectangles
 
@@ -39,35 +41,50 @@ typedef struct {
 
 typedef struct {
 	TrackModel	*model;
-	TrainRes 	entries[MAX_NUM_TRAINS];
+	TrainRes 	 entries  [NUM_TRAINS];
+	TID			 courierTid;
 } Reservation;
 
-// Initialize the reservation structure
-void	res_init		(Reservation *res);
+typedef struct {
+	int dest;
+	TID trainTid;
+} ResCourierReply;
 
+// Initialize the reservation structure
+void	res_init			(Reservation *res);
+
+// Cancel a reservation for a train
+void 	res_cancelTrainRes	( Reservation *r, ResRequest *req );
 // Make a reservation for a train
-int 	res_makeTrainRes( Reservation *r, ResRequest *req );
+int 	res_makeTrainRes	( Reservation *r, ResRequest *req );
+
 // Build the rectangles for a reservations
-int 	res_buildRects	( Reservation *r, TrainRes *d, ResRequest *req );
+int 	res_buildRects		( Reservation *r, TrainRes *d, ResRequest *req );
 // Herlped to buildRects
 int 	res_buildRectsHelper( Reservation *r, TrainRes *d, 
 							  Node *n1, Node *n2, int distPast, 
 							  int distLeft, int trainId );
 
 // Test to see if a rectangle intersects with another reservation
-int 	res_checkIntersection( Reservation *r, Rectangle *rect, int trainId );
+int 	res_checkIntersect	( Reservation *r, Rectangle *rect, int trainId );
+
+void 	res_saveTrainTid	( Reservation *res, int trainId, TID tid );
 
 // Given a trainId, return the corresponding array index
-int 	mapTrainId   		(int trainId);
+inline int 	mapTrainId   	(int trainId);
+// Given an array index, return the corresponding train id
+inline int 	mapIdxToTrainId (int idx);
 
 // Train Reservation functions
-inline void 	trRes_saveRect	( TrainRes *d, Rectangle rect );
-inline void 	trRes_reserveNode( TrainRes *d, Node *n );
+inline void 	trRes_saveRect		( TrainRes *d, Rectangle rect );
+inline void 	trRes_reserveNode	( TrainRes *d, Node *n );
 
+// Courier
+void 		resCourier_run	();
 // ----------------------------------------------------------------------------
 
 void res_run () {
-	int 		senderTid;
+	TID 		senderTid;
 	Reservation res;			// Reservation system
 	ResRequest	req;			// Reservation request
 	ResReply	reply;			// Reservation reply
@@ -90,12 +107,19 @@ void res_run () {
 			case TRAIN_TASK:
 				assert( req.stopDist > 0 );
 
+				// Store the train's tid for later use ...
+				res_saveTrainTid( &res, req.trainId, senderTid );
+
+				// Cancel the previous reservation for this train.
+				res_cancelTrainRes( &res, &req );
+				
+				// Make the reservation for this train.
 				reply.stopDist = res_makeTrainRes( &res, &req );
 				
 				break;
 
-			case ROUTE_PLANNER:
-
+			case COURIER:
+				// Hang out until we need it
 				break;
 
 			default:
@@ -124,24 +148,29 @@ void res_init(Reservation *res) {
 	res->model = addr;
 
 	// Clear each train reservation
-	for ( i = 0; i < MAX_NUM_TRAINS; i ++ ) {
+	for ( i = 0; i < NUM_TRAINS; i ++ ) {
 		res->entries[i].rectLen = 0;
 		res->entries[i].idxsLen = 0;
+		res->entries[i].trainId = mapIdxToTrainId( i );
+
+		res->entries[i].trainTid = -1;
 	}
+
+	// Create the res->train courier.
+	res->courierTid = Create( OTH_NOTIFIER_PRTY, &resCourier_run );
 
 	// Register with the Name Server
 	RegisterAs ( RESERVATION_NAME );
 }
 
-int res_makeTrainRes( Reservation *r, ResRequest *req ) {
-	debug( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d]\r\n", req->trainId, req->sensor, req->distPast, req->stopDist );
-
+void res_cancelTrainRes( Reservation *r, ResRequest *req ) {
+	
 	TrainRes *trRes = &r->entries[ mapTrainId( req->trainId ) ];
 	int i;
-
 	// Unreserve all of the nodes and edges
 	for ( i = 0; i < trRes->idxsLen; i ++ ) {
-		debug("res: Cancelling node %s(%d).\r\n", r->model->nodes[trRes->idxs[i]].name, trRes->idxs[i]);
+		debug( "res: Cancelling node %s(%d).\r\n", 
+			   r->model->nodes[trRes->idxs[i]].name, trRes->idxs[i] );
 		r->model->nodes[ trRes->idxs[i]].reserved = 0;
 		trRes->idxs[i] = 0;
 	}
@@ -153,8 +182,21 @@ int res_makeTrainRes( Reservation *r, ResRequest *req ) {
 		rect_init( &trRes->rects[i] );
 	}
 	trRes->rectLen = 0;
+}
 
-	return res_buildRects( r, trRes, req );
+
+int res_makeTrainRes( Reservation *r, ResRequest *req ) {
+	debug( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d]\r\n", 
+			req->trainId, req->sensor, req->distPast, req->stopDist );
+
+	int 	  ret;
+	TrainRes *trRes = &r->entries[ mapTrainId( req->trainId ) ];
+
+	ret = res_buildRects( r, trRes, req );
+
+	debug ("RETURNING a safe distance of: %d\r\n", ret );
+
+	return ret;
 }
 
 int res_buildRects( Reservation *r, TrainRes *d, ResRequest *req ) {
@@ -204,6 +246,8 @@ int res_buildRectsHelper( Reservation *r, TrainRes *d, Node *n1, Node *n2,
 		
 		// Make the rectangle & stop recursing
 		rect = makeRectangle( start, nextP );
+		// Save the rect
+		trRes_saveRect( d, rect );
 
 		return distLeft;
 
@@ -212,7 +256,7 @@ int res_buildRectsHelper( Reservation *r, TrainRes *d, Node *n1, Node *n2,
 		rect = makeRectangle( start, p2 );
 
 		// If this rectangle intersects with another,
-		if ( res_checkIntersection( r, &rect, trainId ) == INTERSECTION ) {
+		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
 			return distLeft;
 		}
 		
@@ -270,17 +314,19 @@ int res_buildRectsHelper( Reservation *r, TrainRes *d, Node *n1, Node *n2,
 	}
 }
 
-int res_checkIntersection( Reservation *r, Rectangle *rect, int trainId ) {
+int res_checkIntersect( Reservation *r, Rectangle *rect, int trainId ) {
 	int 		 i, j;
 	TrainRes 	*trItr;
 	Rectangle	*rectItr;
 
-	for ( i = 0; i < MAX_NUM_TRAINS; i ++ ) {
+	for ( i = 0; i < NUM_TRAINS; i ++ ) {
 		trItr = &r->entries[i];
 
 		if( trItr->trainId == trainId ) {
 			continue;
 		}
+
+		debug("CHECKING INTERSECTION of this (%d) and (%d)\r\n", trainId, trItr->trainId);
 
 		for ( j = 0; j < trItr->rectLen; j ++ ) {
 			rectItr = &trItr->rects[j];
@@ -299,28 +345,58 @@ int res_checkIntersection( Reservation *r, Rectangle *rect, int trainId ) {
 	return NO_INTERSECTION;
 }
 
+void res_saveTrainTid( Reservation *res, int trainId, TID tid ) {
+	int idx = mapTrainId( trainId );
+
+	if ( res->entries[idx].trainTid != tid ) {
+		res->entries[idx].trainTid = tid;
+	}
+}
+
 // And the hardcoding begins!
-int mapTrainId (int trainId) {
+inline int mapTrainId( int trainId ) {
 	switch (trainId) {
 		case 12:
 			return 0;
-		case 22:
+		case 15:
 			return 1;
-		case 24:
+		case 22:
 			return 2;
-		case 46:
+		case 24:
 			return 3;
-		case 52:
+		case 46:
 			return 4;
+		case 52:
+			return 5;
 	}
 	// ERROR
 	return 5;
+}
+
+inline int mapIdxToTrainId( int idx ) {
+	switch( idx ) {
+		case 0:
+			return 12;
+		case 1:
+			return 15;
+		case 2:
+			return 22;
+		case 3:
+			return 24;
+		case 4:
+			return 46;
+		case 5:
+			return 52;
+	}
+	// ERROR
+	return -1;
 }
 
 // ----------------------------------------------------------------------------
 // --------------------------- Train Reservation ------------------------------
 // ----------------------------------------------------------------------------
 inline void trRes_saveRect( TrainRes *d, Rectangle rect ) {
+	debug("saving Rectangle for %d\r\n", d->trainId);
 	// Store this rectangle
 	d->rects[ d->rectLen ] = rect;
 	d->rectLen ++;
@@ -337,4 +413,32 @@ inline void trRes_reserveNode( TrainRes *d, Node *n ) {
 
 	n->reserved = 1;
 	debug ("res: Reserving %s(%d).\r\n", n->name, n->idx);
+}
+
+
+// ----------------------------------------------------------------------------
+// --------------------------------- Courier ----------------------------------
+// ----------------------------------------------------------------------------
+void resCourier_run( ) {
+	int 				resTid = WhoIs( RESERVATION_NAME );
+	TrainReq   			trReq;
+	ResRequest			resReq;
+	ResCourierReply		reply;
+
+	resReq.type = COURIER;
+	trReq.type  = DEST_UPDATE;
+	trReq.mode	= DRIVE;
+
+	FOREVER {
+		// Send to the Reservation Server
+		Send( resTid, &resReq, sizeof(ResRequest), &reply, sizeof(ResCourierReply));
+
+		// Save the destination index
+		trReq.dest = reply.dest;
+
+		// Send to the train
+		Send( reply.trainTid, &trReq, sizeof(TrainReq), 0, 0 );
+	}
+
+	Exit(); // This will never be called.
 }
