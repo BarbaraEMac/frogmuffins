@@ -10,7 +10,6 @@
 #include "requests.h"
 
 #define	START_SENSOR			-1
-#define	NO_DEST					-1
 
 typedef enum _train_mode {
 	CAL_SPEED = 1,	// Calibrate the running speed
