@@ -24,7 +24,7 @@ typedef struct {
 	union {
 		int stopDist;		// The estimated stopping distance
 		int dest;			// Destination node index
-	}
+	};
 } ResRequest;
 
 typedef struct {
