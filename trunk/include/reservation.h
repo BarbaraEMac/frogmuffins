@@ -10,7 +10,9 @@
 #define RESERVATION_NAME 		"Reserver"
 
 enum ResReqType {
-	TRAIN_TASK = 1,
+	TRAIN_MAKE = 1,
+	TRAIN_IDLE,
+	TRAIN_STUCK,
 	COURIER
 };
 
@@ -20,6 +22,7 @@ typedef struct {
 	int sensor;				// The last triggered sensor
 	int distPast;			// The estimated distance past this sensor
 	int stopDist;			// The estimated stopping distance
+	int dest;		
 } ResRequest;
 
 typedef struct {
