@@ -564,6 +564,7 @@ void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
 	// Save this node.
 	nodePred->idxs[nodePred->len] = n->idx;
 	nodePred->len += 1;
+	assert( nodePred->len <= array_size( nodePred->idxs ) );
 
 	switch ( n->type ) {
 		case NODE_SWITCH:
@@ -609,14 +610,16 @@ void rp_predictHelper( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred,
 
 void rp_predict( RoutePlanner *rp, SensorsPred *pred, NodePred *nodePred, int sensorId ) {
 	int idx = sIdxToIdx ( sensorId );
-	Node *n = &rp->model.nodes[idx];
-	Edge *e = ((sensorId % 2) == 0) ? n->se.ahead : n->se.behind; // next edge
+	// Get the start node
+	Node *start = &rp->model.nodes[idx];
+ 	// Get the next edge
+	Edge *e = ((sensorId % 2) == 0) ? start->se.ahead : start->se.behind;
 	
 	// Get next node along the path
-	n = node_neighbour( n, e ); 
+	Node *n = node_neighbour( start, e ); 
 
 	// Fill the "path" with sensor ids
-	rp_predictHelper ( rp, pred, nodePred, n, n, idx );
+	rp_predictHelper ( rp, pred, nodePred, n, start, idx );
 }
 
 int rp_minSensorDist ( RoutePlanner *rp, int sensor1, int sensor2 ) {
