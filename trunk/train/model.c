@@ -499,13 +499,13 @@ char * track[] = {
 	52 behind 214 \
 11 B7 sensor 11 290 1020 2 \
 	4 ahead 289 \
-	67 behind 60 \
+	67 behind 55 \
 12 B9 sensor 12 250 1170 2 \
 	2 ahead 665 \
-	68 behind 70 \
+	68 behind 50 \
 13 B11 sensor 13 270 1093 2 \
 	3 ahead 473 \
-	69 behind 70 \
+	69 behind 55 \
 14 B13 sensor 14 1660 810 2 \
 	58 ahead 224 \
 	31 behind 205 \
@@ -665,7 +665,7 @@ char * track[] = {
 	14 curved 224 \
 	60 behind 32 \
 59 SW9B switch 0x9b 1595 540 straight 3 \
-	63 straight 247 \
+	63 straight 220 \
 	24 curved 207 \
 	60 behind 24 \
 60 SW9C switch 0x9c 1595 560 curved 3 \
@@ -675,19 +675,19 @@ char * track[] = {
 62 DE1 stop 0 1595 850 1 \
 	61 ahead 230 \
 63 DE2 stop 1 1595 320 1 \
-	59 ahead 247 \
+	59 ahead 220 \
 64 DE3 stop 2 2310 1170 1 \
 	17 ahead 410 \
 65 DE4 stop 3 230 147 1 \
 	6 ahead 320 \
 66 DE5 stop 4 210 67 1 \
 	0 ahead 520 \
-67 DE7 stop 6 290 1020 1 \
-	11 ahead 60 \
-68 DE9 stop 8 250 1170 1 \
-	12 ahead 70 \
-69 DE10 stop 9 270 1093 1 \
-	13 ahead 70"
+67 DE7 stop 6 235 1020 1 \
+	11 ahead 55 \
+68 DE9 stop 8 200 1170 1 \
+	12 ahead 50 \
+69 DE10 stop 9 215 1093 1 \
+	13 ahead 55"
 };
 
 	FILE f;
