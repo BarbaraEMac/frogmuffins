@@ -21,8 +21,10 @@ typedef struct {
 	int trainId;			// The train's identifying number
 	int sensor;				// The last triggered sensor
 	int distPast;			// The estimated distance past this sensor
-	int stopDist;			// The estimated stopping distance
-	int dest;		
+	union {
+		int stopDist;		// The estimated stopping distance
+		int dest;			// Destination node index
+	}
 } ResRequest;
 
 typedef struct {
