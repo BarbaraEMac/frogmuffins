@@ -30,6 +30,7 @@ void 	rb_force( RB *, void * );
 int 	rb_empty( RB * );
 int 	rb_full( RB * );
 void   *rb_pop( RB * );
+void   *rb_top( RB * );
 
 
 #endif
