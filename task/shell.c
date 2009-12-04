@@ -104,7 +104,7 @@ void bootstrap(  ) {
 
 	// Create the ui 
 	// Makes 1 clock notifying task
-	// TID == 11, 12
+	// TID == 11 (12)
 	tids.ui = Create( OTH_SERVER_PRTY, &ui_run );
 //	output( "Initializing the UI (tid=%d). \r\n", tids.ui );
 	
