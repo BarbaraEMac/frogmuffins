@@ -42,14 +42,24 @@ rb_push( RB *rb, void *el ) {
 	rb->size += rb->eltSize;
 }
 
+// rb_top
+void *
+rb_top( RB *rb ) {
+	debug( "rb_top: rb=%x, start=%d, end=%d\r\n", rb, rb->start, rb->end );
+	assert( !rb_empty( rb ) );
+
+	return (rb->buffer + rb->start);
+}
+
 // rb_pop
 void * 
 rb_pop( RB *rb ) {
 	debug( "rb_pop: rb=%x, start=%d, end=%d\r\n", rb, rb->start, rb->end );
-	assert( !rb_empty( rb ) );
+
+	// Get the element from the top
+	void *el = rb_top( rb );
 
 	// Remove the element
-	void *el = (rb->buffer + rb->start);
 	rb->start += rb->eltSize;
 	rb->start %= rb->bufSize;
 
