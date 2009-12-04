@@ -65,7 +65,6 @@ void floyd_warshall 	(RoutePlanner *rp, int n);
 int  cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 int  rev				(RoutePlanner *rp, Node *prev, Node *mid, Node *next);
-void dijkstra		 	(TrackModel *model, int source, int dest);
 
 // ahead[0] = straight
 // ahead[1] = curved
@@ -846,11 +845,10 @@ void makePath (RoutePlanner *rp, Path *p, int i, int j) {
 //	debug ("\r\n");
 }
 
-void dijkstra ( TrackModel *model, int source, int dest ) {
+void dijkstra ( TrackModel *model, int source, int dest, int *prev ) {
 	int n = model->num_nodes;
 	
 	int dists[n];
-	int prev [n];
 	int visited [n];
 	int min;
 	int linkCost;

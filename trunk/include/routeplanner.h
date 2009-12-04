@@ -91,4 +91,6 @@ typedef struct {
 
 void rp_run();
 
+void dijkstra ( TrackModel *model, int source, int dest, int *prev );
+
 #endif
