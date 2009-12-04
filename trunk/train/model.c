@@ -157,8 +157,9 @@ int parse_model_str(FILE *file, TrackModel* model)
 
 		Node* node = &model->nodes[num];
 		// Store the index
-		node->idx 		 = num;
+		node->idx 	   = num;
 		node->reserved = 0;
+		node->reserver = -1;
 
 		char name[5];
 		memoryset(name, 0, 5);

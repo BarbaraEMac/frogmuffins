@@ -71,6 +71,7 @@ struct _node {
     Edge 	*edges[3];
   };
   int reserved;
+  int reserver;
   int x, y; // location (for GUI)
 };
 
