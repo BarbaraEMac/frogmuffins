@@ -5,7 +5,7 @@
  *
  * Used http://stackoverflow.com/questions/115426/algorithm-to-detect-intersection-of-two-rectangles.
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <debug.h>
 #include <math.h>
@@ -25,8 +25,10 @@
 #define NUM_TRAINS		6
 
 #define TRAIN_LEN		340 // mm
-#define	ERROR_MARGIN	50	// mm
+#define	ERROR_MARGIN	60	// mm
 #define	TRAIN_EST		TRAIN_LEN + ERROR_MARGIN
+
+#define SMALLEST_RECT	5
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -132,13 +134,14 @@ void res_run () {
 				} else {
 
 					// Make the reservation for this train.
-					debug("stop dist= %d\r\n", req.stopDist);
 					distLeft = trRes_make( trRes, &res, &req );
+					debug( "stop dist= %d distLeft=%d total=%d other=%d\r\n", 
+						  req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft );
 					assert( distLeft >= 0 );
+					assert( req.stopDist >= distLeft );
 					
-					debug("stop dist= %d distLeft=%d total=%d other=%d\r\n", req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft);
 					reply.stopDist = (distLeft <= 20) ? 
-						min(req.totalDist, req.stopDist - distLeft) : 
+						min(req.totalDist - req.distPast, req.stopDist - distLeft) : 
 						req.stopDist - distLeft;
 
 					assert( reply.stopDist >= 0 );
@@ -396,15 +399,13 @@ inline void trRes_reserveNode( TrainRes *d, Node *n ) {
 
 	n->reserved = 1;
 	n->reserver = d->trainId;
-	debug ("res: Reserving %s(%d).\r\n", n->name, n->idx);
+	printf ("%d: Reserving %s(%d).\r\n", d->trainId, n->name, n->idx);
 }
 
 void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
-	if( trRes->idle == true ) return;	// haven't moved
-	
-	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
-			req->trainId, req->sensor, req->distPast, 
-			req->stopDist, req->totalDist, trRes );
+//	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
+//			req->trainId, req->sensor, req->distPast, 
+//			req->stopDist, req->totalDist, trRes );
 
 	// Only encircle stopped trains
 	assert( req->totalDist == 0 );
@@ -412,19 +413,17 @@ void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
 	// This train has stopped
 	trRes->idle = true;
 
-	req->stopDist = (TRAIN_EST / 2);
-	printf("HALF DIST=%d\r\n", req->stopDist);
-
 	// Build the rectangles ahead
+//	req->stopDist = (TRAIN_LEN / 1) + ERROR_MARGIN;
+	req->stopDist = TRAIN_LEN;
 	trRes_buildRects( trRes, res, req );
-	printf ("DONE FORWARD HALF\r\n");
 
 	// Flip the sensor
 	req->sensor ^= 1;
 	
-	req->stopDist = (TRAIN_EST / 2);
-	
 	// Build the rectangles behind
+	//req->stopDist = (TRAIN_LEN / 2) + ERROR_MARGIN;
+	req->stopDist = TRAIN_LEN;
 	trRes_buildRects( trRes, res, req );
 }
 
@@ -433,7 +432,7 @@ void trRes_cancel( TrainRes *trRes, Reservation *r ) {
 	
 	// Unreserve all of the nodes and edges
 	for ( i = 0; i < trRes->idxsLen; i ++ ) {
-		debug( "res: Cancelling node %s(%d).\r\n", 
+		printf( "res: Cancelling node %s(%d).\r\n", 
 			   r->model->nodes[trRes->idxs[i]].name, trRes->idxs[i] );
 		r->model->nodes[ trRes->idxs[i]].reserved = 0;
 		trRes->idxs[i] = 0;
@@ -449,8 +448,8 @@ void trRes_cancel( TrainRes *trRes, Reservation *r ) {
 }
 
 int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
-	debug( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d total=%d]\r\n", 
-			req->trainId, req->sensor, req->distPast, req->stopDist, req->totalDist );
+//	printf( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d total=%d]\r\n", 
+//			req->trainId, req->sensor, req->distPast, req->stopDist, req->totalDist );
 
 	int distLeft;
 	// Build the rectangles long the path
@@ -462,6 +461,10 @@ int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
 	}
 
 	debug ("RETURNING a distLeft of: %d\r\n", distLeft );
+	if ( distLeft < 0 ) {
+		assert( withinEpsilon( distLeft, 0, 10 ) );
+		distLeft = 0;
+	}
 
 	return distLeft;
 }
@@ -491,37 +494,37 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 						  int distPast, int distLeft, int trainId ) {
 	assert( n1 != n2 );
 
-	debug( "build Rects: n1=%s n2=%s past=%d left=%d id=%d\r\n", 
+//	debug( "build Rects: n1=%s n2=%s past=%d left=%d id=%d\r\n", 
 		   n1->name, n2->name, distPast, distLeft, trainId );
-	debug("n1=(%d, %d) n2=(%d, %d)\r\n", n1->x, n1->y, n2->x, n2->y);
+//	debug("n1=(%d, %d) n2=(%d, %d)\r\n", n1->x, n1->y, n2->x, n2->y);
 
 	Rectangle rect;
 	Point	  p1 = { n1->x, n1->y };
 	Point	  p2 = { n2->x, n2->y };
 	Node 	 *next;
 	debug("first find\r\n");
-	Point	  start = ( distPast != 0 ) ? 
-			  		  findPointOnLine( p1, p2, distPast ) : p1;
-	Point	  nextPoint;
 	int		  edgeDist = node_dist( n1, n2 );
 	int		  pDist    = pointDist( p1, p2 );
 
 //	debug("edge dist=%d pointDist=%d distLeft=%d\r\n", edgeDist, pDist, distLeft);
 
-	// Only travel the distance required
-	distLeft -= distPast;
-
 	// Reserve the first node
 	trRes_reserveNode( trRes, n1 );
 
-	if ( distLeft <= edgeDist ) {
-		debug("second find\r\n");
-		nextPoint = findPointOnLine ( p1, p2, distLeft );
-		debug( "start=(%d, %d) next(%d, %d)\r\n", 
-			   start.x, start.y, nextPoint.x, nextPoint.y );
+	// It is really hard to make exact rectangles of len < 5
+	if ( distLeft <= SMALLEST_RECT ) {
+		return distLeft;
+	}
+	
+	if ( distPast > 0 ) {
+		p1 = findPointOnLine( p1, p2, distPast );
+	}
+
+	if ( (distLeft + distPast) <= edgeDist ) {
+		Point t = findPointOnLine( p1, p2, distLeft );
 		
 		// Make the rectangle & stop recursing
-		rect = makeRectangle( start, nextPoint );
+		rect = makeRectangle( p1, t );
 		
 		// If this rectangle intersects with another,
 		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
@@ -531,11 +534,11 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 		// Save the rect
 		trRes_saveRect( trRes, rect );
 		
-		return distLeft;
+		return 0;// rect.len is srraightline dist (distLeft - rect.len); // Probably should return ~0
 
 	} else {
 		// Construct the rectangle
-		rect = makeRectangle( start, p2 );
+		rect = makeRectangle( p1, p2 );
 
 		// If this rectangle intersects with another,
 		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
@@ -543,7 +546,9 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 		}
 		
 		// Remove the distance of the edge you just took
-		distLeft -= edgeDist;
+		assert( (distLeft+distPast) > edgeDist );
+		distLeft -= (edgeDist - distPast);
+		assert( distLeft > 0 );
 
 		// Save the rect
 		trRes_saveRect( trRes, rect );
