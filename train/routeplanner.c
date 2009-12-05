@@ -61,8 +61,9 @@ void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
 void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
 // Shortest Path Algorithms
-void floyd_warshall 	(RoutePlanner *rp, int n);
-int  cost 				(TrackModel *model, int idx1, int idx2, int rsvDist);
+void floyd_warshall 	(RoutePlanner *rp, int n, int trainId);
+int  cost 				(TrackModel *model, int idx1, int idx2,
+						 int rsvDist, int trainId);
 void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 int  rev				(RoutePlanner *rp, Node *prev, Node *mid, Node *next);
 
@@ -261,7 +262,7 @@ int rp_init(RoutePlanner *rp) {
 	Send( resTid, &modelPtr, sizeof(int), 0, 0 );
 	
 	// Initialize shortest paths using model
-	floyd_warshall (rp, rp->model.num_nodes); 
+	floyd_warshall (rp, rp->model.num_nodes, 0); 
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
@@ -387,7 +388,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
 
 	// TODO: Every time?
-	floyd_warshall( rp, rp->model.num_nodes );
+	floyd_warshall( rp, rp->model.num_nodes, req->trainId );
 	
 	// Distance from current sensor to destination node
 	actualDist = rp->dists[currentIdx][req->destIdx];
@@ -687,7 +688,7 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //          model - To get the cost information.
 //  Output: retDist - shortest path dists(the answer)
 //          retPred - predicate matrix, useful in reconstructing shortest routes
-void floyd_warshall ( RoutePlanner *rp, int n ) {
+void floyd_warshall ( RoutePlanner *rp, int n, int trainId ) {
 	int  i, j, k; // Loop counters
 	int  distMod = 0;
 	
@@ -696,8 +697,8 @@ void floyd_warshall ( RoutePlanner *rp, int n ) {
 		for ( j = 0; j < n; j++ ) {
 			
 			// INT_MAX if no link; 0 if i == j
-			rp->dists[i][j]    = cost(&rp->model, i, j, 0); // no reservations
-			rp->rsvDists[i][j] = cost(&rp->model, i, j, 1); // use reservations
+			rp->dists[i][j]    = cost(&rp->model, i, j, 0, trainId); // no reservations
+			rp->rsvDists[i][j] = cost(&rp->model, i, j, 1, trainId); // use reservations
 			
 			// Init to garbage
 			//rp->paths[i][j] = -1;
@@ -782,7 +783,7 @@ int rev( RoutePlanner *rp, Node *prev, Node *mid, Node *next ) {
 	}
 	return 0;
 }
-int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
+int cost (TrackModel *model, int idx1, int idx2, int rsvDist, int trainId) {
 //	debug ("cost: i=%d j=%d model=%x\r\n", idx1, idx2, model);
 	int itr;
 	Node *node;
@@ -803,14 +804,9 @@ int cost (TrackModel *model, int idx1, int idx2, int rsvDist) {
 	
 	// TODO: Reservation Stuff
 	// If either are reserved, let's say there is no link to them.
-	if ((rsvDist == 1) && ((node->reserved == 1) || (next->reserved == 1))){
-		
-		if (node->reserved == 1) {
-			printf ("%s(%d) is reserved.\r\n", node->name, node->idx);
-		}
-		if (next->reserved == 1) {
-			printf ("%s(%d) is reserved.\r\n", next->name, next->idx);
-		}
+	if ( (rsvDist == 1) &&
+	     ((node->reserved == 1 && node->reserver != trainId) || 
+		  (next->reserved == 1 && node->reserver != trainId)) ){
 		return INT_MAX;
 	}
 
@@ -878,7 +874,7 @@ void dijkstra ( TrackModel *model, int source, int dest, int *prev ) {
 
 		// Until the destination node,
 		for ( j = 1; j <= dest; j ++ ) {
-			linkCost = cost( model, min, j, 0 );
+			linkCost = cost( model, min, j, 0, 0 ); //TODO: fix train id
 			
 			if ( linkCost + dists[min] < dists[j] ) {
 				dists[j] = dists [min] + linkCost;
