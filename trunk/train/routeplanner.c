@@ -256,7 +256,6 @@ int rp_init(RoutePlanner *rp) {
 	
 	// Receive the reservation server's tid from the shell
 	Receive(&shellTid, &resTid, sizeof(int));
-	Reply  (shellTid, 0, 0 );
 	
 	// HACK: Give the reservation server a pointer to our model.
 	Send( resTid, &modelPtr, sizeof(int), 0, 0 );
@@ -266,6 +265,9 @@ int rp_init(RoutePlanner *rp) {
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
+	
+	// Reply to the shell after registering
+	Reply  (shellTid, 0, 0 );
 
 	return shellTid;
 }
