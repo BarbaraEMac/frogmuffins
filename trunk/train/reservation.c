@@ -74,6 +74,8 @@ inline int 	mapIdxToTrainId 	(int idx);
 // Train Reservation functions
 inline void	trRes_saveRect		( TrainRes *d, Rectangle rect );
 inline void	trRes_reserveNode	( TrainRes *d, Node *n );
+// Create a reserved bubble around a train
+void	 	trRes_encircle		( TrainRes *trRes, Reservation *res, ResRequest *req );
 // Cancel a reservation for a train
 void 		trRes_cancel		( TrainRes *res, Reservation *r );
 // Make a reservation for a train
@@ -93,6 +95,7 @@ void res_run () {
 	ResRequest	req;			// Reservation request
 	ResReply	reply;			// Reservation reply
 	TrainRes   *trRes;
+	int			distLeft;
 
 	// Initialize the reservation system
 	res_init( &res );
@@ -100,17 +103,21 @@ void res_run () {
 	FOREVER {
 		// Receive from a TRAIN or the ROUTE PLANNER
 		Receive( &senderTid, &req, sizeof(ResRequest) );
-
+		
 		// If the train has not located itself, do not reserve anything.
 		if ( req.sensor == START_SENSOR ) {
 			reply.stopDist = req.stopDist;
 			req.type       = 0;
+			
+			// Reply to the sender train
+			Reply( senderTid, &reply, sizeof(ResReply) );
 		}
 
 		switch( req.type ) {
 
 			case TRAIN_MAKE:
-				assert( req.stopDist > 0 );
+				assert( req.stopDist >= 0 );
+				assert( req.totalDist >= 0 );
 		
 				// Store the train's tid for later use ...
 				trRes = &res.entries[ mapTrainId( req.trainId ) ];
@@ -119,21 +126,28 @@ void res_run () {
 				// Cancel the previous reservation for this train.
 				trRes_cancel( trRes, &res );
 				
-				// Make the reservation for this train.
-				reply.stopDist = trRes_make( trRes, &res, &req );
-				
+				if ( req.totalDist == 0 ) {
+					trRes_encircle( trRes, &res, &req );
+					reply.stopDist = 0;
+				} else {
+
+					// Make the reservation for this train.
+					debug("stop dist= %d\r\n", req.stopDist);
+					distLeft = trRes_make( trRes, &res, &req );
+					assert( distLeft >= 0 );
+					
+					debug("stop dist= %d distLeft=%d total=%d other=%d\r\n", req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft);
+					reply.stopDist = (distLeft <= 20) ? 
+						min(req.totalDist, req.stopDist - distLeft) : 
+						req.stopDist - distLeft;
+
+					assert( reply.stopDist >= 0 );
+					debug("train can safely travel %d\r\n", reply.stopDist );
+				}
+
 				// Reply to the sender train
 				Reply( senderTid, &reply, sizeof(ResReply) );
 
-				break;
-
-			case TRAIN_IDLE:
-				// Reply to the sender train
-				Reply( senderTid, &reply, sizeof(ResReply) );
-				
-				// Mark the train as idle so we can move it if we must
-				res.entries[ mapTrainId( req.trainId ) ].idle = true;
-				
 				break;
 
 			case TRAIN_STUCK:
@@ -235,6 +249,7 @@ void res_freeTrain( Reservation *r, ResRequest *req ) {
 		}
 
 		// "Move" the blocking trains along the track to a new location
+		// Note that the trains only move forwards and do not flip switches
 		for ( i = prevSteps; i < stepsLen; i ++ ) {
 			res_simulateStep( r, &steps[i] );
 		}
@@ -269,6 +284,9 @@ void res_simulateStep( Reservation *r, TrainRes *step ) {
 	req.distPast = 0; 
 
 	trRes_make( step, r, &req );
+
+	// Make the train appear idle
+	step->idle = true;
 }
 
 void res_moveTrain( Reservation *r, TrainRes *d, int dest ) {
@@ -293,9 +311,6 @@ int res_checkIntersect( Reservation *r, Rectangle *rect, int trainId ) {
 		if( trItr->trainId == trainId ) {
 			continue;
 		}
-
-		debug( "CHECKING INTERSECTION of this (%d) and (%d)\r\n", 
-			   trainId, trItr->trainId );
 
 		for ( j = 0; j < trItr->rectLen; j ++ ) {
 			rectItr = &trItr->rects[j];
@@ -363,7 +378,6 @@ inline int mapIdxToTrainId( int idx ) {
 // --------------------------- Train Reservation ------------------------------
 // ----------------------------------------------------------------------------
 inline void trRes_saveRect( TrainRes *d, Rectangle rect ) {
-	debug("saving Rectangle for %d\r\n", d->trainId);
 	// Store this rectangle
 	d->rects[ d->rectLen ] = rect;
 	d->rectLen ++;
@@ -371,7 +385,7 @@ inline void trRes_saveRect( TrainRes *d, Rectangle rect ) {
 }
 
 inline void trRes_reserveNode( TrainRes *d, Node *n ) {
-	assert( n->reserved == 0 );
+	assert( (n->reserved == 0) || (n->reserved == 1 && n->reserver == d->trainId) );
 
 	// Reserve the corresponding node
 	d->idxs[ d->idxsLen ] = n->idx;
@@ -381,6 +395,35 @@ inline void trRes_reserveNode( TrainRes *d, Node *n ) {
 	n->reserved = 1;
 	n->reserver = d->trainId;
 	debug ("res: Reserving %s(%d).\r\n", n->name, n->idx);
+}
+
+void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
+	if( trRes->idle == true ) return;	// haven't moved
+	
+	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
+			req->trainId, req->sensor, req->distPast, 
+			req->stopDist, req->totalDist, trRes );
+
+	// Only encircle stopped trains
+	assert( req->totalDist == 0 );
+
+	// This train has stopped
+	trRes->idle = true;
+
+	req->stopDist = (TRAIN_EST / 2);
+	printf("HALF DIST=%d\r\n", req->stopDist);
+
+	// Build the rectangles ahead
+	trRes_buildRects( trRes, res, req );
+	printf ("DONE FORWARD HALF\r\n");
+
+	// Flip the sensor
+	req->sensor ^= 1;
+	
+	req->stopDist = (TRAIN_EST / 2);
+	
+	// Build the rectangles behind
+	trRes_buildRects( trRes, res, req );
 }
 
 void trRes_cancel( TrainRes *trRes, Reservation *r ) {
@@ -404,39 +447,42 @@ void trRes_cancel( TrainRes *trRes, Reservation *r ) {
 }
 
 int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
-	debug( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d]\r\n", 
-			req->trainId, req->sensor, req->distPast, req->stopDist );
+	debug( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d total=%d]\r\n", 
+			req->trainId, req->sensor, req->distPast, req->stopDist, req->totalDist );
 
-	int ret;
+	int distLeft;
 	// Build the rectangles long the path
-	ret = trRes_buildRects( trRes, r, req );
+	distLeft = trRes_buildRects( trRes, r, req );
 
 	// Set this train in motion so that we don't accidentally tell it to move.
-	if ( ret != 0 ) {
-		trRes->idle = true;
+	if ( distLeft != 0 ) {
+		trRes->idle = false;
 	}
 
-	debug ("RETURNING a safe distance of: %d\r\n", ret );
+	debug ("RETURNING a distLeft of: %d\r\n", distLeft );
 
-	return ret;
+	return distLeft;
 }
 
 int trRes_buildRects( TrainRes *trRes, Reservation *r, ResRequest *req ) {
 	Node *n = &r->model->nodes[ sIdxToIdx( req->sensor )];
 	Edge *e = ((req->sensor % 2) == 0) ? n->se.ahead : n->se.behind; // next edge
 	Node *nextNode = node_neighbour( n, e );
-	int	  safeDist;
+	int	  distLeft;
 
 	// Assert that you are still on this edge.
 	// TODO: This assertion might not be correct ..
-	assert( req->distPast < e->distance );
+//	assert( req->distPast < e->distance );
+	if ( req->distPast >= e->distance ) {
+		req->distPast = 0;
+	}
 
 	// Make rectangles until the end of the stopping distance
 	// OR your rectangle collides with another's
-	safeDist = trRes_buildRectsH( trRes, r, n, nextNode, req->distPast, 
+	distLeft = trRes_buildRectsH( trRes, r, n, nextNode, req->distPast, 
 								  req->stopDist, req->trainId );
 
-	return req->stopDist - safeDist;
+	return distLeft;
 }
 
 int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2, 
@@ -451,13 +497,14 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 	Point	  p1 = { n1->x, n1->y };
 	Point	  p2 = { n2->x, n2->y };
 	Node 	 *next;
+	debug("first find\r\n");
 	Point	  start = ( distPast != 0 ) ? 
 			  		  findPointOnLine( p1, p2, distPast ) : p1;
 	Point	  nextPoint;
 	int		  edgeDist = node_dist( n1, n2 );
 	int		  pDist    = pointDist( p1, p2 );
 
-	debug("edge dist=%d pointDist = %d\r\n", edgeDist, pDist);
+//	debug("edge dist=%d pointDist=%d distLeft=%d\r\n", edgeDist, pDist, distLeft);
 
 	// Only travel the distance required
 	distLeft -= distPast;
@@ -466,16 +513,22 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 	trRes_reserveNode( trRes, n1 );
 
 	if ( distLeft <= edgeDist ) {
-	  	
+		debug("second find\r\n");
 		nextPoint = findPointOnLine ( p1, p2, distLeft );
 		debug( "start=(%d, %d) next(%d, %d)\r\n", 
 			   start.x, start.y, nextPoint.x, nextPoint.y );
 		
 		// Make the rectangle & stop recursing
 		rect = makeRectangle( start, nextPoint );
+		
+		// If this rectangle intersects with another,
+		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+			return distLeft;
+		}
+		
 		// Save the rect
 		trRes_saveRect( trRes, rect );
-
+		
 		return distLeft;
 
 	} else {
