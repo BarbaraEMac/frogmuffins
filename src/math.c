@@ -2,12 +2,13 @@
  * Math Library
  */
 
-#define DEBUG 2
+#define DEBUG  2
 
 #include "debug.h"
 #include "math.h"
 
 #define TRAIN_WIDTH			40 	// mm
+#define EPSILON 			5
 
 int
 ctz( int x ) {
@@ -77,14 +78,17 @@ inline int sign ( int val ) {
 // ----------------------------------------------------------------------------
 // Find the coord, along the line p1->p2, that is len away from p1.
 Point findPointOnLine ( Point p1, Point p2, int len ) {
+	debug ("findPointOnLine: (%d, %d) and (%d, %d) at len=%d pointDist=%d\r\n", p1.x,p1.y, p2.x,p2.y, len, pointDist(p1,p2));
 	assert( !((p1.x == p2.x) && (p1.y == p2.y)) );
-	assert( len <= pointDist( p1, p2 ) );
 	
-	debug ("findPointOnLine: (%d, %d) and (%d, %d) at len=%d\r\n", p1.x,p1.y, p2.x,p2.y, len);
+	if ( len >= pointDist( p1, p2) ) {
+		return p2;
+	}
+
 	Point mid  = midpoint( p1, p2 );
 	int   dist = pointDist( p1, mid );
 
-	if ( len == dist ) {
+	if ( withinEpsilon(len, dist, EPSILON) || len <= EPSILON ) {
 		return mid;
 	}
 	else if ( len < dist ) {
@@ -160,14 +164,14 @@ Rectangle makeRectangle( Point p1, Point p2 ) {
 	Vector	  perp 	   = { -rectVect.y, rectVect.x };
 	int    	  len  	   = vect_len ( perp );
 
-	debug("rectVect=(%d, %d) Perp=(%d, %d)\r\n", rectVect.x, rectVect.y, perp.x, perp.y);
+//	debug("rectVect=(%d, %d) Perp=(%d, %d)\r\n", rectVect.x, rectVect.y, perp.x, perp.y);
 
 	perp.x *= (TRAIN_WIDTH / 2);
 	perp.y *= (TRAIN_WIDTH / 2);
 	perp.x /= len;
 	perp.y /= len;
 
-	debug("perp:(%d, %d)\r\n", perp.x, perp.y);
+//	debug("perp:(%d, %d)\r\n", perp.x, perp.y);
 
 	rect.p[0] = vect_add( perp, p1 );
 	rect.p[3] = vect_add( perp, p2 );
@@ -186,7 +190,7 @@ Rectangle makeRectangle( Point p1, Point p2 ) {
 		if ( rect.p[i].x < 0 ) rect.p[i].x = 0;
 		if ( rect.p[i].y < 0 ) rect.p[i].y = 0;
 
-		debug("corner:%d (%d, %d)\r\n", i, rect.p[i].x, rect.p[i].y);
+//		debug("corner:%d (%d, %d)\r\n", i, rect.p[i].x, rect.p[i].y);
 	}
 	return rect;
 }
@@ -249,4 +253,8 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	}
 
 	return NO_INTERSECTION;
+}
+
+inline int withinEpsilon(int a, int to, int ep) {
+	return ( (a >= to - ep) && (a <= to + ep) );
 }

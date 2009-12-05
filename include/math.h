@@ -73,5 +73,5 @@ inline  void 	rect_init( Rectangle *rect );
 		int 	rect_intersect( Rectangle *r1, Rectangle *r2 );
 		int 	rect_intersectH( Rectangle *r1, Rectangle *r2, int q );
 
-
+inline int 		withinEpsilon( int a, int to, int ep);
 #endif
