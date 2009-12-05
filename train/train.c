@@ -799,9 +799,6 @@ void train_flipSwitches( Train *tr, RPReply *rpReply, int reserveDist ) {
 	// Do not change the switches if we are calibrating the speed
 	if ( tr->mode == CAL_STOP ) return;
 
-	if ( (tr->mode == CAL_SPEED) && !rb_empty(&tr->dests) &&
-		 (*(int*)rb_top( &tr->dests ) != INIT_DEST) ) return;
-
 	foreach( ss, rpReply->switches ) {
 	  	if( ss->id <= 0 ) break;
 
