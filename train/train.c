@@ -57,7 +57,6 @@ typedef struct {
 	TrainMode	mode;			// Train Mode (calibration or normal)
 		
 	int 	    gear;			// The current speed setting
-	bool		gearChanged;	// Has the speed changed
 	Speed		velocity;		// The actual current speed (in mm/s)
 	int			stopDist;		// The measured stopping distance		
 	
@@ -139,8 +138,7 @@ void		train_flipSwitches	( Train *tr, RPReply *rpReply, int dist );
 SwitchDir	train_dir			( Train *tr, int sw );
 
 // Reservation Server Commands		
-int 		train_makeReservation( Train *tr, int distPast );
-void 		train_makeIdleReservation( Train *tr );
+int 		train_makeReservation( Train *tr, int distPast, int totalDist );
 
 // UI Server
 void 		train_updateUI		( Train *tr, int mm );
@@ -161,7 +159,10 @@ void train_run () {
 	int 		senderTid, len, distFromSensor = 0;
 	int			timeout = LOCATE_TIMEOUT;
 	bool		routeWatcherAwake = false;
-	int			prevMode;
+	int			prevMode  = 0;
+	int			safeDist  = 0;
+	int			totalDist = 0;
+	int			lastDistFromSensor = 0;
 
 	predct.tid = MyTid();
 
@@ -207,7 +208,7 @@ void train_run () {
 			case DEST_UPDATE: 		// got a new destination to go to
 			//	debug ( "train: #%d is at sensor %d going to destidx %d\r\n",
 			//				tr.id, tr.sensor, req);
-				printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
+			//	printf ("Got a DEST UPDATE for dest=%d mode=%d\r\n", req.dest, req.mode);
 				
 				if( req.mode == DRIVE ) { 
 					debug ("drive mode replying to %d\r\n", senderTid );
@@ -232,13 +233,13 @@ void train_run () {
 				}
 
 			case POS_UPDATE: 		// got a position update
-				printf("train: POS UP #%d is at sensor %c%d(%d). ",
-						tr.id, sensor_bank( req.sensor ), sensor_num(req.sensor ),
-						req.sensor );
-				if ( rb_empty(&tr.dests) == 0 ) {
-					printf("Going to %d\r\n", *(int*)rb_top(&tr.dests));
-				}
-				else printf("\r\n");
+			//	printf("train: POS UP #%d is at sensor %c%d(%d)(node=%d). ",
+			//			tr.id, sensor_bank( req.sensor ), sensor_num(req.sensor ),
+			//			req.sensor, sIdxToIdx(req.sensor) );
+			//	if ( rb_empty(&tr.dests) == 0 ) {
+			//		printf("Going to %d\r\n", *(int*)rb_top(&tr.dests));
+			//	}
+			//	else printf("\r\n");
 				
 				// Do not reply twice for a DEST_UPDATE
 				if ( req.type == POS_UPDATE ) {
@@ -252,17 +253,16 @@ void train_run () {
 				distFromSensor = 0;
 
 				// Reset the timeout value
-			//	timeout = LOCATE_TIMEOUT;
+				timeout = LOCATE_TIMEOUT;
 				
 				// If we don't have a destination, don't do anything.
 				if ( rb_empty( &tr.dests ) == 1 ) {
-					printf ("We don't have any dests.\r\n");
+				//	printf ("We don't have any dests.\r\n");
 					break;
 				}
 
 				// Ask the Route Planner for an efficient route!
 				rpReply = train_planRoute ( &tr );
-				debug("train mode = %d\r\n", tr.mode);
 
 				// If there is no path available,
 				if ( rpReply.err < NO_ERROR && tr.sensor != START_SENSOR ) {
@@ -300,33 +300,37 @@ void train_run () {
 					rpReply.stopDist += REVERSE_DIST;
 				}
 
+				// Save the total travelling distance
+				totalDist = rpReply.stopDist;
+				printf ("THE TOTAL DISTANCE TO THE DEST IS:%d\r\n", totalDist);
+
 				// If we have reached our destination, 
-				if ( rpReply.stopDist == 0 ) {
+				if ( totalDist == 0 ) {
 					if ( tr.mode == CAL_SPEED || tr.mode == CAL_STOP ) {
 						// We've reached our destination,
 						// Go to the next OR wait to get a new destination
-						printf ("Train %d reached %d. ", tr.id, *(int*)rb_top(&tr.dests));
+						printf( "Train %d reached %d. ", tr.id, 
+								*(int*)rb_top(&tr.dests) );
 
 						// Take this destination off the queue.
 						rb_pop( &tr.dests );
-						printf("rb: after size=%d \r\n", tr.dests.size/4);
 						
 						if( rb_empty(&tr.dests) == 0 ) {
-							printf ("Going to %d.\r\n", *(int*)rb_top(&tr.dests) );
+							printf ("\r\nGoing to %d.\r\n", 
+									*(int*)rb_top(&tr.dests) );
 						}
-						
+							
 						if ( tr.mode == CAL_SPEED  ) {
 							debug ("replying to the calibrator\r\n");
 							// Reply to the Calibration task
 							Reply( tr.caTid, 0, 0 );
 						} else if ( tr.mode == CAL_STOP ) {
-							printf ("cal stopped. replying to the shell.\r\n");
-							tr.mode = IDLE; // TODO HACk
+							debug ("cal stopped. replying to the shell.\r\n");
 							// Reply to the shell
 							Reply( tr.shTid, 0, 0 );
 						}
+					//break;
 					}
-					break;
 				}
 
 				// Predict the sensors we are about to hit.
@@ -334,18 +338,37 @@ void train_run () {
 
 			case TIME_UPDATE:		// heartbeat
 				// Update current location (NOTE: This is an estimate!)
+				// TODO: Consider acceleration here!!
 				distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
+				
+				if ( tr.mode == IDLE ) {
+					assert( speed(tr.velocity) == 0 );
+					assert( speed_dist(tr.velocity, HEARTBEAT_MS) == 0 );
+				}
+
 				// Send this information to the UI
 				train_updateUI( &tr, distFromSensor );
 				
-				// Make a reservation
-//					debug ("TIMEUPDATE\r\n");
-//					rpReply.stopDist = train_makeReservation( &tr, distFromSensor ); 
-				
+				// Only update your reservation every 20 mm OR 
+				// when you are stopping OR
+				// when you are starting
+			//	if ( (distFromSensor > lastDistFromSensor + 20) || (totalDist == 0) ||
+			//		 (prevMode == IDLE && tr.mode == DRIVE) ) {
+			//		lastDistFromSensor = distFromSensor;
+
+					// Make a reservation
+					if ( tr.mode != CAL_SPEED && tr.mode != CAL_STOP ) {
+						safeDist = train_makeReservation(&tr, distFromSensor, totalDist); 
+					} else {
+						safeDist = train_makeReservation(&tr, 0, totalDist); 
+					}
+			//		debug("safe=%d total=%d\r\n", safeDist, totalDist);
+			//	}
+
 				// Adjust speed
+				// Yes, this uses the PREVIOUS safe distance
 				prevMode = tr.mode;
-				train_adjustSpeed( &tr, rpReply.stopDist - distFromSensor, 
-						rpReply.stopAction );
+				train_adjustSpeed( &tr, safeDist, rpReply.stopAction );
 				
 				if ( prevMode == DRIVE && tr.mode == IDLE ) {
 					// We've reached our destination,
@@ -354,14 +377,13 @@ void train_run () {
 
 					// Take this destination off the queue.
 					rb_pop( &tr.dests );
-					printf("rb: after size=%d \r\n", tr.dests.size/4);
 					
 					if( rb_empty(&tr.dests) == 0 ) {
 						printf ("Going to %d.\r\n", *(int*)rb_top(&tr.dests) );
 					}
 				} else {
 					// Flip the switches along the path.
-					train_flipSwitches( &tr, &rpReply, rpReply.stopDist );
+					train_flipSwitches( &tr, &rpReply, safeDist );
 				}
 				
 				// Only update predictions if train is not lost 
@@ -411,7 +433,7 @@ void train_init ( Train *tr ) {
 
 	// The train talks to several servers
 	tr->csTid  = WhoIs (CLOCK_NAME);
-	//tr->resTid = WhoIs (RESERVATION_NAME);
+	tr->resTid = WhoIs (RESERVATION_NAME);
 	tr->rpTid  = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid  = WhoIs (TRACK_SERVER_NAME);
 	tr->uiTid  = WhoIs (UI_NAME);
@@ -422,7 +444,7 @@ void train_init ( Train *tr ) {
 	assert( tr->caTid  >= NO_ERROR );
 	assert( tr->csTid  >= NO_ERROR );
 	assert( tr->rpTid  >= NO_ERROR );
-	//assert( tr->resTid >= NO_ERROR );
+	assert( tr->resTid >= NO_ERROR );
 	assert( tr->tsTid  >= NO_ERROR );
 	assert( tr->uiTid  >= NO_ERROR );
 
@@ -443,7 +465,6 @@ void train_init ( Train *tr ) {
 
 	tr->velocity     = train_avgSpeed (tr);
 	tr->trigger      = Time( tr->csTid );
-	tr->gearChanged  = false;
 	tr->stopDist     = 0;
 //	RegisterAs ("Train");;
 }
@@ -478,6 +499,8 @@ Speed train_avgSpeed( Train *tr ) {
 }
 
 void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
+	assert( distLeft >= 0 );
+	
 	int bestGear = tr->defaultGear;
 	int stopDist = 0;
 	int i;
@@ -490,8 +513,8 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		for ( i = tr->defaultGear; i >= 1; i -- ) {
 			stopDist = train_getStopDist( tr, i );
 
-			// Multiply by  to account for acc/deceleration
-			if ( (stopDist*2) <= distLeft ) {
+			// Multiply by x to account for acc/deceleration
+			if ( stopDist <= distLeft ) {
 				//printf( "predicted stopping distance for gear %d is %dmm\r\n", i, stopDist );
 //				printf ("new Gear=%d old gear=%d\r\n", i, tr->gear);
 				bestGear = i;
@@ -505,15 +528,15 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		if ( action == JUST_STOP && distLeft <= 0 ) {//If we need to stop,
 			bestGear = 0;
 			tr->mode = IDLE;
-			train_makeIdleReservation( tr );
 		}
 		
 	//	printf ("picking %d as best gear for %d left.\r\n", bestGear, distLeft);
 	} 
 
 	// If you are stopping calibration, or in idle mode
-	if ( (tr->mode == CAL_STOP && distLeft == 0 && tr->dests.size/4 == 1)
+	if ( (tr->mode == CAL_STOP && distLeft == 0 && rb_empty(&tr->dests) )
 		|| (tr->mode == IDLE) ) {
+		tr->mode = IDLE;		// Assert this state!
 		bestGear = 0;
 	}
 
@@ -535,7 +558,11 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	}
 	tr->velocity = set;
 
-	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
+	if ( tr->mode == IDLE ) {
+		assert( speed(tr->velocity) == 0 );
+		assert( speed_dist(tr->velocity, HEARTBEAT_MS) == 0 );
+	}
+//	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
 
 // Returns the stop distance in mm given the gear and train id
@@ -601,12 +628,10 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 	
 	// Update the mean speed
 	if( tr->mode == CAL_SPEED ) {
-			//tr->gearChanged == false && tr->gear == tr->defaultGear ) { //TODO: this is wrong
 		printf ( "adding speed %d/%d to history data\r\n", sp.mm, sp.ms );
 		
 		rb_force( &tr->hist, &sp );
 	}
-	tr->gearChanged = false;
 
 	// See how far we were off
 	diff = speed_dist( tr->velocity, sp.ms ) - sp.mm;
@@ -618,7 +643,6 @@ void train_updatePos( Train *tr, int sensor, int ticks ) {
 	printf("%d/%d = \t%dmm/s \tmu:%dmm/s \tsd:%dmm/s: \tdiff:%dmm\033[37m\r\n",
 			sp.mm, sp.ms, speed( sp ), speed( tr->velocity ) , tr->sd, diff);
 	
-//	printf ("MY POSITION is %d\r\n", sensor);
 	tr->sensor  = sensor; 
 	tr->trigger = ticks;
 }
@@ -661,13 +685,11 @@ RPReply train_planRoute( Train *tr ) {
 	req.destIdx		= *(int *)rb_top( &tr->dests );
 	req.avgSpeed	= min( speed( tr->velocity ), 0 );
 
-	printf ("planning a route from %d to %d\r\n", req.lastSensor, req.destIdx );
+//	printf ("planning a route from %d to %d\r\n", req.lastSensor, req.destIdx );
 
 //	printf("train: asking for route.\r\n");
 	Send( tr->rpTid, &req, sizeof(RPRequest), &reply, sizeof(RPReply) );
 	
-
-	printf ("stopDist=%d \r\n", reply.stopDist);
 	return reply;
 }
 
@@ -700,13 +722,13 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 	predct->numEvents	= sensor->len;
 	predct->expire 		= 0;
 
-	debug("predicting sensors:");
+//	debug("predicting sensors:");
 
 	for( i = 0; i < predct->numEvents ; i ++ ) {
 		dist = sensor->dists[i] - mm ;
 
-		debug( "%c%d, ", sensor_bank(sensor->idxs[i]),
-				sensor_num(sensor->idxs[i]));
+//		debug( "%c%d, ", sensor_bank(sensor->idxs[i]),
+//				sensor_num(sensor->idxs[i]));
 
 		predct->events[i].sensor = sensor->idxs[i];
 		predct->events[i].start  = ticks + speed_time( lower, dist );
@@ -714,7 +736,7 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 
 		predct->expire = max( predct->expire, predct->events[i].end );
 	}
-	debug( "\r\n" );
+//	debug( "\r\n" );
 //	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
 //		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
 	
@@ -732,8 +754,6 @@ void train_reverse( Train *tr ) {
 	
 	debug( "\033[44mTrain %d is reversing at gear =%d\033[49m\r\n", 
 			tr->id, tr->gear );
-
-	tr->gearChanged = true;
 
 	req.type        = RV;
 	req.train       = tr->id;
@@ -757,8 +777,6 @@ void train_drive( Train *tr, int gear ) {
 	if( tr->gear == gear ) {
 		return;
 	}
-
-	tr->gearChanged = true;
 
 	if( gear >= 0 && gear < 15 ) {
 		tr->gear = gear;
@@ -816,31 +834,27 @@ SwitchDir train_dir( Train *tr, int sw ) {
 //-----------------------------------------------------------------------------
 //--------------------------------- Reservation Server ------------------------
 //-----------------------------------------------------------------------------
-int train_makeReservation( Train *tr, int distPast ) {
+int train_makeReservation( Train *tr, int distPast, int totalDist ) {
 	ResRequest  req;
 	ResReply	reply;
 
-	req.type     = TRAIN_MAKE;
-	req.trainId  = tr->id;
-	req.sensor   = tr->sensor;
-	req.distPast = distPast;
-	req.stopDist = train_getStopDist( tr, tr->gear );
+	req.type      = TRAIN_MAKE;
+	req.trainId   = tr->id;
+	req.sensor    = tr->sensor;
+	req.distPast  = distPast;
+	req.totalDist = totalDist;
+	
+	req.stopDist  = train_getStopDist( tr, tr->gear );
+	if( req.stopDist == 0 ) {
+		req.stopDist = train_getStopDist(tr, tr->defaultGear)*2 + 10;
+	}
+	
 
-	//Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
-
-	return 1000;//reply.stopDist;
+	Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
+	
+	return reply.stopDist;
 }	
 
-void train_makeIdleReservation( Train *tr ) {
-	ResRequest  req;
-	ResReply	reply;
-
-	req.type     = TRAIN_IDLE;
-	req.trainId  = tr->id;
-	req.sensor   = tr->sensor;
-
-	//Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
-}	
 //-----------------------------------------------------------------------------
 //--------------------------------- UI Server ---------------------------------
 //-----------------------------------------------------------------------------
