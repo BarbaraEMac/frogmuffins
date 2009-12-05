@@ -6,6 +6,8 @@
 
 #include "debug.h"
 #include "math.h"
+#include "servers.h"
+#include "string.h"
 
 #define TRAIN_WIDTH			40 	// mm
 #define EPSILON 			3
@@ -246,10 +248,15 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	for ( i = 0; i < 4; i ++ ) {
 
 		side1 = sign( perp.x * (r2->p[i].x - r1->p[q].x) + 
-					  perp.y * (r2->p[i].y - r1->p[q].x) );
+					  perp.y * (r2->p[i].y - r1->p[q].y) );
 
 		// TODO: ZERO return case
 		if ( side1 == r1Side ) {
+
+			printf ("r1edge: (%d, %d) r1side=%d r2edge:(%d, %d) r2side=%d\r\n", 
+					 r1->p[q].x, r1->p[q].y, r1Side, 
+					 r2->p[i].x, r2->p[i].y, side1 ); 
+
 			return INTERSECTION;
 		}
 	}
