@@ -181,7 +181,6 @@ void res_init(Reservation *res) {
 
 	// Receive the address of the model from the Route Planner
 	Receive( &rpTid, &addr, sizeof(int) );
-	Reply( rpTid, 0, 0 );
 
 	// Save this address as our model.
 	// HACK: The Route Planner and Reservation System SHARE the same model.
@@ -202,6 +201,9 @@ void res_init(Reservation *res) {
 
 	// Register with the Name Server
 	RegisterAs ( RESERVATION_NAME );
+	
+	// Reply to the shell after registering
+	Reply( rpTid, 0, 0 );
 }
 
 void res_freeTrain( Reservation *r, ResRequest *req ) {
