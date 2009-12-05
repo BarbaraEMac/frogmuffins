@@ -446,7 +446,7 @@ void shell_exec( TIDs *tids, char *command ) {
 		cache_off(  );
 	// path
 	} else if( sscanf( command, "path %s %s", tmpStr1, tmpStr2 )>= 0 ) {
-		rpReq.type = CONVERT_SENSOR;
+		rpReq.type = CONVERT_SENSOR;//CONVERT_IDX;
 		strncpy( rpReq.name, (const char *) tmpStr1, 5 );
 		rpRpl = rpCmd( &rpReq, tids->rp );
 
