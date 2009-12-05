@@ -5,7 +5,7 @@
  *
  * Used http://stackoverflow.com/questions/115426/algorithm-to-detect-intersection-of-two-rectangles.
  */
-#define DEBUG 1
+#define DEBUG 2
 
 #include <debug.h>
 #include <math.h>
@@ -323,11 +323,12 @@ int res_checkIntersect( Reservation *r, Rectangle *rect, int trainId ) {
 			// If the boxes collide OR share an edge,
 			// return there is an intersection
 			if( rect_intersect( rect, rectItr ) != NO_INTERSECTION ) {
-				debug ("%d rect intersects with this train's (%d).\r\n",
+				printf ("%d rect intersects with this train's (%d).\r\n",
 						trItr->trainId, trainId);
 
 				// Move this train out of our way incase we come here
 				if ( trItr->idle == true ) {
+					printf ("Telling %d to move!\r\n", trItr->trainId);
 					res_moveTrain( r, trItr, 69 /*DE*/); // TODO: not pick a random dest ....
 				}
 
@@ -403,7 +404,9 @@ inline void trRes_reserveNode( TrainRes *d, Node *n ) {
 }
 
 void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
-//	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
+	if( trRes->idle == true ) return;
+		
+	//	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
 //			req->trainId, req->sensor, req->distPast, 
 //			req->stopDist, req->totalDist, trRes );
 
@@ -494,19 +497,18 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 						  int distPast, int distLeft, int trainId ) {
 	assert( n1 != n2 );
 
-//	debug( "build Rects: n1=%s n2=%s past=%d left=%d id=%d\r\n", 
+	debug( "build Rects: n1=%s n2=%s past=%d left=%d id=%d\r\n", 
 		   n1->name, n2->name, distPast, distLeft, trainId );
-//	debug("n1=(%d, %d) n2=(%d, %d)\r\n", n1->x, n1->y, n2->x, n2->y);
+	debug("n1=(%d, %d) n2=(%d, %d)\r\n", n1->x, n1->y, n2->x, n2->y);
 
 	Rectangle rect;
 	Point	  p1 = { n1->x, n1->y };
 	Point	  p2 = { n2->x, n2->y };
 	Node 	 *next;
-	debug("first find\r\n");
 	int		  edgeDist = node_dist( n1, n2 );
 	int		  pDist    = pointDist( p1, p2 );
 
-//	debug("edge dist=%d pointDist=%d distLeft=%d\r\n", edgeDist, pDist, distLeft);
+	debug("edge dist=%d pointDist=%d distLeft=%d\r\n", edgeDist, pDist, distLeft);
 
 	// Reserve the first node
 	trRes_reserveNode( trRes, n1 );
