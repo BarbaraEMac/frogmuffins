@@ -146,7 +146,7 @@ int ts_init( TS *ts ) {
 	ts_start( ts );
 	
 	// Stop the trains
-	int trains[] = {12, 22,  24, 49, 52};
+	int trains[] = {12, 15, 22,  24, 49, 52};
 	int *k;
 	foreach( k, trains ) {
 		ts_trainSet( ts, *k, 0 );
