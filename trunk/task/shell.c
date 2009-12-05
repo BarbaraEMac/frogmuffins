@@ -126,14 +126,14 @@ void bootstrap(  ) {
 	output( "Creating the first train! (%d)\r\n", tids.tr[0] );
 	
 	// Create the second train!
-//	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
-//	output( "Creating the first train!\r\n" );
+	tids.tr[1] = Create( TRAIN_PRTY, &train_run );
+	output( "Creating the second train! Oh noes!\r\n" );
 
 	// Initialize the first train
 	shell_initTrain( &tids, 0 /*train num*/);
 	
 	// Initialize the second train
-//	shell_initTrain( &tids, 1 /*train num*/ );
+	shell_initTrain( &tids, 1 /*train num*/ );
 
 	// Run the shell
 	shell_run( &tids );
