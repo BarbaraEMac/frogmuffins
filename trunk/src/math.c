@@ -233,11 +233,11 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	// Determine the side of the other 2 points of R1
 	i = (q+2) % 4;
 	side1 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
-				  perp.y * (r1->p[i].y - r1->p[q].x) );
+				  perp.y * (r1->p[i].y - r1->p[q].y) );
 
 	i = (q+3) % 4;
 	side2 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
-				  perp.y * (r1->p[i].y - r1->p[q].x) );
+				  perp.y * (r1->p[i].y - r1->p[q].y) );
 
 	assert( side1 == side2 );
 	
