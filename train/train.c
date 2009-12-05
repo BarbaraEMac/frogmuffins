@@ -3,7 +3,7 @@
 * becmacdo
 * dgoc
 */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <string.h>
 #include <ts7200.h>
@@ -121,6 +121,7 @@ void 		train_init    		( Train *tr );
 Speed 		train_avgSpeed		( Train *tr );
 void 		train_adjustSpeed	( Train *tr, int distLeft, enum StopAction action );
 int 		train_getStopDist	( Train *tr, int gear );
+Speed 		train_getSpeed		( Train *tr, int gear );
 
 // Route Planner Commands
 RPReply		train_planRoute 	( Train *tr );
@@ -289,7 +290,7 @@ void train_run () {
 					// TODO : possibly have a reversing mode here and don't 
 					// reverse if already in reversing mode
 					train_reverse( &tr );			// TODO: Timeout incorrect for this mode.
-					rpReply.stopDist = -rpReply.stopDist;
+					rpReply.stopDist = -rpReply.stopDist + REVERSE_DIST;
 
 					// TODO: Is this correct?
 					// Flip the last hit sensor
@@ -410,7 +411,7 @@ void train_init ( Train *tr ) {
 
 	// The train talks to several servers
 	tr->csTid  = WhoIs (CLOCK_NAME);
-	tr->resTid = WhoIs (RESERVATION_NAME);
+	//tr->resTid = WhoIs (RESERVATION_NAME);
 	tr->rpTid  = WhoIs (ROUTEPLANNER_NAME);
 	tr->tsTid  = WhoIs (TRACK_SERVER_NAME);
 	tr->uiTid  = WhoIs (UI_NAME);
@@ -421,7 +422,7 @@ void train_init ( Train *tr ) {
 	assert( tr->caTid  >= NO_ERROR );
 	assert( tr->csTid  >= NO_ERROR );
 	assert( tr->rpTid  >= NO_ERROR );
-	assert( tr->resTid >= NO_ERROR );
+	//assert( tr->resTid >= NO_ERROR );
 	assert( tr->tsTid  >= NO_ERROR );
 	assert( tr->uiTid  >= NO_ERROR );
 
@@ -479,7 +480,6 @@ Speed train_avgSpeed( Train *tr ) {
 void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	int bestGear = tr->defaultGear;
 	int stopDist = 0;
-	int defaultStopDist = train_getStopDist( tr, tr->defaultGear );
 	int i;
 	
 	// If we are not in calibration mode,
@@ -490,12 +490,9 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		for ( i = tr->defaultGear; i >= 1; i -- ) {
 			stopDist = train_getStopDist( tr, i );
 
-			// Use the stopping distance multiplier to better predict
-			stopDist *= tr->stopDist;
-			stopDist /= defaultStopDist;
-
 			// Multiply by  to account for acc/deceleration
-			if ( (stopDist*3) <= distLeft ) {
+			if ( (stopDist*2) <= distLeft ) {
+				//printf( "predicted stopping distance for gear %d is %dmm\r\n", i, stopDist );
 //				printf ("new Gear=%d old gear=%d\r\n", i, tr->gear);
 				bestGear = i;
 				break;
@@ -523,11 +520,9 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 	// Change your speed to this new gear.
 	train_drive( tr, bestGear );
 
-	Speed base = train_avgSpeed( tr );
-
 	// Adjust calibrated speed based on gear
-	Speed set = speed_adjust( base, tr->defaultGear, tr->gear );
-/*
+	Speed set = train_getSpeed( tr, tr->gear );
+
 	Speed accel = { HEARTBEAT_MS, 10000 }; // 100 mm/s^2
 	// The current speed does not change rapidly
 	int diff = speed( set ) - speed( tr->velocity );
@@ -537,41 +532,64 @@ void train_adjustSpeed( Train *tr, int distLeft, enum StopAction action ) {
 		tr->velocity = set; 							// minimal accel
 	} else {
 		tr->velocity = speed_sub( tr->velocity, accel ); // negative accel
-	}*/
+	}
 	tr->velocity = set;
 
 	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
 
-// HARDCODING
 // Returns the stop distance in mm given the gear and train id
 int train_getStopDist( Train *tr, int gear ) {
-	switch( gear ) {
-		case 14:
-		case 13:
-			return 830;
+	int stopDist;
+	int calGear = 14;
+	int calDist;
+	// Use the stopping distance multiplier to better predict
+	// TODO
+	// calGear = tr->defaultGear
+	// calDist = tr->stopDist
+	
+	switch( tr->id ) {
+		case 52:
 		case 12:
-		case 11:
-			return 820;
-		case 10:
-		case 9:
-			return 600;
-		case 8:
-		case 7:
-			return 490;
-		case 6:
-		case 5:
-			return 330;
-		case 4:
-		case 3:
-			return 210;
-		case 2:
-		case 1:
-			return 100;
-		default:
-			return 0;
+			// These trains are Special, ladee dadee daah
+			// CRAZY squared profiles
+			calDist = 1320;
+			stopDist = calDist * (gear * gear) / (calGear * calGear);
+			break;
+		default: // train 15,22,24 - NORMAL trains with linear profiles
+			calDist = 970;
+			stopDist = calDist * gear / calGear;
+			break;
+	}
+
+	return stopDist;
+}
+
+// returns a number to it's 1.75 power
+inline int pow_1_75 ( int x ) {
+	int x2 = x * x;
+	int x4 = x2 * x2;
+	int x7 = x4 * x2 * x;
+
+	return isqrt( isqrt( x7 ) );
+}
+
+// Returns the train speed in mm/s
+Speed train_getSpeed ( Train *tr, int gear ) {
+	Speed base = train_avgSpeed( tr );
+	int calGear = tr->defaultGear;
+
+	switch( tr->id ) {
+		case 52:
+		case 12:
+			// These trains are Special, ladee dadee daah
+			// CRAZY ^1.75 profiles
+			//return speed_adjust( base, pow_1_75( calGear ), pow_1_75( gear ) );
+		default: // train 15,22,24 - NORMAL trains with linear profiles
+			return speed_adjust( base, calGear, gear );
 	}
 }
+
 
 void train_updatePos( Train *tr, int sensor, int ticks ) {
 	int 		diff;
@@ -671,10 +689,10 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
 
 	Speed		window = { variation * 3 , 1000 }, upper, lower;
-	lower		= speed_adjust( lower, tr->defaultGear, tr->gear );
-	upper		= speed_adjust( upper, tr->defaultGear, tr->gear );
-	upper		= speed_add( tr->velocity, window );
-	lower 		= speed_sub( tr->velocity, window );
+	lower		= train_getSpeed( tr, tr->gear );
+	upper		= lower;
+	upper		= speed_add( upper, window );
+	lower 		= speed_sub( lower, window );
 
 	assert( sensor->len <= array_size( predct->events ) );
 	
@@ -808,9 +826,9 @@ int train_makeReservation( Train *tr, int distPast ) {
 	req.distPast = distPast;
 	req.stopDist = train_getStopDist( tr, tr->gear );
 
-	Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
+	//Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
 
-	return reply.stopDist;
+	return 1000;//reply.stopDist;
 }	
 
 void train_makeIdleReservation( Train *tr ) {
@@ -821,7 +839,7 @@ void train_makeIdleReservation( Train *tr ) {
 	req.trainId  = tr->id;
 	req.sensor   = tr->sensor;
 
-	Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
+	//Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
 }	
 //-----------------------------------------------------------------------------
 //--------------------------------- UI Server ---------------------------------
