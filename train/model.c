@@ -697,7 +697,7 @@ char * track[] = {
 	}
 	f.curr = track[trackId];
 	int ret = parse_model_str(&f, model);
-	int i, x, y, hyp;
+	/*int i, x, y, hyp;
 	Edge *e;
 	for( i = 0; i < model->num_edges; i++ ) {
 		e = &model->edges[i];
@@ -708,7 +708,7 @@ char * track[] = {
 		printf("Edge %s-%s \tdist: %d, \thyp: %d, diff: %d\r\n",
 				e->node1->name, e->node2->name, e->distance,
 				hyp, e->distance - hyp );
-	}
+	}*/
 	return ret;
 }
 /*
