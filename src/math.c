@@ -2,13 +2,13 @@
  * Math Library
  */
 
-#define DEBUG  2
+#define DEBUG 1 
 
 #include "debug.h"
 #include "math.h"
 
 #define TRAIN_WIDTH			40 	// mm
-#define EPSILON 			5
+#define EPSILON 			3
 
 int
 ctz( int x ) {
@@ -81,14 +81,16 @@ Point findPointOnLine ( Point p1, Point p2, int len ) {
 	debug ("findPointOnLine: (%d, %d) and (%d, %d) at len=%d pointDist=%d\r\n", p1.x,p1.y, p2.x,p2.y, len, pointDist(p1,p2));
 	assert( !((p1.x == p2.x) && (p1.y == p2.y)) );
 	
-	if ( len >= pointDist( p1, p2) ) {
+	if ( len == 0 ) {
+		return p1;
+	} else if ( len >= pointDist( p1, p2 ) ) {
 		return p2;
 	}
 
 	Point mid  = midpoint( p1, p2 );
 	int   dist = pointDist( p1, mid );
 
-	if ( withinEpsilon(len, dist, EPSILON) || len <= EPSILON ) {
+	if ( withinEpsilon(len, dist, EPSILON) ) {
 		return mid;
 	}
 	else if ( len < dist ) {
