@@ -25,6 +25,7 @@ typedef struct {
 		int stopDist;		// The estimated stopping distance
 		int dest;			// Destination node index
 	};
+	int totalDist;			// The desired total distance to travel
 } ResRequest;
 
 typedef struct {
