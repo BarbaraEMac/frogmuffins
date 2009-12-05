@@ -11,7 +11,6 @@
 
 enum ResReqType {
 	TRAIN_MAKE = 1,
-	TRAIN_IDLE,
 	TRAIN_STUCK,
 	COURIER
 };
