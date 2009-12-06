@@ -222,7 +222,7 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	assert ( q <= 2 );
 
-	Vector edge = vect_sub( r1->p[(q+1) % 4], r1->p[q] );
+	Vector edge = vect_make( r1->p[q], r1->p[(q+1) % 4] );
 	Vector perp = { -edge.y, edge.x };
 	int i;
 	int side1, side2;
