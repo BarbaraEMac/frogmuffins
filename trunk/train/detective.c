@@ -135,7 +135,7 @@ void det_run () {
 				break;
 
 			case GET_STRAY:
-				debug( "det: GetStray request from (%d) \r\n", senderTid );
+				printf( "det: GetStray request from (%d) \r\n", senderTid );
 				// Wait for next stray sensor
 				//req.tid = senderTid;
 				req.events[0].sensor = MATCH_ALL;
@@ -199,22 +199,25 @@ void det_reply( DeRequest *req, int sensor, int ticks, TrainCode type ) {
 int det_wake ( Det *det, int sensor, int ticks ) {
 	debug ("det_wake: sensor: %d, time: %dms\r\n", sensor, ticks * MS_IN_TICK );
 	DeRequest  *req;
-	int			woken = 0, i;
+	int			i;
 	
 	foreach( req, det->requests ) {
 		for( i = 0; (req->type == WATCH_FOR) && (i < req->numEvents); i ++ ) {
 			if(req->events[i].sensor == sensor ) {
+				printf ("det: sensor=%d\r\n", sensor);
 				det_reply( req, sensor, ticks, POS_UPDATE );
-				woken++;
+				return 1;
 			}
 		}
 	}
 	foreach( req, det->requests ) {
 		if( req->type == GET_STRAY ) {
-				det_reply( req, sensor, ticks, POS_UPDATE );
+			printf ("det: sensor=%d\r\n", sensor);
+			det_reply( req, sensor, ticks, POS_UPDATE );
+			return 1;
 		}
 	}
-	return woken;
+	return 0;
 }
 
 void det_checkHist( Det *det, DeRequest *req ) {
@@ -226,6 +229,7 @@ void det_checkHist( Det *det, DeRequest *req ) {
 		if(req->events[i].start <= ticks ) {
 			printf( "det: sensor: %d from the past (%d ms ago).\r\n", 
 					sensor, (Time( det->csTid ) - ticks) * MS_IN_TICK );
+				printf ("det: sensor=%d\r\n", sensor);
 			det_reply( req, sensor, ticks, POS_UPDATE );
 			// Reset the History to prevent another train from grabbing it
 			det->sensorHist[sensor] = 0;
