@@ -166,7 +166,7 @@ void train_run () {
 	int			prevMode      = 0;
 	int			safeDist      = 0;
 	int			totalDist 	  = 0;
-	int			trappedTrials = 0;
+	int			waitingTrials = 0;
 
 	predct.tid = MyTid();
 
@@ -363,14 +363,15 @@ void train_run () {
 									   totalDist, rpReply.stopAction );
 				//	// This train is trapppppped.
 				//	if ( tr.mode == WAITING ) {
-				//		Delay( 200, tr.csTid );
-				//		trappedTrials ++;
+				//		Delay( 500, tr.csTid );
+				//		waitingTrials ++;
 				//	}
-				//	if ( trappedTrials == 5 ) {
+				//	if ( waitingTrials == 5 ) {
 				//		train_sendStuck( &tr, distFromSensor, totalDist );
+				//		break;
 				//	}
-			//	} while ( safeDist == 0 && totalDist != 0 );
-				trappedTrials = 0;
+			//	} while ( tr.mode == WAITING  );
+				waitingTrials = 0;
 					
 				if ( prevMode == DRIVE && tr.mode == IDLE ) {
 					// We've reached our destination,
@@ -503,10 +504,10 @@ Speed train_avgSpeed( Train *tr ) {
 void train_adjustSpeed( Train *tr,     int distFromSensor, 
 					   int totalDist, enum StopAction action ) {
 	
-	int bestGear = train_getBestGear( tr, totalDist - distFromSensor);
+	int remainingDist = totalDist - distFromSensor;
+	int bestGear = train_getBestGear( tr, remainingDist );
 	int safeDist = train_makeReservation( tr, distFromSensor, totalDist, 
 										  train_getStopDist(tr, bestGear) ); 
-	int remainingDist = totalDist - distFromSensor;
 
 	// If we are not in calibration mode,
 	if( tr->mode == DRIVE || tr->mode == WAITING ) {
@@ -519,10 +520,8 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 		}
 		
 		if ( action == JUST_STOP && remainingDist <= 0 ) {
-			bestGear = 0;
 			tr->mode = IDLE;
 		} else if ( (safeDist == 0) && (remainingDist > 0) ) {
-			bestGear = 0;
 			tr->mode = WAITING;
 		}
 		
@@ -536,8 +535,12 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 	} 
 
 	// If you are stopping calibration
-	if ( tr->mode == CAL_STOP && safeDist == 0 && rb_empty(&tr->dests) ) {
+	if ( tr->mode == CAL_STOP && (remainingDist == 0 || safeDist == 0) &&
+		 rb_empty(&tr->dests) ) {
 		tr->mode = IDLE;		// Change to this state!
+	}
+
+	if ( tr->mode == IDLE || tr->mode == WAITING ) {
 		bestGear = 0;
 	}
 
@@ -820,11 +823,10 @@ void train_drive( Train *tr, int gear ) {
 	// Don't change your speed while calibrating
 	if( tr->mode == CAL_SPEED && tr->gear != tr->defaultGear ) {
 		gear = tr->defaultGear;
-	} else if ( (tr->mode == CAL_SPEED) || 
-			    (tr->mode == CAL_STOP && gear > tr->gear) ) {
+	} else if ( (tr->mode == CAL_SPEED) || (tr->mode == CAL_STOP) ) {
 		return;
 	}
-	
+
 	// If we are already at this gear, just return.
 	if( tr->gear == gear ) {
 		return;
