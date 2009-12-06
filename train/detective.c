@@ -203,10 +203,24 @@ int det_wake ( Det *det, int sensor, int ticks ) {
 	
 	foreach( req, det->requests ) {
 		for( i = 0; (req->type == WATCH_FOR) && (i < req->numEvents); i ++ ) {
-			if(req->events[i].sensor == sensor ) {
-				printf ("det: sensor=%d\r\n", sensor);
-				det_reply( req, sensor, ticks, POS_UPDATE );
-				return 1;
+			if( req->events[i].sensor == sensor ) {
+				if ( req->events[i].start <= ticks 
+					&& req->events[i].end >= ticks ) {
+//				printf ("det: sensor=%d\r\n", sensor);
+					det_reply( req, sensor, ticks, POS_UPDATE );
+					return 1;
+				} else {
+					printf("det: %c%d predicted but",
+						sensor_bank( sensor ), sensor_num( sensor ));
+					if( req->events[i].end < ticks ) {
+						printf(" early by %d ms\r\n", 
+							(ticks - req->events[i].end) * MS_IN_TICK );
+					}
+					if( req->events[i].start > ticks ) {
+						printf(" late by %d ms\r\n", 
+							(req->events[i].start - ticks) * MS_IN_TICK );
+					}
+				}
 			}
 		}
 	}
@@ -226,7 +240,7 @@ void det_checkHist( Det *det, DeRequest *req ) {
 	for( i = 0; i < req->numEvents; i ++ ) {
 		int sensor 	= req->events[i].sensor;
 		int ticks 	= det->sensorHist[sensor];
-		if(req->events[i].start <= ticks ) {
+		if( req->events[i].start <= ticks ) {
 			printf( "det: sensor: %d from the past (%d ms ago).\r\n", 
 					sensor, (Time( det->csTid ) - ticks) * MS_IN_TICK );
 				printf ("det: sensor=%d\r\n", sensor);
