@@ -92,10 +92,9 @@ Point findPointOnLine ( Point p1, Point p2, int len ) {
 	Point mid  = midpoint( p1, p2 );
 	int   dist = pointDist( p1, mid );
 
-	if ( withinEpsilon(len, dist, EPSILON) ) {
+	if ( abs( len - dist) <= EPSILON ) {
 		return mid;
-	}
-	else if ( len < dist ) {
+	} else if ( len < dist ) {
 		return findPointOnLine( p1, mid, len );
 	} else {
 		return findPointOnLine( mid, p2, len - dist );
@@ -129,13 +128,8 @@ inline int slope( Point p1, Point p2 ) {
 }
 
 // --------------------------- Vector -----------------------------------------
-inline Vector makeVector( Point p1, Point p2 ) {
-	Vector ret;
-
-	ret.x = p2.x - p1.x;
-	ret.y = p2.y - p1.y;
-
-	return ret;
+inline Vector vect_make( Point p1, Point p2 ) {
+	return vect_sub( p2, p1 );
 }
 
 inline int vect_len( Vector v ) {
@@ -160,11 +154,15 @@ inline Vector vect_sub( Vector v1, Vector v2 ) {
 	return ret;
 }
 
+inline int vect_dotProduct( Vector v1, Vector v2 ) {
+	return (v1.x * v2.x) + (v1.y * v2.y);
+}
+
 // ------------------------ Rectangle -----------------------------------------
 Rectangle makeRectangle( Point p1, Point p2 ) {
 	debug("make from (%d, %d) to (%d, %d)\r\n", p1.x, p1.y, p2.x, p2.y);
 	Rectangle rect;
-	Vector 	  rectVect = makeVector( p1, p2 );
+	Vector 	  rectVect = vect_make( p1, p2 );
 	Vector	  perp 	   = { -rectVect.y, rectVect.x };
 	int    	  len  	   = vect_len ( perp );
 
@@ -212,19 +210,19 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 	int i;
 
 	// For each edge made by the corners of r1,
-	for ( i = 0; i < 2; i ++ ) {
-		if ( rect_intersectH( r1, r2, i ) == INTERSECTION ) {
-			return INTERSECTION;
+	for ( i = 0; i < 3; i ++ ) {
+		if ( rect_intersectH( r1, r2, i ) == NO_INTERSECTION ) {
+			return NO_INTERSECTION;
 		}
 	}
 
-	return NO_INTERSECTION;
+	return INTERSECTION;
 }
 
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	assert ( q <= 2 );
 
-	Vector edge = vect_sub( r1->p[q+1], r1->p[q] );
+	Vector edge = vect_sub( r1->p[(q+1) % 4], r1->p[q] );
 	Vector perp = { -edge.y, edge.x };
 	int i;
 	int side1, side2;
@@ -232,12 +230,10 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 
 	// Determine the side of the other 2 points of R1
 	i = (q+2) % 4;
-	side1 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
-				  perp.y * (r1->p[i].y - r1->p[q].y) );
+	side1 = sign( vect_dotProduct( perp, vect_make( r1->p[q], r1->p[i] )));
 
 	i = (q+3) % 4;
-	side2 = sign( perp.x * (r1->p[i].x - r1->p[q].x) + 
-				  perp.y * (r1->p[i].y - r1->p[q].y) );
+	side2 = sign( vect_dotProduct( perp, vect_make( r1->p[q], r1->p[i] )));
 
 	assert( side1 == side2 );
 	
@@ -247,8 +243,7 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	// Determine the side of each point in the second rect
 	for ( i = 0; i < 4; i ++ ) {
 
-		side1 = sign( perp.x * (r2->p[i].x - r1->p[q].x) + 
-					  perp.y * (r2->p[i].y - r1->p[q].y) );
+		side1 = sign( vect_dotProduct( perp, vect_make( r1->p[q], r2->p[i]) ) );
 
 		// TODO: ZERO return case
 		if ( side1 == r1Side ) {
@@ -264,6 +259,3 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	return NO_INTERSECTION;
 }
 
-inline int withinEpsilon(int a, int to, int ep) {
-	return ( (a >= to - ep) && (a <= to + ep) );
-}
