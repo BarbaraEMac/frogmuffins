@@ -316,7 +316,9 @@
 	===========
 	We did some neat things for this assignment. Here's a brief discussion of
 	some of them.
-	
+		
+		- can travle to any location - not just sensors
+
 		Track Measurements
 		==================
 		We measured the location of every single node on both tracks from an
