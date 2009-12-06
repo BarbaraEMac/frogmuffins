@@ -396,7 +396,7 @@ void train_run () {
 							distFromSensor, &predct );
 				}
 				
-				if ( req.type == TIME_UPDATE && tr.mode != IDLE ) {
+				if ( req.type == TIME_UPDATE ) {
 					Reply( senderTid, &predct, sizeof(DeRequest) );
 				}
 
@@ -463,7 +463,7 @@ void train_init ( Train *tr ) {
 	// Initialize the calibration data
 	rb_init( &(tr->hist), tr->histBuf );
 	memoryset( tr->histBuf, 0, sizeof(tr->histBuf) );
-	Speed sp = {350, 1000}; // inital speed
+	Speed sp = {300, 1000}; // inital speed
 	rb_push( &(tr->hist), &sp );
 
 	tr->velocity     = train_avgSpeed (tr);
