@@ -232,9 +232,10 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 	assert ( q <= 3 );
 
-	Vector edge = vect_make( r1->p[q], r1->p[(q+1) % 4] );
-	Vector perp = { -edge.y, edge.x };
 	int i;
+	i = (q+1) % 4;
+	Vector edge = vect_make( r1->p[q], r1->p[i] );
+	Vector perp = { -edge.y, edge.x };
 	int side1, side2;
 	int r1Side;
 
