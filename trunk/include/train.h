@@ -15,7 +15,8 @@ typedef enum _train_mode {
 	CAL_SPEED = 1,	// Calibrate the running speed
 	CAL_STOP,		// Calibrate the stopping distance
 	IDLE,			// Ready for input
-	DRIVE			// Going from place A to place B
+	DRIVE,			// Going from place A to place B
+	WAITING			// Waiting for a clear path
 } TrainMode;
 
 typedef enum _train_request {
