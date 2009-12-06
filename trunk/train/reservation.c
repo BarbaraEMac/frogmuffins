@@ -154,7 +154,7 @@ void res_run () {
 					}
 
 					assert( reply.stopDist >= 0 );
-					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
+				//	printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
 				}
 
 				// Reply to the sender train
