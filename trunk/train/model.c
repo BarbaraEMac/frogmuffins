@@ -758,10 +758,16 @@ void model_findNextNodes( TrackModel *model, Node *curr, Node *prev,
 
 Node *
 node_neighbour( Node *node, Edge *edge ) {
-	if( edge->node1 == node ) {
+	if( edge->node1->idx == node->idx ) {
 		return edge->node2;
 	} else {
-		assert( edge->node2 == node );
+		if( edge->node2->idx != node->idx ) {
+			printf("this:(%x)%s end1=(%x)%s end2=(%x)%s\r\n", 
+					node, node->name, 
+					edge->node1, edge->node1->name, 
+					edge->node2, edge->node2->name);
+		}
+		assert( edge->node2->idx == node->idx );
 		return edge->node1; 
 	}
 }
@@ -838,7 +844,10 @@ inline int idxTosIdx (int idx, char *name) {
 	if ( (atod(name[1]) % 2) == 0 ) {
 		ret += 1;
 	}
-	debug ("idx=%d ret=%d\r\n", idx, ret);
+	if ( strlen(name) == 3 && atod(name[2]) % 2 == 0 ) {
+		ret += 1;
+	}
+	debug ("atod=%d name=%s idx=%d ret=%d\r\n", atod(name[1]), name, idx, ret);
 	return ret;
 }
 
