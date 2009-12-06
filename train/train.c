@@ -118,7 +118,7 @@ speed_sub( Speed sp1, Speed sp2 ) {
 
 void 		train_init    		( Train *tr );
 Speed 		train_avgSpeed		( Train *tr );
-int 		train_adjustSpeed	( Train *tr, int distFromSensor, int totalDist, enum StopAction action );
+void 		train_adjustSpeed	( Train *tr, int distFromSensor, int totalDist, enum StopAction action );
 int		 	train_getBestGear	( Train *tr, int totalDist );
 int 		train_getStopDist	( Train *tr, int gear );
 Speed 		train_getSpeed		( Train *tr, int gear );
@@ -358,10 +358,10 @@ void train_run () {
 			//	do {
 					// Adjust speed
 					prevMode = tr.mode;
-					safeDist = train_adjustSpeed( &tr, distFromSensor, 
-												  totalDist, rpReply.stopAction );
+					train_adjustSpeed( &tr, distFromSensor, 
+									   totalDist, rpReply.stopAction );
 				//	// This train is trapppppped.
-				//	if ( safeDist == 0 && totalDist != 0 ) {
+				//	if ( tr.mode == WAITING ) {
 				//		Delay( 200, tr.csTid );
 				//		trappedTrials ++;
 				//	}
@@ -371,8 +371,7 @@ void train_run () {
 			//	} while ( safeDist == 0 && totalDist != 0 );
 				trappedTrials = 0;
 
-				if ( prevMode == DRIVE && tr.mode == IDLE && 
-					 abs(totalDist - distFromSensor) <= 10) ) {
+				if ( prevMode == DRIVE && tr.mode == IDLE ) {
 					// We've reached our destination,
 					// Go to the next OR wait to get a new destination
 					printf ("%d reached %d. ", tr.id, *(int*)rb_top(&tr.dests));
@@ -500,7 +499,7 @@ Speed train_avgSpeed( Train *tr ) {
 	return total;
 }
 
-int train_adjustSpeed( Train *tr,     int distFromSensor, 
+void train_adjustSpeed( Train *tr,     int distFromSensor, 
 					   int totalDist, enum StopAction action ) {
 	
 	int bestGear = train_getBestGear( tr, totalDist - distFromSensor);
@@ -508,34 +507,45 @@ int train_adjustSpeed( Train *tr,     int distFromSensor,
 										  train_getStopDist(tr, bestGear) ); 
 	
 	// If we are not in calibration mode,
-	if( tr->mode == DRIVE || tr->mode == IDLE ) {
+	if( tr->mode == DRIVE || tr->mode == IDLE || tr->mode == WAITING ) {
 		// Given a safe distance, select the best gear.
 		bestGear = train_getBestGear( tr, safeDist );
 
 		if ( action == STOP_AND_REVERSE && bestGear < 3 ) {
 			bestGear = 3;
 		}
-		// This IDLE can also mean the train is trapped.
-		if ( action == JUST_STOP && safeDist <= 0 ) {// If we need to stop,
+		
+		if ( action == JUST_STOP ) {
 			bestGear = 0;
 			tr->mode = IDLE;
+		}
+
+		if ( (safeDist == 0) && ((totalDist - distFromSensor) > 0) ) {
+			bestGear = 0;
+			tr->mode = WAITING;
 		}
 		
 		printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
 				 bestGear, safeDist, totalDist - distFromSensor );
 
 		// Reset the mode if it is safe to travel
-		if ( tr->mode == IDLE && bestGear > 0 ) {
+		if ( (tr->mode == IDLE || tr->mode == WAITING) && bestGear > 0 ) {
 			tr->mode = DRIVE;
 		}
 	} 
 
-	// If you are stopping calibration, or in idle mode
-	if ( (tr->mode == CAL_STOP && safeDist == 0 && rb_empty(&tr->dests) )
-		|| (tr->mode == IDLE) ) {
-		tr->mode = IDLE;		// Assert this state!
+	// If you are stopping calibration
+	if ( tr->mode == CAL_STOP && safeDist == 0 && rb_empty(&tr->dests) ) {
+		tr->mode = IDLE;		// Change to this state!
 		bestGear = 0;
 	}
+
+	// If you need to stop,
+	if ( tr->mode == IDLE ) assert( bestGear == 0 );
+	// If you are waiting,
+	if ( tr->mode == WAITING ) assert( bestGear == 0 );
+	// If you need to move,
+	if ( tr->mode == DRIVE ) assert( bestGear > 0 );
 
 	// Change your speed to this new gear.
 	train_drive( tr, bestGear );
@@ -555,12 +565,10 @@ int train_adjustSpeed( Train *tr,     int distFromSensor,
 	}
 	tr->velocity = set;
 
-	if ( tr->mode == IDLE ) {
+	if ( tr->mode == IDLE || tr->mode == WAITING ) {
 		assert( speed(tr->velocity) == 0 );
 		assert( speed_dist(tr->velocity, HEARTBEAT_MS) == 0 );
 	}
-
-	return safeDist;
 //	debug( "train: speed adjusted to %dmm/s\r\n", speed( tr->velocity ) );
 }
 
@@ -724,7 +732,8 @@ void train_locate( Train *tr, int timeout, DeRequest *predct ) {
 }
 
 void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * predct ) {
-	if ( tr->mode == IDLE ) return;		// Do not predict if you are not moving.
+	// Do not predict if you are not moving.
+	if ( tr->mode == IDLE  || tr->mode == WAITING ) return;	
 	
 	int 		i, dist, ticks = Time( tr->csTid );
 	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
@@ -769,7 +778,7 @@ void train_reverse( Train *tr ) {
 	TSReply	  reply;
 
 	// Do not reverse if we are testing the stopping distance.
-	if( tr->mode == CAL_STOP ) return; //|| tr->mode == CAL_SPEED ) return;
+	if( tr->mode == CAL_STOP || tr->mode == CAL_SPEED ) return;
 	
 	debug( "\033[44mTrain %d is reversing at gear =%d\033[49m\r\n", 
 			tr->id, tr->gear );
@@ -788,7 +797,8 @@ void train_drive( Train *tr, int gear ) {
 	// Don't change your speed while calibrating
 	if( tr->mode == CAL_SPEED && tr->gear != tr->defaultGear ) {
 		gear = tr->defaultGear;
-	} else if ( tr->mode == CAL_SPEED || (tr->mode == CAL_STOP && gear > tr->gear) ) {
+	} else if ( (tr->mode == CAL_SPEED) || 
+			    (tr->mode == CAL_STOP && gear > tr->gear) ) {
 		return;
 	}
 	
