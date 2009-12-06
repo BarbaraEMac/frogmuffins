@@ -252,16 +252,9 @@ int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
 
 	// Determine the side of each point in the second rect
 	for ( i = 0; i < 4; i ++ ) {
-
 		side1 = sign( vect_dotProduct( perp, vect_make( r1->p[q], r2->p[i]) ) );
 
-		if ( side1 == r1Side ) {
-			printf ("r1edge: (%d, %d) r1side=%d r2edge:(%d, %d) r2side=%d\r\n", 
-					 r1->p[q].x, r1->p[q].y, r1Side, 
-					 r2->p[i].x, r2->p[i].y, side1 ); 
-
-			return INTERSECTION;
-		}
+		if ( side1 == r1Side ) { return INTERSECTION; }
 	}
 
 	return NO_INTERSECTION;
