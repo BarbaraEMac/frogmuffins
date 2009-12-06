@@ -33,6 +33,9 @@
 	
 	Model
 	=====
+	For the project we have extensively remeasured the tracks, particularly 
+	the x and y coordinates which we use in our reservation system.
+
 	For this assignment, we simply use the reserved flag in each node to set it
 	as reserved or not. We have not modified our representation of the track for
 	P2.
