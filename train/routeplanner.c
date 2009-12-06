@@ -193,7 +193,7 @@ void rp_run() {
 				// Get the sensor id
 				shReply.idx = idxTosIdx (shReply.idx, req.name);
 				
-				debug ("converted %s to %d\r\n", req.name, shReply.idx);
+				printf ("converted %s to %d\r\n", req.name, shReply.idx);
 				// Reply to the shell
 				Reply(senderTid, (char*)&shReply, sizeof(RPShellReply));
 				break;
@@ -390,7 +390,7 @@ void rp_planRoute ( RoutePlanner *rp, RPReply *trReply, RPRequest *req ) {
 			rp->model.nodes[req->destIdx].name, req->destIdx, rp->model.nodes[currentIdx].name);
 
 	// TODO: Every time?
-	floyd_warshall( rp, rp->model.num_nodes, req->trainId );
+	//floyd_warshall( rp, rp->model.num_nodes, req->trainId );
 	
 	// Distance from current sensor to destination node
 	actualDist = rp->dists[currentIdx][req->destIdx];
