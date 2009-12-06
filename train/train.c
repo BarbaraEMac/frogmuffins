@@ -585,7 +585,7 @@ int train_getBestGear( Train *tr, int totalDist ) {
 	for ( i = tr->defaultGear; i >= 1; i -- ) {
 		stopDist = train_getStopDist( tr, i );
 
-		if ( stopDist <= totalDist ) {
+		if ( stopDist * 3 / 2 <= totalDist ) {
 			//printf( "predicted stopping distance for gear %d is %dmm\r\n", 
 			//         i, stopDist );
 //				printf ("new Gear=%d old gear=%d\r\n", i, tr->gear);
@@ -593,7 +593,7 @@ int train_getBestGear( Train *tr, int totalDist ) {
 		}
 	}
 
-	return tr->defaultGear;
+	return 1; // trying to hit sensor
 }
 
 // Returns the stop distance in mm given the gear and train id
