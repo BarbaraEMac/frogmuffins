@@ -36,6 +36,7 @@
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 #define REVERSE_DIST			400
+#define SAFE_FLIP_DIST			200
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -135,7 +136,7 @@ void 		train_updatePos		( Train *tr, int sensor, int ticks );
 // Track Server Commands
 void 		train_reverse		( Train *tr );
 void 		train_drive			( Train *tr, int gear );
-void		train_flipSwitches	( Train *tr, RPReply *rpReply, int dist );
+void 		train_flipSwitches	( Train *tr, RPReply *rpReply, int mm, int reserveDist ) ;
 SwitchDir	train_dir			( Train *tr, int sw );
 
 // Reservation Server Commands		
@@ -370,7 +371,7 @@ void train_run () {
 				//	}
 			//	} while ( safeDist == 0 && totalDist != 0 );
 				trappedTrials = 0;
-
+					
 				if ( prevMode == DRIVE && tr.mode == IDLE ) {
 					// We've reached our destination,
 					// Go to the next OR wait to get a new destination
@@ -384,7 +385,7 @@ void train_run () {
 					}
 				} else if( tr.mode != IDLE ) {
 					// Flip the switches along the path.
-					train_flipSwitches( &tr, &rpReply, safeDist );
+					train_flipSwitches( &tr, &rpReply, distFromSensor, safeDist );
 				}
 				
 				// Only update predictions if train is not lost 
@@ -394,7 +395,7 @@ void train_run () {
 							distFromSensor, &predct );
 				}
 				
-				if ( req.type == TIME_UPDATE ) {
+				if ( req.type == TIME_UPDATE && tr.mode != IDLE ) {
 					Reply( senderTid, &predct, sizeof(DeRequest) );
 				}
 
@@ -505,31 +506,31 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 	int bestGear = train_getBestGear( tr, totalDist - distFromSensor);
 	int safeDist = train_makeReservation( tr, distFromSensor, totalDist, 
 										  train_getStopDist(tr, bestGear) ); 
-	
+	int remainingDist = totalDist - distFromSensor;
+
 	// If we are not in calibration mode,
-	if( tr->mode == DRIVE || tr->mode == IDLE || tr->mode == WAITING ) {
+	if( tr->mode == DRIVE || tr->mode == WAITING ) {
 		// Given a safe distance, select the best gear.
 		bestGear = train_getBestGear( tr, safeDist );
 
-		if ( action == STOP_AND_REVERSE && bestGear < 3 ) {
+		if ( action == STOP_AND_REVERSE && bestGear < 3 ) {//distLeft <= 0 ) {
+			//train_drive( tr, 15 );
 			bestGear = 3;
 		}
 		
-		if ( action == JUST_STOP ) {
+		if ( action == JUST_STOP && remainingDist <= 0 ) {
 			bestGear = 0;
 			tr->mode = IDLE;
-		}
-
-		if ( (safeDist == 0) && ((totalDist - distFromSensor) > 0) ) {
+		} else if ( (safeDist == 0) && (remainingDist > 0) ) {
 			bestGear = 0;
 			tr->mode = WAITING;
 		}
 		
 		printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
-				 bestGear, safeDist, totalDist - distFromSensor );
+				 bestGear, safeDist, remainingDist );
 
 		// Reset the mode if it is safe to travel
-		if ( (tr->mode == IDLE || tr->mode == WAITING) && bestGear > 0 ) {
+		if ( tr->mode == WAITING && bestGear > 0 ) {
 			tr->mode = DRIVE;
 		}
 	} 
@@ -731,18 +732,19 @@ void train_locate( Train *tr, int timeout, DeRequest *predct ) {
 	train_drive( tr, LOCATE_GEAR );
 }
 
+
 void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * predct ) {
 	// Do not predict if you are not moving.
-	if ( tr->mode == IDLE  || tr->mode == WAITING ) return;	
+	if ( tr->mode == IDLE || tr->mode == WAITING || 
+		 speed( tr->velocity ) == 0  ) return;
 	
-	int 		i, dist, ticks = Time( tr->csTid );
-	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD );
-
-	Speed		window = { variation * 3 , 1000 }, upper, lower;
-	lower		= train_getSpeed( tr, tr->gear );
-	upper		= lower;
-	upper		= speed_add( upper, window );
-	lower 		= speed_sub( lower, window );
+	int 		i, ticks = Time( tr->csTid );
+	int			variation = max( tr->sd, speed( tr->velocity )/ SD_THRESHOLD ) * 3;
+	variation = min( variation, speed( tr->velocity )  / 2 ); // max: 50% variation
+	
+	Speed		window 	= { variation, 1000 };
+	Speed		faster 	= speed_add( tr->velocity, window );
+	Speed		slower 	= speed_sub( tr->velocity, window );
 
 	assert( sensor->len <= array_size( predct->events ) );
 	
@@ -753,20 +755,41 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 //	debug("predicting sensors:");
 
 	for( i = 0; i < predct->numEvents ; i ++ ) {
-		dist = sensor->dists[i] - mm ;
+		int dist = sensor->dists[i] ;
+		int expected = speed_time( tr->velocity, dist );
+		int startDiff = speed_time( faster, dist ) - expected;
+		assert( startDiff < 0 );
+		int endDiff = speed_time( slower, dist ) - expected;
+		assert( endDiff > 0 );
+	
+		dist -= mm;
 
-//		debug( "%c%d, ", sensor_bank(sensor->idxs[i]),
-//				sensor_num(sensor->idxs[i]));
+		if( tr->mode == CAL_SPEED ) {
+			startDiff = -expected;
+			endDiff = expected;
+		}
+
+		expected = speed_time( tr->velocity, dist );
 
 		predct->events[i].sensor = sensor->idxs[i];
-		predct->events[i].start  = ticks + speed_time( lower, dist );
-		predct->events[i].end    = ticks + speed_time( upper, dist );
+		predct->events[i].start  = ticks + (expected + startDiff) / MS_IN_TICK;
+		predct->events[i].end    = ticks + (expected + endDiff) / MS_IN_TICK;
+		//if( predct->events[i].start >= predct->events[i].end ) {
+	/*	printf("%c%d, \tdist: %dmm, \tspeed: %dmm/s, \tstart: %dms, \tend: %dms\r\n",
+				sensor_bank(sensor->idxs[i]), sensor_num(sensor->idxs[i]),
+				sensor->dists[i] - mm,
+				speed( tr->velocity ),
+				predct->events[i].start,
+				predct->events[i].end );*/
+		//}
+
+		//assert( predct->events[i].start <= predct->events[i].end );
 
 		predct->expire = max( predct->expire, predct->events[i].end );
 	}
 //	debug( "\r\n" );
 //	debug( "train: pr:%dmm/s \twi:%dmm/s \tlo:%dmm/s \tup:%dmm/s\r\n", 
-//		speed( tr->velocity ), speed(window ), speed( lower ), speed( upper ) );
+//		speed( tr->velocity ), speed(window ), speed( slower ), speed( faster ) );
 	
 }
 
@@ -778,7 +801,7 @@ void train_reverse( Train *tr ) {
 	TSReply	  reply;
 
 	// Do not reverse if we are testing the stopping distance.
-	if( tr->mode == CAL_STOP || tr->mode == CAL_SPEED ) return;
+	if( tr->mode == CAL_STOP ) return;//|| tr->mode == CAL_SPEED ) return;
 	
 	debug( "\033[44mTrain %d is reversing at gear =%d\033[49m\r\n", 
 			tr->id, tr->gear );
@@ -810,7 +833,7 @@ void train_drive( Train *tr, int gear ) {
 	if( gear >= 0 && gear < 15 ) {
 		tr->gear = gear;
 	}
-	debug ("Train %d is driving at gear =%d\r\n", tr->id, gear);
+	printf ("Train %d is driving at gear =%d\r\n", tr->id, gear);
 		
 	req.type        = TR;
 	req.train       = tr->id;
@@ -820,7 +843,7 @@ void train_drive( Train *tr, int gear ) {
 	Send( tr->tsTid, &req, sizeof(TSRequest), &reply, sizeof(TSReply) );
 }
 
-void train_flipSwitches( Train *tr, RPReply *rpReply, int reserveDist ) {
+void train_flipSwitches( Train *tr, RPReply *rpReply, int mm, int reserveDist ) {
 	TSRequest		req;
 	TSReply			reply;
 	SwitchSetting  *ss;
@@ -831,8 +854,12 @@ void train_flipSwitches( Train *tr, RPReply *rpReply, int reserveDist ) {
 	foreach( ss, rpReply->switches ) {
 	  	if( ss->id <= 0 ) break;
 
+		// Only flip switches more than 20 cm away
+		int dist = ss->dist - mm;
+		if( abs( dist ) < SAFE_FLIP_DIST ) continue;
+
 		// Only flip switches in your reserved section
-	 	if ( reserveDist <= ss->dist ) continue;
+	 	if ( reserveDist <= dist ) continue;
 
 	  	// only flip switches in the inproper position
 	  	if ( train_dir( tr, ss->id ) != ss->dir ) {
