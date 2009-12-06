@@ -62,7 +62,7 @@ inline Point 	midpoint( Point p1, Point p2 );
 inline int	 	slope( Point p1, Point p2 );
 
 // --------------------------- Vector -----------------------------------------
-inline Vector 	makeVector( Point p1, Point p2 );
+inline Vector 	vect_make( Point p1, Point p2 );
 inline int  	vect_len( Vector v );
 inline Vector 	vect_add( Vector v1, Vector v2 );
 inline Vector 	vect_sub( Vector v1, Vector v2 );
@@ -73,5 +73,4 @@ inline  void 	rect_init( Rectangle *rect );
 		int 	rect_intersect( Rectangle *r1, Rectangle *r2 );
 		int 	rect_intersectH( Rectangle *r1, Rectangle *r2, int q );
 
-inline int 		withinEpsilon( int a, int to, int ep);
 #endif
