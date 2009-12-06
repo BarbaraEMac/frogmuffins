@@ -338,7 +338,6 @@ void train_run () {
 
 			case TIME_UPDATE:		// heartbeat
 				// Update current location (NOTE: This is an estimate!)
-				// TODO: Consider acceleration here!!
 				distFromSensor += speed_dist( tr.velocity, HEARTBEAT_MS );
 				
 				if ( tr.mode == IDLE ) {
@@ -381,7 +380,7 @@ void train_run () {
 					if( rb_empty(&tr.dests) == 0 ) {
 						printf ("Going to %d.\r\n", *(int*)rb_top(&tr.dests) );
 					}
-				} else {
+				} else if( tr.mode != IDLE ) {
 					// Flip the switches along the path.
 					train_flipSwitches( &tr, &rpReply, safeDist );
 				}
@@ -846,12 +845,12 @@ int train_makeReservation( Train *tr, int distPast, int totalDist ) {
 		req.stopDist = train_getStopDist(tr, tr->defaultGear)*2 + 10;
 	}
 	
-
 	Send( tr->resTid, &req, sizeof(ResRequest), &reply, sizeof(ResReply) );
-	
 	return reply.stopDist;
+	int diff = totalDist - distPast;
+	if( diff < 0 ) return 0;
+	return diff; //reply.stopDist;
 }	
-
 //-----------------------------------------------------------------------------
 //--------------------------------- UI Server ---------------------------------
 //-----------------------------------------------------------------------------
