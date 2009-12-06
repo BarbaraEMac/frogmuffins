@@ -465,7 +465,7 @@ int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
 
 	debug ("RETURNING a distLeft of: %d\r\n", distLeft );
 	if ( distLeft < 0 ) {
-		assert( withinEpsilon( distLeft, 0, 10 ) );
+		assert( abs( distLeft ) < 10 );
 		distLeft = 0;
 	}
 
