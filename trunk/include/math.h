@@ -53,13 +53,13 @@ unsigned long isqrt( unsigned long x );
  
 inline int sign (int val);
 
-// TODO: INLINE THESE
 // ---------------------- Point and Line --------------------------------------
 // Find the coord, along the line p1->p2, that is len away from p1.
 	   Point 	findPointOnLine ( Point p1, Point p2, int len );
 inline int		pointDist( Point p1, Point p2 );
 inline Point 	midpoint( Point p1, Point p2 );
 inline int	 	slope( Point p1, Point p2 );
+inline int 		pointEqual( Point p1, Point p2 );
 
 // --------------------------- Vector -----------------------------------------
 inline Vector 	vect_make( Point p1, Point p2 );

@@ -81,7 +81,7 @@ inline int sign ( int val ) {
 // Find the coord, along the line p1->p2, that is len away from p1.
 Point findPointOnLine ( Point p1, Point p2, int len ) {
 	debug ("findPointOnLine: (%d, %d) and (%d, %d) at len=%d pointDist=%d\r\n", p1.x,p1.y, p2.x,p2.y, len, pointDist(p1,p2));
-	assert( !((p1.x == p2.x) && (p1.y == p2.y)) );
+	assert( !pointEqual(p1, p2) );
 	
 	if ( len == 0 ) {
 		return p1;
@@ -125,6 +125,10 @@ inline int slope( Point p1, Point p2 ) {
 	int yDiff = p2.y - p1.y;
 
 	return yDiff / xDiff;
+}
+
+inline int pointEqual( Point p1, Point p2 ) {
+	return ( p1.x == p2.x ) && ( p1.y == p2.y );
 }
 
 // --------------------------- Vector -----------------------------------------
@@ -210,8 +214,14 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 	int i;
 
 	// For each edge made by the corners of r1,
-	for ( i = 0; i < 3; i ++ ) {
+	for ( i = 0; i < 4; i ++ ) {
 		if ( rect_intersectH( r1, r2, i ) == NO_INTERSECTION ) {
+			return NO_INTERSECTION;
+		}
+	}
+		
+	for ( i = 0; i < 4; i ++ ) {
+		if ( rect_intersectH( r2, r1, i ) == NO_INTERSECTION ) {
 			return NO_INTERSECTION;
 		}
 	}
@@ -220,7 +230,7 @@ int rect_intersect( Rectangle *r1, Rectangle *r2 ) {
 }
 
 int rect_intersectH( Rectangle *r1, Rectangle *r2, int q ) {
-	assert ( q <= 2 );
+	assert ( q <= 3 );
 
 	Vector edge = vect_make( r1->p[q], r1->p[(q+1) % 4] );
 	Vector perp = { -edge.y, edge.x };
