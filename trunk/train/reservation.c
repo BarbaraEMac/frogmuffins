@@ -5,7 +5,7 @@
  *
  * Used http://stackoverflow.com/questions/115426/algorithm-to-detect-intersection-of-two-rectangles.
  */
-#define DEBUG 2
+#define DEBUG 1
 
 #include <debug.h>
 #include <math.h>
@@ -28,7 +28,7 @@
 #define	ERROR_MARGIN	60	// mm
 #define	TRAIN_EST		TRAIN_LEN + ERROR_MARGIN
 
-#define SMALLEST_RECT	5
+#define SMALLEST_RECT	10
 
 // Private Stuff
 // ----------------------------------------------------------------------------
@@ -67,6 +67,8 @@ void 		res_simulateStep	( Reservation *r, TrainRes *toMove );
 void 		res_moveTrain		( Reservation *r, TrainRes *toMove, int dest );
 // Test to see if a rectangle intersects with another reservation
 int 		res_checkIntersect	( Reservation *r, Rectangle *rect, int trainId );
+// Returns the farthest p2 that creates a non-intersecting rectangle
+Point		res_maximizePoint	( Reservation *r, Point p1, Point p2, int trainId );
 
 // Given a trainId, return the corresponding array index
 inline int 	mapTrainId   		(int trainId);
@@ -75,7 +77,7 @@ inline int 	mapIdxToTrainId 	(int idx);
 
 // Train Reservation functions
 inline void	trRes_saveRect		( TrainRes *d, Rectangle rect );
-inline void	trRes_reserveNode	( TrainRes *d, Node *n );
+inline int	trRes_reserveNode	( TrainRes *d, Node *n );
 // Create a reserved bubble around a train
 void	 	trRes_encircle		( TrainRes *trRes, Reservation *res, ResRequest *req );
 // Cancel a reservation for a train
@@ -127,25 +129,32 @@ void res_run () {
 
 				// Cancel the previous reservation for this train.
 				trRes_cancel( trRes, &res );
-				
+
 				if ( req.totalDist == 0 ) {
+				
 					trRes_encircle( trRes, &res, &req );
 					reply.stopDist = 0;
+				
 				} else {
 
 					// Make the reservation for this train.
 					distLeft = trRes_make( trRes, &res, &req );
 					debug( "stop dist= %d distLeft=%d total=%d other=%d\r\n", 
 						  req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft );
+					
 					assert( distLeft >= 0 );
 					assert( req.stopDist >= distLeft );
 					
-					reply.stopDist = (distLeft <= 20) ? 
-						min(req.totalDist - req.distPast, req.stopDist - distLeft) : 
-						req.stopDist - distLeft;
+					reply.stopDist = (distLeft <= 20) ? min( req.totalDist, 
+														     req.stopDist  - distLeft ) : 
+														req.stopDist - distLeft;
+	
+					if ( reply.stopDist <= 0 ) {
+						reply.stopDist = 0;
+					}
 
 					assert( reply.stopDist >= 0 );
-					debug("train can safely travel %d\r\n", reply.stopDist );
+					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
 				}
 
 				// Reply to the sender train
@@ -323,17 +332,13 @@ int res_checkIntersect( Reservation *r, Rectangle *rect, int trainId ) {
 			// If the boxes collide OR share an edge,
 			// return there is an intersection
 			if( rect_intersect( rect, rectItr ) != NO_INTERSECTION ) {
-				printf ("%d rect intersects with this train's (%d).\r\n",
-						trItr->trainId, trainId);
-
+//				printf ("%d rect intersects with this train's (%d).\r\n",
+//						trItr->trainId, trainId);
 				// Move this train out of our way incase we come here
-				if ( trItr->idle == true ) {
-					printf ("Telling %d to move!\r\n", trItr->trainId);
-					res_moveTrain( r, trItr, 69 /*DE*/); // TODO: not pick a random dest ....
-				}
-
-				// TODO: return something more useful.
-				// What is the maximum distance a train can go?
+			//	if ( trItr->idle == true ) {
+			//		printf ("Telling %d to move!\r\n", trItr->trainId);
+			//		res_moveTrain( r, trItr, 69 /*DE*/); // TODO: not pick a random dest ....
+			//	}
 				return INTERSECTION;
 			}
 		}
@@ -390,8 +395,16 @@ inline void trRes_saveRect( TrainRes *d, Rectangle rect ) {
 	assert( d->rectLen < NUM_RECTS );
 }
 
-inline void trRes_reserveNode( TrainRes *d, Node *n ) {
-	assert( (n->reserved == 0) || (n->reserved == 1 && n->reserver == d->trainId) );
+inline int trRes_reserveNode( TrainRes *d, Node *n ) {
+	if ( n->reserved == 1 && d->trainId == n->reserver) {
+//		printf ("%d trying to reserve it's own node %s.\r\n", d->trainId, n->name, n->reserver);
+		return NO_INTERSECTION;
+	}
+	else if( n->reserved == 1 && d->trainId != n->reserver ) {
+//		printf ("%d trying to reserve %s. Already reserved by %d\r\n", d->trainId, n->name, n->reserver);
+		return INTERSECTION;
+	}
+	
 
 	// Reserve the corresponding node
 	d->idxs[ d->idxsLen ] = n->idx;
@@ -400,13 +413,13 @@ inline void trRes_reserveNode( TrainRes *d, Node *n ) {
 
 	n->reserved = 1;
 	n->reserver = d->trainId;
-	printf ("%d: Reserving %s(%d).\r\n", d->trainId, n->name, n->idx);
+//	printf ("%d: Reserving %s(%d).\r\n", d->trainId, n->name, n->idx);
+
+	return NO_INTERSECTION;
 }
 
 void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
-	if( trRes->idle == true ) return;
-		
-	//	printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
+//		printf( "\r\nEncircle [id=%d, sensor=%d, past=%d, stop=%d total=%d res=%x]\r\n", 
 //			req->trainId, req->sensor, req->distPast, 
 //			req->stopDist, req->totalDist, trRes );
 
@@ -435,9 +448,11 @@ void trRes_cancel( TrainRes *trRes, Reservation *r ) {
 	
 	// Unreserve all of the nodes and edges
 	for ( i = 0; i < trRes->idxsLen; i ++ ) {
-		printf( "res: Cancelling node %s(%d).\r\n", 
-			   r->model->nodes[trRes->idxs[i]].name, trRes->idxs[i] );
+//		printf( "%d: Cancelling node %s(%d).\r\n", trRes->trainId,
+//			   r->model->nodes[trRes->idxs[i]].name, trRes->idxs[i] );
+
 		r->model->nodes[ trRes->idxs[i]].reserved = 0;
+		r->model->nodes[ trRes->idxs[i]].reserver = -1;
 		trRes->idxs[i] = 0;
 	}
 	trRes->idxsLen = 0;
@@ -451,7 +466,7 @@ void trRes_cancel( TrainRes *trRes, Reservation *r ) {
 }
 
 int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
-//	printf( "res: Making a reservation. [id=%d, sensor=%d, past=%d, stop=%d total=%d]\r\n", 
+//	printf( "%d: Making a reservation. [sensor=%d, past=%d, stop=%d total=%d]\r\n", 
 //			req->trainId, req->sensor, req->distPast, req->stopDist, req->totalDist );
 
 	int distLeft;
@@ -479,7 +494,6 @@ int trRes_buildRects( TrainRes *trRes, Reservation *r, ResRequest *req ) {
 	int	  distLeft;
 
 	// Assert that you are still on this edge.
-	// TODO: This assertion might not be correct ..
 //	assert( req->distPast < e->distance );
 	if ( req->distPast >= e->distance ) {
 		req->distPast = 0;
@@ -504,16 +518,19 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 	Rectangle rect;
 	Point	  p1 = { n1->x, n1->y };
 	Point	  p2 = { n2->x, n2->y };
+	Point	  farthest;
 	Node 	 *next;
 	int		  edgeDist = node_dist( n1, n2 );
 	int		  pDist    = pointDist( p1, p2 );
 
 	debug("edge dist=%d pointDist=%d distLeft=%d\r\n", edgeDist, pDist, distLeft);
-
+	
 	// Reserve the first node
-	trRes_reserveNode( trRes, n1 );
-
-	// It is really hard to make exact rectangles of len < 5
+	if ( trRes_reserveNode( trRes, n1 ) == INTERSECTION ) {
+		return distLeft;
+	}
+		
+	// It is really hard to make exact rectangles of small len
 	if ( distLeft <= SMALLEST_RECT ) {
 		return distLeft;
 	}
@@ -523,37 +540,50 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 	}
 
 	if ( (distLeft + distPast) <= edgeDist ) {
-		Point t = findPointOnLine( p1, p2, distLeft );
-		
 		// Make the rectangle & stop recursing
-		rect = makeRectangle( p1, t );
+		p2   = res_maximizePoint( r, p1, findPointOnLine( p1, p2, distLeft ), trainId );
+		rect = makeRectangle( p1, p2 );
 		
-		// If this rectangle intersects with another,
-		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+		if ( p2.x == -1 ) { //res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
 			return distLeft;
 		}
+
+		assert( res_checkIntersect( r, &rect, trainId ) == NO_INTERSECTION );
 		
+		// Reserve the first node
+		assert ( trRes_reserveNode( trRes, n1 ) == NO_INTERSECTION );
+
 		// Save the rect
 		trRes_saveRect( trRes, rect );
 		
-		return 0;// rect.len is srraightline dist (distLeft - rect.len); // Probably should return ~0
+		return (distLeft - rect.len); // Rounding / curve error introduced here
 
 	} else {
-		// Construct the rectangle
-		rect = makeRectangle( p1, p2 );
-
-		// If this rectangle intersects with another,
-		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+		// Find the farthest point possible
+		farthest = res_maximizePoint( r, p1, p2, trainId );
+		rect     = makeRectangle( p1, farthest );
+	
+		if ( farthest.x == -1 ) { //res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
 			return distLeft;
 		}
+
+		assert ( res_checkIntersect( r, &rect, trainId ) == NO_INTERSECTION );
 		
+		// Save the rect
+		trRes_saveRect( trRes, rect );
+
+		// If we can't go all the way to the next node, so stop
+		if ( !pointEqual(farthest, p2) ) {
+			return (distLeft - rect.len); // Rounding / curve error introduced here
+		} else {
+			// Reserve the other endpoint
+			trRes_reserveNode( trRes, n2 );
+		}
+
 		// Remove the distance of the edge you just took
 		assert( (distLeft+distPast) > edgeDist );
 		distLeft -= (edgeDist - distPast);
 		assert( distLeft > 0 );
-
-		// Save the rect
-		trRes_saveRect( trRes, rect );
 		
 		// Recurse on the next edges in all directions
 		switch( n2->type ) {
@@ -602,6 +632,52 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 		}
 	}
 }
+
+Point res_maximizePoint( Reservation *r, Point p1, Point p2, int trainId ) {
+//	printf ("MAXIMIZE POINT (%d, %d) (%d, %d)\r\n", p1.x, p1.y, p2.x, p2.y);
+	
+	Rectangle rect = makeRectangle( p1, p2 );
+	Point 	  m;
+
+	// If the two points are close enough,
+	if ( (p1.x >= p2.x - 10) && (p1.x <= p2.x + 10) && 
+		 (p1.y >= p2.y - 10) && (p1.y <= p2.y + 10) ) {
+//		printf ("MAXIMISE POINT STOPPING\r\n");
+		Point err = {-1, -1};
+//		printf ("returinng -1 -1\r\n");
+		return err; //p2;
+	}
+
+	// If this rectangle intersects with another,
+//	printf ("checking first intersection\r\n");
+	if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+//		printf ("Let's find the midpoint.\r\n");
+		m    = midpoint( p1, p2 );
+
+//		printf ("making rect to midpoint (%d, %d)\r\n", m.x, m.y);
+		rect = makeRectangle( p1, m );
+
+		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+//			printf ("midpoint intersects. searching in (%d, %d) to (%d, %d)\r\n", p1.x, p1.y, m.x, m.y);
+			return res_maximizePoint( r, p1, m, trainId );
+		} else {
+
+			if ( rect.len <= 30 ) {
+//				printf ("returning (%d, %d)\r\n", m.x, m.y);
+				return m;
+			}
+
+//			printf ("midpoint doesnt intersect. searching in (%d, %d) to (%d, %d)\r\n", m.x, m.y, p2.x, p2.y);
+			return res_maximizePoint( r, m, p2, trainId );
+		}
+	} 
+	else {
+//		printf ("returning (%d, %d)\r\n", p2.x, p2.y);
+//		printf ("MAXIMISE POINT STOPPING\r\n");
+		return p2;
+	}
+}
+
 
 // ----------------------------------------------------------------------------
 // --------------------------------- Courier ----------------------------------
