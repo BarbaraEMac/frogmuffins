@@ -31,6 +31,17 @@ enum StopAction {
 	STOP_AND_REVERSE
 };
 
+struct _rp {
+	int 		rsvDists[MAX_NUM_NODES][MAX_NUM_NODES];
+	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
+	//int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
+	int 		pred[MAX_NUM_NODES][MAX_NUM_NODES];
+	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
+
+	TrackModel  model;
+};
+typedef struct _rp RoutePlanner;
+
 typedef struct {
 	RPType	type;		// Route Planner request type
 	
@@ -91,6 +102,8 @@ typedef struct {
 
 void rp_run();
 
+void floyd_warshall 	(RoutePlanner *rp, TrackModel *model, int trainId);
+void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 void dijkstra ( TrackModel *model, int source, int dest, int *prev );
 
 #endif
