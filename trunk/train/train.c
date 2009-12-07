@@ -167,6 +167,7 @@ void train_run () {
 	int			safeDist      = 0;
 	int			totalDist 	  = 0;
 	int			waitingTrials = 0;
+	int			i;
 
 	predct.tid = MyTid();
 
@@ -407,7 +408,12 @@ void train_run () {
 				//printf( "Train: Stopping distance %dmm calculated.\r\n", req.mm );
 				tr.stopDist = req.mm;
 				
+				for( i = 0; i < 15; i++ ) {
+					printf("train %d: predicted stop. dist. %dmm for gear %d\r\n",
+						tr.id, train_getStopDist( &tr, i ) , i );
+				}
 				Reply( senderTid, 0, 0 );
+
 				break;
 
 			default:
@@ -602,20 +608,19 @@ int train_getStopDist( Train *tr, int gear ) {
 	int calGear = 14;
 	int calDist;
 	// Use the stopping distance multiplier to better predict
-	// TODO
-	// calGear = tr->defaultGear
-	// calDist = tr->stopDist
+	calGear = tr->defaultGear;
+	calDist = tr->stopDist;
 	
 	switch( tr->id ) {
 		case 52:
 		case 12:
 			// These trains are Special, ladee dadee daah
 			// CRAZY squared profiles
-			calDist = 1320;
+			//calDist = 1320;
 			stopDist = calDist * (gear * gear) / (calGear * calGear);
 			break;
 		default: // train 15,22,24 - NORMAL trains with linear profiles
-			calDist = 970;
+			//calDist = 970;
 			stopDist = calDist * gear / calGear;
 			break;
 	}
@@ -642,7 +647,7 @@ Speed train_getSpeed ( Train *tr, int gear ) {
 		case 12:
 			// These trains are Special, ladee dadee daah
 			// CRAZY ^1.75 profiles
-			//return speed_adjust( base, pow_1_75( calGear ), pow_1_75( gear ) );
+			return speed_adjust( base, pow_1_75( calGear ), pow_1_75( gear ) );
 		default: // train 15,22,24 - NORMAL trains with linear profiles
 			return speed_adjust( base, calGear, gear );
 	}
@@ -858,7 +863,8 @@ void train_flipSwitches( Train *tr, RPReply *rpReply, int mm, int reserveDist ) 
 
 		// Only flip switches more than 20 cm away
 		int dist = ss->dist - mm;
-		if( abs( dist ) < SAFE_FLIP_DIST ) continue;
+		if( abs( dist ) < SAFE_FLIP_DIST ) 
+			printf(" too close to switch %d\r\n", ss->id ); //continue;
 
 		// Only flip switches in your reserved section
 	 	if ( reserveDist <= dist ) continue;
