@@ -12,7 +12,7 @@
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
 
-	The executable is located at: /u8/becmacdonald/cs452/p//handin/main/main.elf.
+	The executable is located at: /u8/becmacdonald/cs452/p3/handin/main/main.elf.
 
 	To make the kernel, execute the following from the root directory:
 	cd src/
@@ -33,16 +33,16 @@
 
 	Goal
 	====
-	Since we handed in the project description, we changed the goal of our project.
-	We decided to write a novel reservation system and deadlock detection and recovery
+	Since we handed in the project description, we have changed the goal of our project.
+	We decided to write a neat Reservation Server and deadlock detection and recovery
 	solution. Our goal was to create situations with 5 trains where at least 2 trains
 	were blocking a single train from reaching its destination. The trapped train
 	was supposed to cause the idle blocking trains to move out of its way, let it pass,
 	and move them back into place. 
 
 	We were also going to implement a neat method to have trains follow each other 
-	as closely as possible without having collisions occur as the leading train slowed 
-	and sped up. The following train's resevations were suppsoed to notice the speed
+	as closely as possible without having collisions occur as the leading train slowed down
+	and sped up. The following train's reservations were supposed to notice the speed
 	changes and change its speed to match.
 
 	Finally, we wanted to have at least 3 trains running around in inner loop crossing
@@ -59,7 +59,7 @@
 	But, that's life!
 
 	Here is a description of the code we have implemented for this project. We've made
-	special notes of the sections that do not work as well as we hoped they would.
+	special notes of the sections that do not work.
 	
 	Model
 	=====
@@ -127,7 +127,9 @@
 			1. The names were changed to use camel case.
 			2. Each Node now stores its index in the TrackModel's nodes array.
 			3. Each node has a reserved flag. If the flag is 1, this node is reserved.
-			4. The x and y co-ordinates for the UI have been altered.
+			   We also store the train id of the reserving train.
+			4. The x and y co-ordinates for the UI have been altered to store
+			   the actual x and y measurements of each landmark.
 
 		Parse & Ownership
 		=================
@@ -138,12 +140,12 @@
 
 		We decided against parsing the model once and passing it as a message
 		to each task since the model is large. We will pay the parse time cost
-		during initialization.
+		during initialization when it doesn't really count.
 
 		Therefore, only the Route Planner and Track Server parse the model.
 	
 		Since route planning needs to consider track reservations, the model structure
-		is shared between the reservation server and the route planner. This is the
+		is shared between the Reservation Server and the Route Planner. This is the
 		only global variable we have.
 
 		Data Accuracy
@@ -153,13 +155,14 @@
 
 		New Measurements
 		================
-		Our reservation system turns the track into a 2D map. Therefore, we needed
+		Our Reservation Server turns the track into a 2D map. Therefore, we needed
 		accurate locations of each landmark. Daniel spent a long time measuring the
 		exact location of the landmarks and entering them into the model data.
+		See the section on Reservations below.
 
 	Route Planner
 	=============
-	A train will query the route planner to determine its route. It is able to
+	A train will query the Route Planner to determine its route. It is able to
 	determine the shortest path between any two nodes, distance between any two
 	nodes, make predictions about the next sensors along a path, determine which
 	switches will need to be set and to which directions, determine if a train
@@ -174,10 +177,8 @@
 			Reservations	*reservations;
 
 		It stores the minimum distance between any two nodes, the shortest path between
-		any two nodes, a model of the track, and the track reservations.
+		any two nodes, and a model of the track.
 
-		The track reservations are not currently used. (See comment below)
-		
 		Shortest Path Algorithm
 		=======================
 		To be able to determine the shortest distance between any two nodes in 
@@ -214,9 +215,9 @@
 		it may take longer to reach the destination than if the train had taken a longer
 		route (distance-wise) that required it to only drive straight. We decided 
 		that we are fine with using the shortest distance to determine the shortest
-		path for now.
+		path.
 
-		The shortest path from node i to node j  can be recovered in the following
+		The shortest path from node i to node j can be recovered in the following
 		manner:
 
 		outputPath( path, i, j ) {
@@ -253,14 +254,14 @@
 		very quickly. We choose to pay a larger cost up front to save time when the 
 		trains are running.
 
-		Even with the reservation system, having the shortest path between any two nodes
+		Even with the Reservation Server, having the shortest path between any two nodes
 		will collapse the graph for any sections that are not reserved, speeding up
 		a Dijkstra or any other algorithm we might use to compute the paths using the
-		reservation system.
+		Reservation Server.
 
 		Route Planner to Train API
 		==========================
-		Currently, only the command prompt (shell) and rain talk to the Route Planner.
+		Currently, only the command prompt (shell) and trains talk to the Route Planner.
 		Since the shell is specialized for testing, we've created special handlers
 		for shell messages.
 
@@ -315,10 +316,10 @@
 		Right now, the train will flip switches that are not near it. This will change
 		as we have more trains running on the track.
 
-		If we had more time, we wanted to make sure that any switch was in the correct
-		position before we went over instead of relying on the spring system for going over
-		a switch backwards.
-		
+		If we had more time, we would have ensured that a switch is set in the correct
+		direction regardless of the direction we are travelling over it. This way we
+		are not relying on the spring property of the switches.
+
 		Predictions
 		===========
 		Given a desired path and the last hit sensor, the Route Planner is able to 
@@ -421,8 +422,8 @@
 		=================
 		The train keeps a buffer of the last 10 track section speeds and calculates the
 		mean and standard deviation of this sample. Data is only added to the buffer
-		when we know the train is not accelerating (and decelerating). This gives us a
-		base speed to use in our calculations for current speed.
+		when we know the train is not accelerating and decelerating due to the train mode.
+		This gives us a base speed to use in our calculations for current speed.
 		This approach is robust against the train losing speed over time and does not 
 		require hardcoded speed profiles per train. It also has the advantage of not having
 		to figure these out ahead of time as this time-costly, at the expense of little extra
@@ -432,9 +433,9 @@
 		estimate its speed and distance within a small standard deviation of
 		error.
 
-		Thus, we run the train around the large loop of the track 3 times and 
+		Thus, we run the train around the large loop of the track 2 times and 
 		gather data to make these estimations. While estimating, we calculate
-		the standard deviation of the estimations. To do this we keep an array
+		the standard deviation of the estimations. To do this, we keep an array
 		of the last 10 recorded speeds (as in P1) and calculate the standard
 		deviation of this sample. We only add a speed to the buffer if the train 
 		has not changed speed over the last sector to prevent contamination of data.
@@ -452,7 +453,7 @@
 		At the shell, this actual stopping distance is manually entered into the
 		train so that we can calibrate the hardcoded stopping distances.
 
-		After this, the calibration tasks Exits.
+		After this, the calibration task Exits.
 
 		The neat thing about our calibration mode is that it is also a form of automated testing.
 		As the train is travelling, it is calculating shortest routes via the Route Planner and 
@@ -552,12 +553,13 @@
 	
 		Route Planning
 		==============
-		In order to keep the train task simple and focussed on driving at the correct
+		In order to keep the train task simple and focused on driving at the correct
 		speed, the train does not know anything about the landmarks on the track.
 
 		When the Route Planner returns, it simply gives the train a distance
-		until it needs to stop. While this is more complicated to handle within
-		the train, it makes the navigation code simple.
+		until it needs to stop, sensor predictions and switch settings. 
+		While this is more complicated to handle within the train, it makes the 
+		navigation code simple.
 
 		Prediction
 		==========
@@ -567,13 +569,14 @@
 
 		Reservations
 		============
-		A train calls the reservation system every 200ms to update its reservation
-		and determine a safe distance that it can travel within.
+		A train calls the Reservation Server every 200ms to update its reservation
+		and determine a safe distance that it can travel within. See below for
+		implementation details.
 
 	Reservation System
 	==================
-	For our final project, we decided to try a novel reservation system idea. We
-	convert the train track into a 2D point set and reserve points along the track
+	For our final project, we decided to try a neat Reservation Server idea. We have
+	converted the train track into a 2D point set and reserve points along the track
 	as a train reservation. If these rectangular sections ever intersect, then
 	a train collision can occur and the trains should slow down.
 
@@ -605,31 +608,33 @@
 		relies on a estimation of where the train is, 2*train length is the minimum
 		we can reserve to ensure that no train will collide with a stopped train.
 
-		2. If a train is moving, we try to reserve ahead of it to its stopping
-		distance. When trying to make a reservation, we pass in the total distance
+		2. If a train is moving, we first reserve a bubble around the train and then
+		try to reserve its stopping distance ahead of it.
+		When trying to make a reservation, we pass in the total distance
 		a train wants to go, stopping distance at the current speed, last triggered 
 		sensor, and distance past the last sensor. 
 
-		Using this stopping distance, the reservation server builds rectangles from
+		Using this stopping distance, the Reservation Server builds rectangles from
 		the last triggered sensor forward until the end of the stopping distance.
 
 		If a stopping distance is greater than the edge distance between 2 nodes,
-		we build a rectangle from node to node and build a rectangle for the 
+		we build a rectangle from node to node and build another rectangle for the 
 		remaining distance.
 
-		If a remaining distance lies between 2 nodes, we grow a rectangle to the maximum
-		size it can be using a binary search between nodes.
+		If a remaining distance falls between 2 nodes, we grow a rectangle to
+		the maximum size it can be using a binary search between nodes.
 
 		It is important to note that the rectangles represent straight lines between 
 		any two neighbouring nodes. Hence, it is possible for a rectangle length to be 
-		less than the actual distance between 2 nodes. This is not really a problem.
+		less than the actual distance between 2 nodes. This is not a problem.
 
 		When rectangles are made from node to node, both nodes are reserved so that
-		the route planner can find routes around them. Otherwise, just the starting
+		the Route Planner can find routes around them. Otherwise, just the starting
 		node is reserved.
 
 		If a train is heading towards a switch, both routes will become reserved just 
-		in case the switch is not flipped in time.
+		in case the switch is not flipped in time and the train heads down the 
+		incorrect route.
 		
 		Train Intersections
 		===================
@@ -640,12 +645,13 @@
 
 		Hence, during the reservation process, we grow rectangles as far as we can 
 		before intersecting with another rectangle. If an intersection occurs along
-		the path, the reservation system will reserve up to just before the 
+		the path, the Reservation Server will reserve up to just before the 
 		intersecting area and return the safe distance that the train can travel.
 
 		Using this distance, the train will adjust its speed until its stopping distance
-		within the range. If the train cannot stop in time, a collision will probably occur.
-		In this case, we cause the train to stop immediately.
+		is within the range. If the train cannot stop in time, a collision will 
+		probably occur. In this case, we cause the train to stop immediately and
+		hope for the best.
 
 		Geometry Class
 		==============
@@ -667,12 +673,13 @@
 		Since the geometry class doesn't use floating point numbers, error is introduced
 		as we are building the rectangles. We've decided to have an error margin of 2cm.
 
-		The error is acceptable because we can only estimate the location of the train
-		to begin with. Our error for the train location is 2cm as well.
+		The error is acceptable because we are only estimating the location of the train
+		and this is not guaranteed to be perfectly accurate.
+		Our error margin for the train location is usually 2cm after a full calibration.
 		
 		Data Structures
 		===============
-		The reservation system is a struct of the following form:
+		The Reservation Server is a struct of the following form:
 		typedef struct {
 			TrackModel	*model;
 			TrainRes 	 entries  [NUM_TRAINS];
@@ -698,20 +705,21 @@
 
 		The data structure is fairly self-explanatory.
 
-		Why?
-		====
+		Why a 2D Point Map? 
+		===================
 		We noticed that there are sections of the track near switches when two 
 		trains can come very close and graze each other. It made sense for us to block
 		off 2-dimensional areas instead of just blocking off 1-dimensional nodes. 
 
-		We also wanted to try this as a proof of concept. As far as we know, this is the
-		first time a group has decided to create a 2D reservation system and wanted to 
-		try it out. We believe it is just as efficient as other methods and can solve
-		special boundary cases automatically, without the need for special cases.
+		We also wanted to try this idea as a proof of concept. As far as we know, this is the
+		first time a group has decided to create a 2D Reservation Server and wanted to 
+		see how feasible it is. We believe it is just as efficient as other methods
+		and can solve special boundary cases automatically, without the need for 
+		any special cases.
 
-		Useful Things
-		=============
-		Here is a list of useful and neat things about our reservation system:
+		Neat/Useful Things
+		===================
+		Here is a list of useful and neat things about our Reservation Server:
 
 		- Using our rectangle growing, trains are given the maximum distance they
 		wish to travel, while considering other reservations.
@@ -720,8 +728,8 @@
 		they own. They only flip switches within this safe distance. This way we can
 		ensure that multiple trains do not interfere with each other.
 		
-		- We never reserve a section of track behind a train unless it is stopped.
-		A train travelling behind a train will reserve right up to the back of it.
+		- We only reserve a train length behind the train so that another train
+		does not sneak up behind it and collide.
 		
 		- As mentioned above, collisions near switches are eliminated since we create
 		straight-line rectangles towards the switch.
@@ -732,22 +740,22 @@
 		due to an idle blocking train, we pick a random destination for the blocking 
 		train and send it there. We hope that by the time the moving train reaches
 		the reserved section it is clear. After moving to the random destination, the
-		blocking idle train will move back to its start location.
+		blocking idle train will move back to its start location. This has not been tested.
 		
 		- We believe our reservation is optimal. A train only reserves as far as it wants
 		to go and never any more. 
 
 		Limitations
 		===========
-		As far as testing just the reservation system without the trains (analyzing the 
+		As far as testing just the Reservation Server without the trains (analyzing the 
 		rectangles built along the length of tracks and verifying the reserved nodes are
-		correct), our reservation system is quite good. We can detect many boundary cases
+		correct), our Reservation Server is quite good. We can detect many boundary cases
 		where straight trains will collide on curved sections of track without any 
-		special cases.
+		special cases. All of our manual test cases have been solved automatically.
 
-		Unfortunately, as of 10:00pm before this project is due, trains are still colliding.
+		Unfortunately, as of 1:35am before this project is due, trains are still colliding.
 		We believe this is a problem with the train driving since static testing of the 
-		reservation system has passed all of the normal and boundary cases we could think up.
+		Reservation Server has passed all of the normal and boundary cases we could think up.
 		Testing will continue until the code freeze at 9:00am to determine the source of the
 		collisions.
 
@@ -757,10 +765,10 @@
 	untested. It uses train predictions to simulate moves into the future and determine
 	a set of moves that will clear a train's path as effectively as possible.
 
-	As of 10:00pm the night before this project is due, no part of this system has been tested.
-	It's quite unfortunate since we think it will be VERY neat to watch and it will make the trains
+	As of 1:35am the night before this project is due, no part of this system has been tested.
+	It's quite unfortunate since we think it will be VERY neat to watch and will make the trains
 	look very intelligent. We have spent most of our time over the past few days working on the
-	train task and reservation system to ensure that they are both working as best as they can.
+	train task and Reservation Server to ensure that they are both working as best as they can.
 	Unfortunately, testing the coolest part of our project was pushed off to the back burner. 
 
 	Obviously, since this system has not been tested, it is still in the simplistic early stages.
@@ -768,28 +776,28 @@
 	There are many neat real-time AI problems that could be solved!
 
 	If we were allowed to continue working on the train project after the take-home exam, it
-	would be neat to see what our system could accomplish with some more testing and finesse.
+	would be neat to see what our system could accomplish with some testing and finesse.
 
 		Detection
 		=========
-		During a track reservation, the reservation server knows where each train is
+		During a track reservation, the Reservation Server knows where each train is
 		by its reservation data and where it wants to go. If a train is unable make 
-		any moves, the reservation system knows this and returns a safe distance of 
+		any moves, the Reservation Server knows this and returns a safe travelling distance of 
 		0. We hope that the train will determine it cannot safely move and will 
-		halt immediately.
+		halt immediately. As of 1:45am, the trains are being un-cooperative.
 
 		At this point, the train will delay for 500ms and try to make a reservation. 
 		During this time, we hope that a blocking train will move out the way and allow 
 		this train to make a valid track reservation and start moving.
 
 		If a train stays blocked for 5 iterations, we consider it to be stuck. At this point,
-		it tells the reservation system it is stuck and we start the deadlock recovery code.
+		it tells the Reservation Server it is stuck and we start the deadlock recovery code.
 
 		Recovery
 		========
 		To free a train, we create a simulation system and run a possible set of moves through
-		it to find a way for a trapped train to move. The simulation system is a local copy of
-		the current reservation system with a local copy of the track model. We can alter
+		it to find a solution simulation system is a local copy of
+		the current Reservation Server using a local copy of the track model. We can alter
 		these local copies as we wish and they will not affect our actual system. Since
 		these are copies, they will act in the same manner as the actual system. 
 		
@@ -835,7 +843,7 @@
 		===========
 		Here is a list of limitations (other than those listed above):
 
-		- Our reservation system does not look ahead as it is making a reservation and determine
+		- Our Reservation Server does not look ahead as it is making a reservation and determine
 		that there a deadlock could occur with a particular reservation. It would probably
 		be smart to do this.
 
@@ -844,7 +852,7 @@
 		situations where this will not end.
 
 		- There are many time-expensive computations during a deadlock recovery. This code
-		is not O(1). Since the reservation server is figuring out these steps, other
+		is not O(1). Since the Reservation Server is figuring out these steps, other
 		non-trapped trains cannot make reservations.
 
 	UI / Shell
@@ -1054,7 +1062,7 @@
 
 		Aggressive Reservation System
 		=============================
-		Our reservation system is very aggressive. We always try to make a reservation end
+		Our Reservation Server is very aggressive. We always try to make a reservation end
 		as close as it can to the next train. If our train location estimations are
 		slightly off, then train's can collide even though the reserved sections are 
 		correct. In this case, it is probably a good idea to test the system thoroughly
