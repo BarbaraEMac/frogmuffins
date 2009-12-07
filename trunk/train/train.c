@@ -515,7 +515,7 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 	int remainingDist = totalDist - distFromSensor;
 	int bestGear = train_getBestGear( tr, remainingDist );
 	int safeDist = train_makeReservation( tr, distFromSensor, totalDist, 
-										  train_getStopDist(tr, bestGear) ); 
+										  train_getStopDist(tr, bestGear) + 30 ); 
 
 	// If we are not in calibration mode,
 	if( tr->mode == DRIVE || tr->mode == WAITING ) {
