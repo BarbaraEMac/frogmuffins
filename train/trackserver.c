@@ -201,6 +201,8 @@ int ts_trainSet( TS *ts, int train, int speed ) {
 	// check the train number is valid
 	int err = checkTrain( train );
 	if( err >= NO_ERROR ) {
+		// Turn the function on
+		if( speed >= 0 && speed < 16 ) speed += 16;
 		char bytes[2] = { (char) speed, (char) train };
 
 		// Send the command
