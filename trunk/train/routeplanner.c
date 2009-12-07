@@ -27,15 +27,7 @@ typedef struct {
 	int idxs[20];
 } NodePred;
 
-typedef struct {
-	int 		rsvDists[MAX_NUM_NODES][MAX_NUM_NODES];
-	int 		dists[MAX_NUM_NODES][MAX_NUM_NODES];
-	//int			paths[MAX_NUM_NODES][MAX_NUM_NODES];
-	int 		pred[MAX_NUM_NODES][MAX_NUM_NODES];
-	int			succ[MAX_NUM_NODES][MAX_NUM_NODES];
 
-	TrackModel  model;
-} RoutePlanner;
 
 inline SwitchDir getSwitchDir(Node *sw, Node *next);
 
@@ -61,10 +53,8 @@ void rp_displayFirstRv 	(RoutePlanner *rp, RPRequest *req);
 void rp_displayPath	  	(RoutePlanner *rp, Path *p );
 
 // Shortest Path Algorithms
-void floyd_warshall 	(RoutePlanner *rp, int n, int trainId);
 int  cost 				(TrackModel *model, int idx1, int idx2,
 						 int rsvDist, int trainId);
-void makePath 			(RoutePlanner *rp, Path *p, int i, int j);
 int  rev				(RoutePlanner *rp, Node *prev, Node *mid, Node *next);
 
 // ahead[0] = straight
@@ -261,7 +251,7 @@ int rp_init(RoutePlanner *rp) {
 	Send( resTid, &modelPtr, sizeof(int), 0, 0 );
 	
 	// Initialize shortest paths using model
-	floyd_warshall (rp, rp->model.num_nodes, 0); 
+	floyd_warshall (rp, &rp->model, 0); 
 
 	// Register with the Name Server
 	RegisterAs ( ROUTEPLANNER_NAME );
@@ -531,14 +521,35 @@ void rp_getNextSwitchSettings (RoutePlanner *rp, Path *p, SwitchSetting *setting
 		curr = next;
 		next = &rp->model.nodes[path[i+1]];
 		if ( curr->type == NODE_SWITCH ) {
-			if ( node_neighbour( curr, curr->sw.behind ) == prev ) {
+			Node *behind = node_neighbour( curr, curr->sw.behind );
+			if ( behind == prev ) {
 				settings[n].dist = rp->dists[path[0]][path[i]];
 				settings[n].id   = curr->id;
 				settings[n].dir  = getSwitchDir(curr, next);
 				n ++;
-
-				assert ( n < NUM_SETTINGS );
+			
+			} else { // curr.sw.behind = next
+				settings[n].dist = rp->dists[path[0]][path[i]];
+				settings[n].id   = curr->id;
+				settings[n].dir  = getSwitchDir(curr, prev);
+				n ++;
 			}
+			if( rev( rp, prev, curr, next ) ) {
+				if( prev == behind ) {
+					eprintf( "rp: revesing on a switch backwards\r\n" );
+				// Switch one switch ahead to prevent multitrack drifting
+				} else if( behind->type == NODE_SWITCH ) {
+
+					settings[n].dist = rp->dists[path[0]][behind->idx];
+					settings[n].id   = behind->id;
+					settings[n].dir  = getSwitchDir(behind, curr);
+					n ++;
+				}
+			}
+
+
+			assert ( n < NUM_SETTINGS );
+
 		}
 
 		// Subtract from the distance as we travel further
@@ -690,7 +701,8 @@ void rp_displayPath ( RoutePlanner *rp, Path *p ) {
 //          model - To get the cost information.
 //  Output: retDist - shortest path dists(the answer)
 //          retPred - predicate matrix, useful in reconstructing shortest routes
-void floyd_warshall ( RoutePlanner *rp, int n, int trainId ) {
+void floyd_warshall ( RoutePlanner *rp, TrackModel *model, int trainId ) {
+	int  n = model->num_nodes;
 	int  i, j, k; // Loop counters
 	int  distMod = 0;
 	
@@ -699,8 +711,8 @@ void floyd_warshall ( RoutePlanner *rp, int n, int trainId ) {
 		for ( j = 0; j < n; j++ ) {
 			
 			// INT_MAX if no link; 0 if i == j
-			rp->dists[i][j]    = cost(&rp->model, i, j, 0, trainId); // no reservations
-			rp->rsvDists[i][j] = cost(&rp->model, i, j, 1, trainId); // use reservations
+			rp->dists[i][j]    = cost(model, i, j, 0, trainId); // no reservations
+			rp->rsvDists[i][j] = cost(model, i, j, 1, trainId); // use reservations
 			
 			// Init to garbage
 			//rp->paths[i][j] = -1;
@@ -866,8 +878,7 @@ void dijkstra ( TrackModel *model, int source, int dest, int *prev ) {
 	for ( i = 1; i < n; i ++ ) {
 		min = INT_MAX;
 		for ( j = 0; j < n; j ++ ) {
-			if ( !visited[j] && 
-				 (min == INT_MAX || dists[j] < dists[min]) ) {
+			if ( !visited[j] && (min == INT_MAX || dists[j] < dists[min]) ) {
 				min = j;
 			}
 		}
@@ -879,13 +890,13 @@ void dijkstra ( TrackModel *model, int source, int dest, int *prev ) {
 			linkCost = cost( model, min, j, 0, 0 ); //TODO: fix train id
 			
 			if ( linkCost + dists[min] < dists[j] ) {
-				dists[j] = dists [min] + linkCost;
+				dists[j] = dists[min] + linkCost;
 				prev [j] = min;
 			}
 		}
 	}
 
-	printf ("Dist from %s to %d is=%d.\r\n", source, dest, dists[dest]);
+	printf ("Dist from %d to %d is=%d.\r\n", source, dest, dists[dest]);
 
 	for ( i = 0; i < n; i ++ ) {
 		printf ("%d> ", prev[i]);
