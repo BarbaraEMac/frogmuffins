@@ -766,10 +766,11 @@ void train_predictSensors( Train *tr, SensorsPred *sensor, int mm, DeRequest * p
 		int dist = sensor->dists[i] ;
 		int expected = speed_time( tr->velocity, dist );
 		int startDiff = speed_time( faster, dist ) - expected;
-		assert( startDiff < 0 );
 		int endDiff = speed_time( slower, dist ) - expected;
-		assert( endDiff > 0 );
-	
+		if( endDiff <= 0 || startDiff >= 0 ) {
+			eprintf("train %d: startDiff: %dms, endDiff %dms\r\n",
+					tr->id, startDiff, endDiff );
+		}
 		dist -= mm;
 
 		if( tr->mode == CAL_SPEED ) {
