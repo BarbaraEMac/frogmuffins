@@ -32,7 +32,7 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				1
+#define CAL_LOOPS				3
 #define INT_MAX					0x7FFFFFFF
 #define LOCATE_GEAR				4
 #define REVERSE_DIST			400
@@ -357,21 +357,22 @@ void train_run () {
 				// Send this information to the UI
 				train_updateUI( &tr, distFromSensor );
 				
-			//	do {
+				do {
 					// Adjust speed
 					prevMode = tr.mode;
 					train_adjustSpeed( &tr, distFromSensor, 
 									   totalDist, rpReply.stopAction );
-				//	// This train is trapppppped.
-				//	if ( tr.mode == WAITING ) {
-				//		Delay( 500, tr.csTid );
-				//		waitingTrials ++;
-				//	}
-				//	if ( waitingTrials == 5 ) {
-				//		train_sendStuck( &tr, distFromSensor, totalDist );
-				//		break;
-				//	}
-			//	} while ( tr.mode == WAITING  );
+					// This train is trapppppped.
+					if ( tr.mode == WAITING ) {
+						printf ("%d is waiting.\r\n", tr.id);
+						Delay( 500, tr.csTid );
+						waitingTrials ++;
+					}
+					if ( waitingTrials == 5 ) {
+						train_sendStuck( &tr, distFromSensor, totalDist );
+						break;
+					}
+				} while ( tr.mode == WAITING  );
 				waitingTrials = 0;
 					
 				if ( prevMode == DRIVE && tr.mode == IDLE ) {
@@ -528,13 +529,11 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 		if ( action == JUST_STOP && remainingDist <= 0 ) {
 			tr->mode = IDLE;
 		} else if ( (safeDist == 0) && (remainingDist > 0) ) {
+			printf ("COLLISION PROBABLY DETECTED.\r\n");
 			tr->mode = WAITING;
 		}
 		
-		printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
-				 bestGear, safeDist, remainingDist );
-
-		// Reset the mode if it is safe to travel
+			// Reset the mode if it is safe to travel
 		if ( tr->mode == WAITING && bestGear > 0 ) {
 			tr->mode = DRIVE;
 		}
@@ -549,6 +548,9 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 	if ( tr->mode == IDLE || tr->mode == WAITING ) {
 		bestGear = 0;
 	}
+	
+	printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
+				 bestGear, safeDist, remainingDist );
 
 	// If you need to stop,
 	if ( tr->mode == IDLE ) assert( bestGear == 0 );
@@ -588,7 +590,7 @@ int train_getBestGear( Train *tr, int totalDist ) {
 	// Given the stop distance for this train,
 	// estimate the best gear for the train to travel at.
 	// In theory, as safeDist decreases, so does the speed.
-	for ( i = tr->defaultGear; i >= 1; i -- ) {
+	for ( i = tr->defaultGear; i >= 2; i -- ) {
 		stopDist = train_getStopDist( tr, i );
 
 		if ( stopDist * 3 / 2 <= totalDist ) {
@@ -599,7 +601,7 @@ int train_getBestGear( Train *tr, int totalDist ) {
 		}
 	}
 
-	return 1; // trying to hit sensor
+	return 3; // trying to hit sensor
 }
 
 // Returns the stop distance in mm given the gear and train id
@@ -857,7 +859,7 @@ void train_flipSwitches( Train *tr, RPReply *rpReply, int mm, int reserveDist ) 
 	SwitchSetting  *ss;
 
 	// Do not change the switches if we are calibrating the speed
-	if ( tr->mode == CAL_STOP ) return;
+	if ( tr->mode == CAL_STOP || tr->mode == CAL_SPEED ) return;
 
 	foreach( ss, rpReply->switches ) {
 	  	if( ss->id <= 0 ) break;
