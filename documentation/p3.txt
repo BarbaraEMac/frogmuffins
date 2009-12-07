@@ -1054,6 +1054,10 @@
 		As of 12:15am before the assignment is due, we are at 911 Subversion commits. 
 		We're hoping to get to 1000 before the night ends, but this is probably unlikely.
 
+		Line Count
+		==========
+		As of 2:30am before the assignment is due, we have 11439 lines of code in our repository.
+
 	Limitations & Challenges
 	========================
 	There were many challenges we faced while implementing our train application, due to
