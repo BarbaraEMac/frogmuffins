@@ -527,6 +527,11 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 			bestGear = 3;
 		}
 		
+		// Reset the mode if it is safe to travel
+		if ( tr->mode == WAITING && bestGear > 0 ) {
+			tr->mode = DRIVE;
+		}
+		
 		if ( action == JUST_STOP && remainingDist <= 0 ) {
 			tr->mode = IDLE;
 		} else if ( (safeDist == 0) && (remainingDist > 0) ) {
@@ -534,10 +539,6 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 			tr->mode = WAITING;
 		}
 		
-			// Reset the mode if it is safe to travel
-		if ( tr->mode == WAITING && bestGear > 0 ) {
-			tr->mode = DRIVE;
-		}
 	} 
 
 	// If you are stopping calibration
