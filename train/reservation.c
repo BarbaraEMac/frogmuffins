@@ -148,9 +148,9 @@ void res_run () {
 				}
 				assert( reply.stopDist >= 0 );
 				
-				if( reply.stopDist < req.stopDist - 50 ) {
+				/*if( reply.stopDist < req.stopDist - 50 ) {
 					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
-				}
+				}*/
 
 
 				// Reply to the sender train
@@ -184,7 +184,7 @@ void res_run () {
 
 void res_init(Reservation *res) {
 	int  i;
-	int  addr;
+	TrackModel *addr;
 	int  rpTid;
 
 	// Receive the address of the model from the Route Planner
@@ -217,18 +217,18 @@ void res_init(Reservation *res) {
 void res_freeTrain( Reservation *r, ResRequest *req ) {
 	int   	 i;
 	Node 	*n;
-	int		 path[r->model->num_nodes];
 	TrainRes steps[NUM_TRAINS*5];
 	int 	 stepsLen  = 0;
 	int	 	 newSteps  = 0;
 	int		 prevSteps = 0;
+	RoutePlanner rp;
 	int		 trainDests[NUM_TRAINS];
 	int 	 idx;
 
 	// Create a reservation system and model for this simulation
 	Reservation simRes   = *r;
-	TrackModel  simModel = *r->model;
-	simRes.model = &simModel;
+	//TrackModel  simModel = *r->model;
+	//simRes.model = &simModel;
 
 	// Init to garbage
 	for ( i = 0; i < NUM_TRAINS; i ++ ) {
@@ -236,15 +236,21 @@ void res_freeTrain( Reservation *r, ResRequest *req ) {
 	}
 
 	// Create the shortest path
-	// TODO: Call FW once and use those results
-	dijkstra( &simModel, req->sensor, req->dest, path );
+	floyd_warshall( &rp, simRes.model, 0 ); // TODO train id
+	//	dijkstra( &simModel, req->sensor, req->dest, path );
+
+	Path p;
+	// TODO this is the minimum we have to copy
+	rp.model.num_nodes = r->model->num_nodes;
+	makePath( &rp, &p, sIdxToIdx( req->sensor ), req->dest );
+
 
 	FOREVER {
 		// Get all of the train reservations blocking the path
 		newSteps  = 0;
 		prevSteps = stepsLen;
-		for( i = 0; path[i] != req->dest; i ++ ) {
-			n = &simModel.nodes[ path[i] ];
+		for( i = 0; p.path[i] != req->dest; i ++ ) {
+			n = &simRes.model->nodes[ p.path[i] ];
 			
 			if ( (n->reserved == true) && 
 				 (simRes.entries[mapTrainId(n->reserver)].idle == true) ) {
