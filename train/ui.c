@@ -96,7 +96,7 @@ void ui_run () {
 		// Save the shell's cursor location
 		ui_saveCursor(&ui);
 
-		// Display the information at the correct location
+/*		// Display the information at the correct location
 		switch( req.type ) {
 			case CLOCK:
 				ui_displayTimeAt( &ui, 46, 2, req.time );
@@ -117,7 +117,7 @@ void ui_run () {
 				// TODO: error?
 				break;
 		}
-
+*/
 		// Restore the location of the cursor for the shell
 		ui_restoreCursor(&ui);
 	}
@@ -156,9 +156,11 @@ void ui_init (UI *ui) {
 		err = INVALID_TRACK;
 	}
 	
-	//ui_clearScreen( ui->ios2Tid );
-	//ui_splashScreen(ui->ios2Tid);
+	ui_clearScreen( ui );
+	ui_splashScreen(ui);
 	
+	Delay( 750, WhoIs(CLOCK_NAME) );
+
 	// Parse the model
 	ui->trackId = ( ch == 'A' || ch == 'a' ) ? TRACK_A : TRACK_B;
 	parse_model( ui->trackId, &ui->model );
@@ -377,7 +379,17 @@ void intPrintAt (int ios2Tid, int x, int y, char *fmt, int value,
 }
 
 void ui_splashScreen( UI *ui ) {
-char frog[][100] = {
+
+		char title[][100] = { 
+"_________      ___________________           ______  	",
+"__  ____/_________(_)_____  /__  /______________  /__	",
+"_  / __ __  ___/_  /_  __  /__  /_  __ \\  ___/_  //_/	",
+"/ /_/ / _  /   _  / / /_/ / _  / / /_/ / /__ _  ,<   	",
+"\\____/  /_/    /_/  \\__,_/  /_/  \\____/\\___/ /_/|_| " }; 
+
+
+	
+	char frog[][100] = {
 "				     _    _", 	        
 "                    / \\  / \\",              
 "                   |@|  |@|",             
@@ -397,10 +409,19 @@ char frog[][100] = {
 "             \\/  \\/  \\/  \\/  \\/  \\/                 " };
 
     int i;
-    for ( i = 0; i < 20; i ++ ) {
-        strPrintAt( ui->ios2Tid, 1, i+20,
+    for ( i = 0; i < 5; i ++ ) {
+		strPrintAt( ui->ios2Tid, 10, i+2, (char*) title[i], RED_FC, BLACK_BC );
+	}
+	
+	Delay(200, WhoIs(CLOCK_NAME));
+
+	for ( i = 0; i < 17; i ++ ) {
+        strPrintAt( ui->ios2Tid, 15, i+7,
         		    (char*)frog[i], GREEN_FC, BLACK_BC );
 	}
+
+
+
 
 }
 
