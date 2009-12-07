@@ -24,7 +24,7 @@
 #define NUM_IDXS		20
 #define NUM_TRAINS		8
 
-#define TRAIN_LEN		340 // mm
+#define TRAIN_LEN		230 // mm
 #define	ERROR_MARGIN	60	// mm
 #define	TRAIN_EST		TRAIN_LEN + ERROR_MARGIN
 
@@ -130,33 +130,25 @@ void res_run () {
 				// Cancel the previous reservation for this train.
 				trRes_cancel( trRes, &res );
 
-				if ( ((req.totalDist - req.distPast) >= -20) &&
-					 ((req.totalDist - req.distPast) <= 20) ) {
+				// Make the reservation for this train.
+				distLeft = trRes_make( trRes, &res, &req );
 				
-					trRes_encircle( trRes, &res, &req );
+				debug( "stop dist= %d distLeft=%d total=%d other=%d\r\n", 
+						req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft );
+				assert( distLeft >= 0 );
+				assert( req.stopDist >= distLeft );
+				
+				// Calculate the safe stopping distance for the train
+				reply.stopDist = (distLeft <= 20) ? min( req.totalDist, 
+															req.stopDist  - distLeft ) : 
+													req.stopDist - distLeft;
+				// Make sure it is positive
+				if ( reply.stopDist <= 0 ) {
 					reply.stopDist = 0;
-				
-				} else {
-
-					// Make the reservation for this train.
-					distLeft = trRes_make( trRes, &res, &req );
-					debug( "stop dist= %d distLeft=%d total=%d other=%d\r\n", 
-						  req.stopDist, distLeft, req.totalDist, req.stopDist - distLeft );
-					
-					assert( distLeft >= 0 );
-					assert( req.stopDist >= distLeft );
-					
-					reply.stopDist = (distLeft <= 20) ? min( req.totalDist, 
-														     req.stopDist  - distLeft ) : 
-														req.stopDist - distLeft;
-	
-					if ( reply.stopDist <= 0 ) {
-						reply.stopDist = 0;
-					}
-
-					assert( reply.stopDist >= 0 );
-					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
 				}
+				assert( reply.stopDist >= 0 );
+				
+				printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
 
 				// Reply to the sender train
 				Reply( senderTid, &reply, sizeof(ResReply) );
@@ -477,10 +469,15 @@ int trRes_make( TrainRes *trRes, Reservation *r, ResRequest *req ) {
 //			req->trainId, req->sensor, req->distPast, req->stopDist, req->totalDist );
 
 	int distLeft;
-	// Build the rectangles long the path
+
+	// Make a bubble
+	trRes_encircle( trRes, r, req );
+
+	// Build the rectangles along the path
 	distLeft = trRes_buildRects( trRes, r, req );
 
-	// Set this train in motion so that we don't accidentally tell it to move.
+	// Set this train in motion so that we don't 
+	// accidentally tell it to move during simulation.
 	if ( distLeft != 0 ) {
 		trRes->idle = false;
 	}
