@@ -135,7 +135,7 @@ void det_run () {
 				break;
 
 			case GET_STRAY:
-				printf( "det: GetStray request from (%d) \r\n", senderTid );
+				debug( "det: GetStray request from (%d) \r\n", senderTid );
 				// Wait for next stray sensor
 				//req.tid = senderTid;
 				req.events[0].sensor = MATCH_ALL;
