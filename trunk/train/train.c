@@ -187,7 +187,7 @@ void train_run () {
 			case WATCH_TIMEOUT:		// train is lost
 				Reply( senderTid, 0, 0 );
 				
-				if ( tr.mode != IDLE ) {
+				if ( tr.mode != IDLE && tr.mode != WAITING ) {
 					printf( "\033[43m train %d: is lost, for %dms.\r\n\033[49m", 
 							tr.id, timeout * MS_IN_TICK );
 
@@ -199,7 +199,7 @@ void train_run () {
 			case STRAY_TIMEOUT:		// train is really lost
 				Reply( senderTid, 0, 0 );
 				
-				if ( tr.mode != IDLE ) {
+				if ( tr.mode != IDLE && tr.mode != WAITING ) {
 					// Increase the timeout by 2s 
 					timeout += (2000 / MS_IN_TICK); 
 					printf( "\033[43m train %d: is really lost for %dms.\r\n\033[49m", 
@@ -532,9 +532,11 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 			tr->mode = DRIVE;
 		}
 		
-		if ( action == JUST_STOP && remainingDist <= 0 ) {
+		int stoppingDist = train_getStopDist( tr, bestGear );
+
+		if ( action == JUST_STOP && remainingDist <= stoppingDist ) {
 			tr->mode = IDLE;
-		} else if ( (safeDist == 0) && (remainingDist > 0) ) {
+		} else if ( safeDist <= stoppingDist ) {
 			printf ("COLLISION PROBABLY DETECTED.\r\n");
 			tr->mode = WAITING;
 		}
@@ -550,9 +552,10 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 	if ( tr->mode == IDLE || tr->mode == WAITING ) {
 		bestGear = 0;
 	}
-	
-//	printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
-//				 bestGear, safeDist, remainingDist );
+
+	if( bestGear != tr->gear ) 	
+	printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
+				 bestGear, safeDist, remainingDist );
 
 	// If you need to stop,
 	if ( tr->mode == IDLE ) assert( bestGear == 0 );
