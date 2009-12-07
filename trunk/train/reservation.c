@@ -22,7 +22,7 @@
 
 #define NUM_RECTS		20
 #define NUM_IDXS		20
-#define NUM_TRAINS		7
+#define NUM_TRAINS		8
 
 #define TRAIN_LEN		340 // mm
 #define	ERROR_MARGIN	60	// mm
@@ -358,16 +358,17 @@ inline int mapTrainId( int trainId ) {
 			return 2;
 		case 24:
 			return 3;
-		case 46:
+		case 27:
 			return 4;
-		case 52:
+		case 46:
 			return 5;
-		case 55:
+		case 52:
 			return 6;
-
+		case 55:
+			return 7;
 	}
 	// ERROR
-	return 7;
+	return 8;
 }
 
 inline int mapIdxToTrainId( int idx ) {
@@ -381,10 +382,12 @@ inline int mapIdxToTrainId( int idx ) {
 		case 3:
 			return 24;
 		case 4:
-			return 46;
+			return 27;
 		case 5:
-			return 52;
+			return 46;
 		case 6:
+			return 52;
+		case 7:
 			return 55;
 
 	}
