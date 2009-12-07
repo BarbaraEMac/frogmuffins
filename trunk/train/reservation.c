@@ -130,7 +130,8 @@ void res_run () {
 				// Cancel the previous reservation for this train.
 				trRes_cancel( trRes, &res );
 
-				if ( req.totalDist == 0 ) {
+				if ( ((req.totalDist - req.distPast) >= -20) &&
+					 ((req.totalDist - req.distPast) <= 20) ) {
 				
 					trRes_encircle( trRes, &res, &req );
 					reply.stopDist = 0;
@@ -154,7 +155,7 @@ void res_run () {
 					}
 
 					assert( reply.stopDist >= 0 );
-				//	printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
+					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
 				}
 
 				// Reply to the sender train
@@ -429,9 +430,6 @@ void trRes_encircle( TrainRes *trRes, Reservation *res, ResRequest *req ) {
 //			req->trainId, req->sensor, req->distPast, 
 //			req->stopDist, req->totalDist, trRes );
 
-	// Only encircle stopped trains
-	assert( req->totalDist == 0 );
-
 	// This train has stopped
 	trRes->idle = true;
 
@@ -550,7 +548,7 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 		p2   = res_maximizePoint( r, p1, findPointOnLine( p1, p2, distLeft ), trainId );
 		rect = makeRectangle( p1, p2 );
 		
-		if ( p2.x == -1 ) { //res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
 			return distLeft;
 		}
 
@@ -569,7 +567,7 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 		farthest = res_maximizePoint( r, p1, p2, trainId );
 		rect     = makeRectangle( p1, farthest );
 	
-		if ( farthest.x == -1 ) { //res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
+		if ( res_checkIntersect( r, &rect, trainId ) == INTERSECTION ) {
 			return distLeft;
 		}
 
@@ -630,7 +628,6 @@ int trRes_buildRectsH( TrainRes *trRes, Reservation *r, Node *n1, Node *n2,
 											 distLeft, trainId );
 				break;
 			case NODE_STOP:
-
 				return distLeft;
 			//	debug("next node is a stop\r\n");
 				// Do nothing for a stop.
@@ -649,9 +646,7 @@ Point res_maximizePoint( Reservation *r, Point p1, Point p2, int trainId ) {
 	if ( (p1.x >= p2.x - 10) && (p1.x <= p2.x + 10) && 
 		 (p1.y >= p2.y - 10) && (p1.y <= p2.y + 10) ) {
 //		printf ("MAXIMISE POINT STOPPING\r\n");
-		Point err = {-1, -1};
-//		printf ("returinng -1 -1\r\n");
-		return err; //p2;
+		return p2;
 	}
 
 	// If this rectangle intersects with another,
