@@ -157,7 +157,7 @@ int ts_init( TS *ts ) {
 	memoryset ( ts->speeds, 0, NUM_TRNS );
 	
 	for ( i = 0; i < NUM_SWTS - 4; i ++ ) {
-		if ( i == 11 ) {
+		if ( i == 11 || i == 5 || i == 18 ) {
 			ts->defaultLow[i] = SWITCH_CURVED;
 		} else {
 			ts->defaultLow[i] = SWITCH_STRAIGHT;
