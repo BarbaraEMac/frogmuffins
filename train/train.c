@@ -358,23 +358,23 @@ void train_run () {
 				// Send this information to the UI
 				train_updateUI( &tr, distFromSensor );
 				
-				do {
+//				do {
 					// Adjust speed
 					prevMode = tr.mode;
 					train_adjustSpeed( &tr, distFromSensor, 
 									   totalDist, rpReply.stopAction );
 					// This train is trapppppped.
-					if ( tr.mode == WAITING ) {
-						printf ("%d is waiting.\r\n", tr.id);
-						Delay( 500, tr.csTid );
-						waitingTrials ++;
-					}
-					if ( waitingTrials == 5 ) {
-						train_sendStuck( &tr, distFromSensor, totalDist );
-						break;
-					}
-				} while ( tr.mode == WAITING  );
-				waitingTrials = 0;
+//					if ( tr.mode == WAITING ) {
+//						printf ("%d is waiting.\r\n", tr.id);
+//						Delay( 500, tr.csTid );
+//						waitingTrials ++;
+//					}
+//					if ( waitingTrials == 5 ) {
+//						train_sendStuck( &tr, distFromSensor, totalDist );
+//						break;
+//					}
+//				} while ( tr.mode == WAITING && waitingTrials  );
+//				waitingTrials = 0;
 					
 				if ( prevMode == DRIVE && tr.mode == IDLE ) {
 					// We've reached our destination,
