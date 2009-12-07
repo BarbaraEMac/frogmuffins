@@ -32,9 +32,9 @@
 #define	INIT_GRACE				(10000 /MS_IN_TICK)
 #define	SENSOR_TIMEOUT			(5000 / MS_IN_TICK)
 #define SD_THRESHOLD			10	// parts of mean	
-#define CAL_LOOPS				3
+#define CAL_LOOPS				2
 #define INT_MAX					0x7FFFFFFF
-#define LOCATE_GEAR				4
+#define LOCATE_GEAR				3
 #define REVERSE_DIST			400
 #define SAFE_FLIP_DIST			200
 
@@ -188,7 +188,7 @@ void train_run () {
 				Reply( senderTid, 0, 0 );
 				
 				if ( tr.mode != IDLE ) {
-					printf( "%d is lost, for %dms.\r\n", 
+					printf( "\033[43m train %d: is lost, for %dms.\r\n\033[49m", 
 							tr.id, timeout * MS_IN_TICK );
 
 					// Try to hit a sensor to find where you are
@@ -202,7 +202,7 @@ void train_run () {
 				if ( tr.mode != IDLE ) {
 					// Increase the timeout by 2s 
 					timeout += (2000 / MS_IN_TICK); 
-					printf( "%d is really lost for %dms.\r\n", 
+					printf( "\033[43m train %d: is really lost for %dms.\r\n\033[49m", 
 							tr.id, timeout *MS_IN_TICK );
 					
 					// Reverse direction 
@@ -273,7 +273,8 @@ void train_run () {
 
 				// If there is no path available,
 				if ( rpReply.err < NO_ERROR && tr.sensor != START_SENSOR ) {
-					debug ("The train has no route. Stopping at %d.\r\n", tr.sensor);
+					printf ( "The train has no route. Stopping at %d. ERROR=%d\r\n", 
+							tr.sensor, rpReply.err );
 						
 					assert( 4 == 5 );
 
@@ -549,8 +550,8 @@ void train_adjustSpeed( Train *tr,     int distFromSensor,
 		bestGear = 0;
 	}
 	
-	printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
-				 bestGear, safeDist, remainingDist );
+//	printf( "%d: %d is best gear for %d safe. (total=%d)\r\n", tr->id,
+//				 bestGear, safeDist, remainingDist );
 
 	// If you need to stop,
 	if ( tr->mode == IDLE ) assert( bestGear == 0 );
@@ -866,8 +867,8 @@ void train_flipSwitches( Train *tr, RPReply *rpReply, int mm, int reserveDist ) 
 
 		// Only flip switches more than 20 cm away
 		int dist = ss->dist - mm;
-		if( abs( dist ) < SAFE_FLIP_DIST ) 
-			printf(" too close to switch %d\r\n", ss->id ); //continue;
+		if( abs( dist ) < SAFE_FLIP_DIST ) continue;
+//			printf(" too close to switch %d\r\n", ss->id ); //continue;
 
 		// Only flip switches in your reserved section
 	 	if ( reserveDist <= dist ) continue;
