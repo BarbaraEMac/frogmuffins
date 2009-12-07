@@ -30,36 +30,208 @@
 |/__\|/__\|/__\|/__\|/__\|/__\|/__\|/__\|/_______\|/__\|
 
 	The following is a description of our train application.
+
+	Goal
+	====
+	Since we handed in the project description, we changed the goal of our project.
+	We decided to write a novel reservation system and deadlock detection and recovery
+	solution. Our goal was to create situations with 5 trains where at least 2 trains
+	were blocking a single train from reaching its destination. The trapped train
+	was supposed to cause the idle blocking trains to move out of its way, let it pass,
+	and move them back into place. 
+
+	We were also going to implement a neat method to have trains follow each other 
+	as closely as possible without having collisions occur as the leading train slowed 
+	and sped up. The following train's resevations were suppsoed to notice the speed
+	changes and change its speed to match.
+
+	Finally, we wanted to have at least 3 trains running around in inner loop crossing
+	in the middle without collisions.
+
+	We believe that our reservation and deadlock recovery systems would be able to solve
+	all sorts of difficult problems automatically.
+
+	As of 10:00pm before the due date, the trains are still colliding sometimes and the
+	deadlock simulation system has not yet been tested. It works "in theory". Despite
+	the massive amounts of man hours we have invested into this project, we believe that
+	our goal was too ambitious to complete within the allotted time. We do believe that
+	the system would be in a much better state if we had just 1 more week to complete it.
+	But, that's life!
+
+	Here is a description of the code we have implemented for this project. We've made
+	special notes of the sections that do not work as well as we hoped they would.
 	
 	Model
 	=====
-	For the project we have extensively remeasured the tracks, particularly 
-	the x and y coordinates which we use in our reservation system.
+	We decided to use the model provided on the course webpage to store the track
+	graph. We did this because the track data was already measured and stored in
+	a useable format. 
 
-	For this assignment, we simply use the reserved flag in each node to set it
-	as reserved or not. We have not modified our representation of the track for
-	P2.
+		Model Data Structure
+		====================
+		Here are the structs we use to store the model:
+
+		typedef enum {
+			SWITCH_STRAIGHT = 0,
+			SWITCH_CURVED = 1
+		} SwitchDir;
+
+		typedef struct {
+			int dest;
+			int distance;
+		} Edge;
+
+		typedef struct {
+			Edge 		ahead[2]; // (curved, straight)
+			Edge 		behind;
+			SwitchDir set;
+		} Switch;
+
+		typedef struct {
+			Edge ahead;
+			Edge behind;
+			Edge filler[1];
+			char trig_forward, trig_back;
+		} Sensor;
+
+		typedef struct {
+			Edge ahead;
+			Edge filler[2];
+		} Stop;
+
+		typedef struct {
+			enum {
+				NODE_SWITCH = 3,
+				NODE_SENSOR = 2,
+				NODE_STOP = 1,
+			} type;
+			char name[NODE_NAME_LEN];
+			int id, idx;
+			union {
+				Switch sw;
+				Sensor se;
+				Stop st;
+				Edge edges[3];
+			};
+			int reserved, reserver;
+			int x, y; // location (for ui)
+		} Node;
+
+		typedef struct {
+			int 	num_nodes;
+			Node 	nodes[MAX_NUM_NODES];
+			int 	sensor_nodes[NUM_SENSORS];
+		} TrackModel;
+
+		This is essentially taken from the course webpage with a few minor adjustments:
+			1. The names were changed to use camel case.
+			2. Each Node now stores its index in the TrackModel's nodes array.
+			3. Each node has a reserved flag. If the flag is 1, this node is reserved.
+			4. The x and y co-ordinates for the UI have been altered.
+
+		Parse & Ownership
+		=================
+		The model data is hardcoded into the model.c file as a string. This string
+		can be parsed with sscanf to build the model data structure at any time.
+		Since the model is quite large and memory intensive, we've decided to only
+		let the Track Server and Route Planner parse and store the model.
+
+		We decided against parsing the model once and passing it as a message
+		to each task since the model is large. We will pay the parse time cost
+		during initialization.
+
+		Therefore, only the Route Planner and Track Server parse the model.
+	
+		Since route planning needs to consider track reservations, the model structure
+		is shared between the reservation server and the route planner. This is the
+		only global variable we have.
+
+		Data Accuracy
+		=============
+		We are accepting the data in the track files as being accurate. Cherry confirmed
+		that she measured some of the distances in the previous term.
+
+		New Measurements
+		================
+		Our reservation system turns the track into a 2D map. Therefore, we needed
+		accurate locations of each landmark. Daniel spent a long time measuring the
+		exact location of the landmarks and entering them into the model data.
 
 	Route Planner
 	=============
-	 We've made some minor modifications
-	to our shortest distance calculator (Floyd-Warshall) to consider the extra
-	distance required for a reverse in the middle of a path. 
-	
-		Sensor Predictions
-		==================
-		Since our sensor predictions worked for P1, we have not modified them for P2.
-		We've simply added some Node Predictions.
-	
-		Node Predictions
-		================
-		In addition to determining all of the next sensors we could possibly hit,
-		we now build a list of node predictions. This list includes every node
-		a train will pass until it reaches a sensor. These predictions include
-		each node a train could pass, independent of switch state or train direction.
+	A train will query the route planner to determine its route. It is able to
+	determine the shortest path between any two nodes, distance between any two
+	nodes, make predictions about the next sensors along a path, determine which
+	switches will need to be set and to which directions, determine if a train
+	needs to turn around / reverse, and more.
 
-		Floyd-Warshall
-		==============
+		Route Planner Data Structure
+		============================
+		The Route Planner is a private struct of the following form:
+			int 			 distances[num_nodes][num_nodes];
+			int 			 paths    [num_nodes][num_nodes];
+			TrackModel		*model;
+			Reservations	*reservations;
+
+		It stores the minimum distance between any two nodes, the shortest path between
+		any two nodes, a model of the track, and the track reservations.
+
+		The track reservations are not currently used. (See comment below)
+		
+		Shortest Path Algorithm
+		=======================
+		To be able to determine the shortest distance between any two nodes in 
+		O(1) time, we run Floyd-Warshall's All-Pairs Shortest Path algorithm
+		once during initialization and store the results. Here is the algorithm:
+
+		Let dists be the distances matirx.
+		Let paths be the path parents matrix.
+
+		Initialize matrices:
+			dists[i][j] = 0 		if i == j
+						  cost(i,j) if i and j are neighbours
+						  Infinity  otherwise
+			path[i][j] = -1
+
+		for ( k = 0; k < n; k ++ ) {
+			for ( i = 0; i < n; i ++ ) {
+				for ( j = 0; j < n; j ++ ) {
+					if (dists[i][j] > dists[i][k] + dists[k][j]) {
+						dists[i][j] = dists[i][k] + dists[k][j];
+
+						paths[i][j] = k;
+					}
+				}
+			}
+		}
+
+		This algorithm computes the shortest distance between any two nodes in
+		the graph and stores them in a distances matrix. It runs in time O(n^3).
+
+		The cost function returns the distance in mm between two consecutive,
+		neighbouring nodes. Thus, our algorithm will find the shortest distance in mm
+		between any two nodes. Note that if a train needs to reverse along this path, 
+		it may take longer to reach the destination than if the train had taken a longer
+		route (distance-wise) that required it to only drive straight. We decided 
+		that we are fine with using the shortest distance to determine the shortest
+		path for now.
+
+		The shortest path from node i to node j  can be recovered in the following
+		manner:
+
+		outputPath( path, i, j ) {
+			if ( path[i][j] == -1 ) {
+				Display node i.
+			}
+			else {
+				outputPath(path, i, path[i][j]);
+				outputPath(path, path[i][j], j);
+			}
+		}
+
+		The function uses recursion to follow the links stored during Floyd-Warshall
+		to determine the path. The depth of the recursion is at most O(length of path).
+
 		At a quick glance of our code, you will notice that we have implemented
 		Dijkstra's Algorithm to determine the shortest path between 2 nodes.
 
@@ -73,60 +245,145 @@
 
 		Therefore, while we realize that Floyd-Warshall might be overkill and,
 		theoretically, too slow, it has worked in all of our tests so far.
-	
-	Reservation System
-	==================
 
-		2D Map
-		======
+		Why Do We Use Floyd-Warshall?
+		=============================
+		Floyd-Warshall allows us to cache our shortest paths results. We only run this
+		algorithm once and can compute distances and paths from those stored results
+		very quickly. We choose to pay a larger cost up front to save time when the 
+		trains are running.
 
-		Train Representation
-		====================
-		- reserve to stopping distance
-		- updated every 11mm or so for maximum accuracy
-		- when stopped, build a bubble around train of size train + error
-		- how rectangles are built
+		Even with the reservation system, having the shortest path between any two nodes
+		will collapse the graph for any sections that are not reserved, speeding up
+		a Dijkstra or any other algorithm we might use to compute the paths using the
+		reservation system.
 
-		Train Intersections
-		===================
-		- rectangle intersections
-		- grow rectangles as far as they can go (wthin 1cm)
-		- lets trains travel as far as they possibly can
+		Route Planner to Train API
+		==========================
+		Currently, only the command prompt (shell) and rain talk to the Route Planner.
+		Since the shell is specialized for testing, we've created special handlers
+		for shell messages.
 
-		Useful Things
+		When the train talks to the Route Planner, it communicates using sensor ids.
+		Each sensor has a unique id within the sensor_nodes array of the model. We
+		can use this id to determine the location of the train and direction it is
+		going.
+
+		When the Route Planner talks to the train, it sends sensor ids as predictions,
+		distances in mm to particular landmarks, and switch settings/directions. 
+
+		The train does not know anything about the model. We felt that the train
+		should not need to know about nodes or need to parse the model for it to
+		drive. We consider our train to be driven by either a blind engineer or one
+		without a map. The Route Planner simply tells the train a distance to travel,
+		direction, and switch settings. Thus, the train can focus on calibration
+		instead of complex details about nodes and making sure it is travelling along
+		a set path.
+
+		Shortest Distance
+		=================
+		To get the shortest distance between any two nodes, we simply look up the
+		corresponding entry in the distances matrix and return it to the train.
+
+		Shortest Path
 		=============
-		- reserve nodes within reservation distance
-		- only flip switches if a train has them reserved
-		- trains know they can drie within their safe distance
-		- never reserve behind a train unless it is stopped
-		- collions on switches are detected since we use straightline rectangles
-		- train can have as many rectangles as it needs
+		To computer the shortest distance between any two nodes, we recurse on the
+		path to build a list of landmarks. The list and length of the list are
+		returned.
 
-	Deadlock Detection & Recovery
-	===============================
-
-
-		Detection
-		=========
-		- reservation system will return a safe distance of 0
-
-		Recovery
-		========
-		- First, assume train is moving and will move out of the way
-		- wait for 1000 ms for the train to move and try again
-		- if not successful, check train status
-		- if idle, move it
-		- otherwise, wait more
-
-		how does the train get moved?
-
-		Limitations
+		Turn Around
 		===========
-		- cannot predict and prevent
+		Since sensors give a direction and the train tells the Route Planner when 
+		it triggers a sensor, we can easily tell if the train needs to reverse.
 
+		Switch Settings
+		===============
+		Given a desired path and the last hit sensor, it is easy to determine the next 
+		few switches a train will encounter and the direction they need to be set.
+		When the Route Planner tells the train it has a valid path, it also returns
+		some switch settings.
+		
+		SwitchSettings is a struct of the following form:
+			int distanceToSwitch;
+			int switchId;
+			SwitchDirection dir;
+
+		The train will receive a list of these settings and can flip switches 
+		immediately before it needs to. Thus, when more trains are on the track, they
+		will not interfere when switching switches.
+
+		Right now, the train will flip switches that are not near it. This will change
+		as we have more trains running on the track.
+
+		If we had more time, we wanted to make sure that any switch was in the correct
+		position before we went over instead of relying on the spring system for going over
+		a switch backwards.
+		
+		Predictions
+		===========
+		Given a desired path and the last hit sensor, the Route Planner is able to 
+		predict which sensors the train should hit next.
+
+		If the train is facing forward, we follow the path in the desired direction
+		and build a list of the first sensors it could hit. If the path reaches a switch,
+		we follow in both directions in case the switch is not set correctly.
+
+		If the train is facing backward, we tack on a list of all sensors it is facing
+		in case it does not turn around correctly. This way we make a prediction for ANY
+		route the train could take. If a sensor is hit and it is not a member of this list,
+		we disregard the trigger since it is not possible for this train to have triggered 
+		it.
+
+		These predictions are given to the train. The train bundles the sensors and an 
+		estimated trigger time range to send to the Detective. The Detective handles the
+		trigger from there.
+
+		In addition to determining all of the next sensors we could possibly hit,
+		we now build a list of node predictions. This list includes every node
+		a train will pass until it reaches a sensor. These predictions include
+		each node a train could pass, independent of switch state or train direction.
 
 	Detective
 	=========
+	The detective handles polling and allows trains to wait for a set of sensors to
+	trigger. There is a expire time associated with each such request and if the request 
+	expires, the train is notified and expected to recover.
+
+		Notifiers
+		=========
+		The detective spawns two helper tasks - a polling task that tries to poll the 
+		train box as often as possible, and a watchdog that makes sure the poller does not
+		time out. Having an extra task for the watchdog allows our project to be really
+		robust, even against such events as temporarily severing the train box connection.
+		
+		Any time the polling task returns its data (more than 1 sensor can be returned)
+		we go through it and match against any outstanding requests. The poller notifier was
+		originally a part of the track server, but to improve latency, we decided it should
+		report directly to the detective.
+
+		After getting a watchdog notify, we check for requests that have expired and reply 
+		to them.
+
+		WATCH_FOR
+		=========
+		This is the most useful request (from the train's POV) of the detective. It allows 
+		the train to only wait on a specific set of sensor triggers, disregarding erroneous
+		sensor data. Provided the train can predict the potential trigger windows accurately
+		one would have to hit the right sensors within a fraction of a second to confuse 
+		the train.
+		
+		When a WATCH_FOR request comes in, it is checked against the history of the last 
+		time each sensor was hit. If a match occurs (in the past), the request is 
+		answered immediately. This is handy for times when we have just passed over 
+		a sensor.
+
+		GET_STRAY
+		=========
+		In the event WATCH_FOR fails, the trains can resort to GET_STRAY. 
+		This request will return the next (unmatched by WATCH_FOR) event. This way the train
+		the train will disregard sensors triggered by other trains, for later assignments.
+
+****TODO****
 	The detective group of tasks is not much different from the last code. There is still
 	one main server task, one poller task and a watchdog task. The few changes that were
 	made are: 
@@ -136,88 +393,77 @@
 	are non-blocking now, with the detective doing an explicit Send() to the train when 
 	the request is handled. We've made this change because the train task is now a server.
 
-	When a WATCH_FOR request comes in, it is checked against the history of the last 
-	time each sensor was hit. If a match occurs (in the past), the request is 
-	answered immediately. This is handy for times when we have just passed over 
-	a sensor.
 
 	Also, we increased the grace period on the watchdog to 5 seconds, as sometimes the
 	poll takes a bit longer to respond - especially when sending in other commands.
 	The reason for this change is that reseting it too early might mean we discard useful
 	sensor data.
 
+		The detective also keeps a buffer of unaccounted for sensor triggers, but they are
+		not used at this time.
+	
 	Track Server
 	============
-	We have not modified how our project sends commands to the train controller.
-	Therefore, the Track Server has not changed since the first project.
+	The track server is largely unchanged from the K4 code, with the exception of the
+	polling task now talking directly to the detective, and the detective passing on the
+	values to the track server itself. We also added extra error checking and printing 
+	through the UI task.
 
 	Train
 	=====
-	Since the first iteration of our train was not working as smoothly as we would
-	have liked, we have scrapped most of it and started again. The majority of the
-	time spent on this assignment was spent on recoding this task.
+	The train is, by far, our most complex task. It has an exhaustive calibration system and
+	lots of measured hardcoded values to estimate the train's location within 2cm.
 
-		Server
-		======
-		Since the train has so many helper tasks, we've turned it into a server
-		to simplify the code. Any Send call made by the train is guaranteed to be
-		non-blocking. 
+** TODO ** More preamble about our impressive train
+		
+		
+		Speed Calibration
+		=================
+		The train keeps a buffer of the last 10 track section speeds and calculates the
+		mean and standard deviation of this sample. Data is only added to the buffer
+		when we know the train is not accelerating (and decellerating). This gives us a
+		base speed to use in our calculations for current speed.
+		This approach is robust against the train losing speed over time and does not 
+		require hardcoded speed profiles per train. It also has the advantage of not having
+		to figure these out ahead of time as this time-costly, at the expense of little extra
+		calibration time at each run.
+			
+		The goal of calibration is to be able to track the train and correctly
+		estimate its speed and distance within a small standard deviation of
+		error.
 
-		Helper Tasks
-		============
-		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher.
-		These are all notifier tasks so their priorities' are all one higher than 
-		that of the train.
+		Thus, we run the train around the large loop of the track 3 times and 
+		gather data to make these estimations. While estimating, we calculate
+		the standard deviation of the estimations. To do this we keep an array
+		of the last 10 recorded speeds (as in P1) and calculate the standard
+		deviation of this sample. We only add a speed to the buffer if the train 
+		has not changed speed over the last sector to prevent contamination of data.
+		This speed calibration remains enabled over the course of the run, 
+		meaning it will adjust for the train slowing down with wear.
 
-			Heart
-			=====
-			The heart is a timer task that delays for a set period of time and Sends
-			to the train. Upon the wake up, a train can update its location on the 
-			track in between sensors.
+		The calibrator task moves the train to D9 and then E11 so that we 
+		force a direction for it to travel around the loop.
 
-			Hence, we can estimate the train's location anywhere on the track within
-			the train's standard deviation worth of error. Assuming normal distribution
-			this will predict the sensor hit correcly 99% of the time.
-			(See Standard Deviation below).
+		From E11, the calibrator tells the train to travel around the loop
+		without changing speed until we have run around 3 times. After this
+		third time, the train stops once it hits E11. It will usually travel
+		much farther before actually stopping.
 
-			Calibration
-			===========
-			The goal of calibration is to be able to track the train and correctly
-			estimate its speed and distance within a small standard deviation of
-			error.
+		At the shell, this actual stopping distance is manually entered into the
+		train so that we can calibrate the hardcoded stopping distances.
 
-			Thus, we run the train around the large loop of the track 3 times and 
-			gather data to make these estimations. While estimating, we calculate
-			the standard deviation of the estimations. To do this we keep an array
-			of the last 10 recorded speeds (as in P1) and calculate the standard
-			deviation of this sample. We only add a speed to the buffer if the train 
-			has not changed speed over the last sector to prevent contamination of data.
-			This speed calibration remains enabled over the course of the run, 
-			meaning it will adjust for the train slowing down with wear.
+		After this, the calibration tasks Exits.
 
-			The calibrator task moves the train to D9 and then E11 so that we 
-			force a direction for it to travel around the loop.
-
-			From E11, the calibrator tells the train to travel around the loop
-			without changing speed until we have run around 3 times. After this
-			third time, the train stops once it hits E11. It will usually travel
-			much farther before actually stopping.
-
-			At the shell, this actual stopping distance is manually entered into the
-			train so that we can calibrate the hardcoded stopping distances.
-
-			After this, the calibration tasks Exits.
-
-			Route Watcher
-			============
-			This task has already been briefly explained in the Route Planner above.
-			It is only woken up when a train cannot create any vaild path. After
-			Delaying for a set time, it Sends to the train to wake it up and try
-			to plan a new route. If the blocking train has moved and made new
-			reservations, then this train will be free to plan a route.
+		The neat thing about our calibration mode is that it is also a form of automated testing.
+		As the train is travelling, it is calculating shortest routes via the Route Planner and 
+		reserving and cancelling sections of track. If any part of the system is broken, we can
+		tell immediately during calibration.
 
 		Stopping Distances
 		==================
+
+**** TODO ****
+		
 		During calibration, a manual stopping distance for the calibration speed
 		is stored in the train.
 
@@ -259,6 +505,51 @@
 				Flips the switches you need.
 				Tell the Detective about the predicted nodes.
 	
+		Locating the train
+		==================
+		Whenever the train loses its position, it calls the locate subroutine. 
+		Using a slow speed setting, that is unlikely to damage the train we do the following:
+
+			timeout = 1 sec
+			FOREVER {
+				sensor = get_stray_sensor( timeout )
+				
+			  if( isValid( sensor ) ) break;
+				train_reverse;
+				timeout *= 2;
+			}
+
+		Since the timeout doubles every time, this is guaranteed to return the train location
+		eventually assuming the train is actually moving.
+
+		This subroutine is called at the beginning of train init to locate the train, 
+		any time the usual sensor prediction goes horribly awry.
+
+		Helper Tasks
+		============
+		The train currently has 3 helper tasks: 1 Heart, 1 Calibrator, 1 Route Watcher.
+		These are all notifier tasks so their priorities' are all one higher than 
+		that of the train.
+
+			Heart
+			=====
+			The heart is a timer task that delays for a set period of time and Sends
+			to the train. Upon the wake up, a train can update its location on the 
+			track in between sensors.
+
+			Hence, we can estimate the train's location anywhere on the track within
+			the train's standard deviation worth of error. Assuming normal distribution
+			this will predict the sensor hit correcly 99% of the time.
+			(See Standard Deviation below).
+
+			Route Watcher
+			============
+			This task has already been briefly explained in the Route Planner above.
+			It is only woken up when a train cannot create any vaild path. After
+			Delaying for a set time, it Sends to the train to wake it up and try
+			to plan a new route. If the blocking train has moved and made new
+			reservations, then this train will be free to plan a route.
+	
 		Route Planning
 		==============
 		In order to keep the train task simple and focussed on driving at the correct
@@ -276,47 +567,274 @@
 
 		Reservations
 		============
-		The track is automatically reserved within the call to plan route. This 
-		ensures that the train stays as simple as possible and can just focus on 
-		driving and calibrating.
+		A train calls the reservation system every 200ms to update its reservation
+		and determine a safe distance that it can travel within.
+
+	Reservation System
+	==================
+	For our final project, we decided to try a novel reservation system idea. We
+	convert the train track into a 2D point set and reserve points along the track
+	as a train reservation. If these rectangular sections ever intersect, then
+	a train collision can occur and the trains should slow down.
+
+		2D Map
+		======
+		As mentioned above, Daniel has measured all of the landmarks on both tracks
+		and entered the data into our model information. When our model is parsed,
+		we know the exact location of each landmark in 2D space. 
+
+		It is interesting to note that the straight-line point distances and the 
+		distances between two neighbouring nodes do not differ by more than 7cm.
+		The 7cm difference is noticed on curved sections of the track. For all other
+		neighbouring edge distances, the straight-line distance does not differ from
+		it by more than 2cm.
+		
+		Reservation Updates
+		===================
+		Reservations are updated every 200ms or every 11mm approximately for maximum
+		accuracy. Since a train estimates its location every 200ms, it makes sense
+		to update its reservations at this point as well.
+
+		Train Representation
+		====================
+		A train on the track is represented by a series of rectangles. The minimum
+		length of track we reserve varies based on a few different conditions.
+
+		1. If a train has stopped, we reserve 1 train length worth of track on either
+		side of where we estimate the train to be. Since our stopping distance
+		relies on a estimation of where the train is, 2*train length is the minimum
+		we can reserve to ensure that no train will collide with a stopped train.
+
+		2. If a train is moving, we try to reserve ahead of it to its stopping
+		distance. When trying to make a reservation, we pass in the total distance
+		a train wants to go, stopping distance at the current speed, last triggered 
+		sensor, and distance past the last sensor. 
+
+		Using this stopping distance, the reservation server builds rectangles from
+		the last triggered sensor forward until the end of the stopping distance.
+
+		If a stopping distance is greater than the edge distance between 2 nodes,
+		we build a rectangle from node to node and build a rectangle for the 
+		remaining distance.
+
+		If a remaining distance lies between 2 nodes, we grow a rectangle to the maximum
+		size it can be using a binary search between nodes.
+
+		It is important to note that the rectangles represent straight lines between 
+		any two neighbouring nodes. Hence, it is possible for a rectangle length to be 
+		less than the actual distance between 2 nodes. This is not really a problem.
+
+		When rectangles are made from node to node, both nodes are reserved so that
+		the route planner can find routes around them. Otherwise, just the starting
+		node is reserved.
+
+		If a train is heading towards a switch, both routes will become reserved just 
+		in case the switch is not flipped in time.
+		
+		Train Intersections
+		===================
+		When a train tries to make a reservation, it passes in the stopping distance
+		for its current speed. Using this, we grow rectangles forward until we've
+		exhausted the stopping distance. If a rectangle intersects with another one,
+		we say that trains can collide at that point.
+
+		Hence, during the reservation process, we grow rectangles as far as we can 
+		before intersecting with another rectangle. If an intersection occurs along
+		the path, the reservation system will reserve up to just before the 
+		intersecting area and return the safe distance that the train can travel.
+
+		Using this distance, the train will adjust its speed until its stopping distance
+		within the range. If the train cannot stop in time, a collision will probably occur.
+		In this case, we cause the train to stop immediately.
+
+		Geometry Class
+		==============
+		To map the track and trains and know when collisions have occurred, we have
+		implemented an entire 2D geometry class with vectors, single points and 
+		rectangles. 
+
+		Since we are updating reservations and checking for collsions frequently, 
+		we needed to ensure that these operations are fast. Efficient 2D rectangle 
+		intersection code was found online and it used in 2D video games. 
+
+		So, we know that two objects do not intersect if we can find a line that
+		separates them. Using this fact, we take each edge of a rectangle, A, and
+		verify that every point on the other rectangle, B, is on a different side
+		than the remaining points of A.
+
+		Rounding Errors and Accuracy
+		============================
+		Since the geometry class doesn't use floating point numbers, error is introduced
+		as we are building the rectangles. We've decided to have an error margin of 2cm.
+
+		The error is acceptable because we can only estimate the location of the train
+		to begin with. Our error for the train location is 2cm as well.
+		
+		Why?
+		====
+		We noticed that there are sections of the track near switches when two 
+		trains can come very close and graze each other. It made sense for us to block
+		off 2-dimensional areas instead of just blocking off 1-dimensional nodes. 
+
+		We also wanted to try this as a proof of concept. As far as we know, this is the
+		first time a group has decided to create a 2D reservation system and wanted to 
+		try it out. We believe it is just as efficient as other methods and can solve
+		special boundary cases automatically, without the need for special cases.
+
+		Useful Things
+		=============
+		Here is a list of useful and neat things about our reservation system:
+
+		- Using our rectangle growing, trains are given the maximum distance they
+		wish to travel, while considering other reservations.
+		
+		- Trains now know their safe distance and have a section of track that
+		they own. They only flip switches within this safe distance. This way we can
+		ensure that multiple trains do not interfere with each other.
+		
+		- We never reserve a section of track behind a train unless it is stopped.
+		A train travelling behind a train will reserve right up to the back of it.
+		
+		- As mentioned above, collisions near switches are elminated since we create
+		straight-line rectangles towards the switch.
+		
+		- A train can have as many rectangles as it needs.
+		
+		- We believe our reservation is optimal. A train only reserves as far as it wants
+		to go and never any more. 
+
+		Limitations
+		===========
+		As far as testing just the reservation system without the trains (analyzing the 
+		rectangles built along the length of tracks and verifying the reserved nodes are
+		correct), our reservation system is quite good. We can detect many boundary cases
+		where straight trains will collide on curved sections of track without any 
+		special cases.
+
+		Unfortunately, as of 10:00pm before this project is due, trains are still colliding.
+		We believe this is a problem with the train driving since static testing of the 
+		reservation system has passed all of the normal and boundary cases we could think up.
+		Testing will continue until the code freeze at 9:00am to determine the source of the
+		collisions.
+
+
+	Deadlock Detection & Recovery
+	===============================
+	
+
+		Detection
+		=========
+		- reservation system will return a safe distance of 0
+
+		Recovery
+		========
+		- First, assume train is moving and will move out of the way
+		- wait for 1000 ms for the train to move and try again
+		- if not successful, check train status
+		- if idle, move it
+		- otherwise, wait more
+
+		how does the train get moved?
+
+		Limitations
+		===========
+		- cannot predict and prevent
 	
 	UI / Shell
 	==========
-	Not much has changed with these two user tasks since they were mostly working
-	for our Project 1 demo. The following is a list of the changes.
+	We have designed a unique user interface for this project. This UI shows the
+	state of the turn-outs, last 4 triggered sensors, location of the train 
+	(distance in mm from last sensor it hit), current time in ms, and the shell
+	prompt. Much of this information is overlayed on a map of the track. There 
+	are unique maps depending on the track that is loaded.
 
-		UI
-		==
-		Since we are now tracking 2 trains, we will display the location of each
-		train separately on the map.
+		UI Implementation
+		=================
+		The UI is a server. User tasks that wish to display information send 
+		this info to the UI server. All output formatting is contained within the
+		UI server. Here is the pseudo-code:
+
+		Initialize:
+			Get the track id from the shell.
+			Parse the corresponding model.
+			Clear the screen.
+			Draw the map and other static information.
+			Create the timer notifier.
+			Register with the Name Server.
+			Reply to the shell to let other tasks run.
+
+		FOREVER {
+			Receive from a user task.
+			Reply to the user task immediately.
+
+			switch( request type ) {
+				case CLOCK:
+					Display the current time.
+				case TRACK_SERVER:
+					Update a switch setting on the map.
+				case DETECTIVE:
+					Update the last triggered sensors.
+				case TRAIN:
+					Update the train's current location.
+			}
+		}
+
+		The UI task is kept as simple as possible. It has quite a few functions
+		that can send special escaped character sequences to the terminal.
+
+		Layout
+		======
+		The track map prints at the top of the screen. The switch settings are
+		displayed over the map. 'S' indicates the switch is straight and 'C' 
+		indicates the switch is curved. The train location is displayed inside
+		the left-most loop and the current time (in ms) is displayed in the
+		right-most loop.
+
+		The last triggered sensors, triggered by a train or a malicious TA, will
+		display below the map. We will show the last 4 triggered sensors. 
+
+		The shell prompt will display at the very bottom and can show 3 lines
+		worth of scrolling data.
+
+		We realize that the map is very large and will be modifying it in future
+		iterations of this project.
 
 		Shell
 		=====
-		During train calibration, the shell will now be blocked until a train is 
-		fully calibrated.
+		The shell does not print itself via the UI server for the following
+		reasons:
+			1. We've been using the shell since A0 so we know it works. The UI
+			   is new code which may have bugs. Hence, the shell is more robust
+			   and we can count on it to display properly.
+			2. We need to be able to scroll to see error and debug data. The 
+			   shell does this for free.
+			3. We need to use the shell before the UI starts.
 
-	Error Codes
-	===========
-	We created the following error codes for the project:
-		TIMEOUT,				// A timeout has occurred
-		DET_INVALID_REQ_TYPE,	// Invalid Track Detective request type
-		INVALID_NODE_NAME,		// Invalid node name
-		INVALID_NODE_IDX,		// Invalid node index
-		RP_INVALID_REQ_TYPE,	// Invalid request type for the Route Planner
-		INVALID_SENSOR_IDX,		// Invalid sensor index
-		INVALID_TRAIN_SPEED,	// Invalid train speed (avg speed)
-		INVALID_TRACK			// Invalid track identifier
-		NO_PATH					// There is no path for the train
-	
-	Whenever a server request is made, we always check for these error values
-	in the reply. If there is an error, the user task should attempt to handle
-	it.
+		The Shell is the only user task that will display text itself, other
+		than the UI in our production code.
+
+		Efficiency
+		==========
+		There are many calls to cprintf within the UI server. These calls could 
+		be merged together to create more efficient output. 
+
+		Advantages
+		==========
+		All of the formatting is stored within one simply user task. If we need to 
+		change how a particular gadget is displayed, this will be very simple.
+
+		Limitations
+		===========
+		Each element that is drawn to the screen needs to be sent via a message to
+		the UI. This can be very costly time-wise.
 
 	Neat Things
 	===========
 	We did some neat things for this assignment. Here's a brief discussion of
 	some of them.
-		
+	
+		- use lights to determine if connected
+		- flip switches buffer
 		- can travle to any location - not just sensors
 
 		Track Measurements
@@ -334,6 +852,66 @@
 	coupling.
 
 	Except for the ROute PLanner and the Reservation system. It was more efficient to share the track model then to pass reservation data bck and forth in messages.
+
+		Optimization
+		============
+		We were the first group to figure out how to compile in optimized mode.
+		Virtually all our code is compiled with 02 optimizations on, there is one
+		little file with two tiny functions that never get called that is not 
+		optimized to fool the compiler into loading function pointer properly.
+		Inside the kernel, the volatile modifier is carefully used to ensure memory
+		reads/writes do not get optimized away in places that they do not need to.
+		Furthermore, our context switch assumes the number of registers saved by 
+		the request call primitives. This has changed with the optimization on, 
+		and the appropriate number had to be updated.
+
+		The code speed increased by 2 - 3 times with O2 optimization on.
+	
+		We do not particularly feel like debugging gcc optimization bugs at this time
+		and so we chose to use the stable O2 optimization instead of O3.
+
+		Task Priorities
+		===============
+		We have designed a task priority hierarchy for this assignment. It works
+		as follows:
+
+		#define NUM_USER_PRIORITIES	10
+		#define HW_SERVER_PRTY 		1
+		#define NOTIFIER_PRTY 		HW_SERVER_PRTY - 1
+		#define OTH_SERVER_PRTY		3
+		#define OTH_NOTIFIER_PRTY	OTH_SERVER_PRTY - 1
+		#define	IDLE_PRTY			NUM_USER_PRIORITIES - 1
+		#define SHELL_PRTY			IDLE_PRTY - 1
+
+		#define TRAIN_PRTY			5
+		#define LOW_SERVER_PRTY		7
+
+		We have 10 different priorities, ranging from 0 to 9, and they are
+		assigned as follows:
+
+		0 is used for hardware notifiers since we need to handle hardware interrupts
+		as soon as they occur.
+		1 is used for hardware servers.
+		3 is used for other servers ( UI and track server ).
+		2 is used for the notifiers of "other servers".
+		5 is used for train tasks.
+		7 is used for the only low priority server, the Route Planner.
+		8 is used for the shell.
+		9 is used for the idle task.
+
+		Notifiers must always have a higher priority than the servers they are
+		notifying.
+
+	Limitations & Challenges
+	========================
+
+		Distance System
+		===============
+
+
+		Aggressive Reservation System
+		=============================
+
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
