@@ -184,8 +184,8 @@
 		O(1) time, we run Floyd-Warshall's All-Pairs Shortest Path algorithm
 		once during initialization and store the results. Here is the algorithm:
 
-		Let dists be the distances matirx.
-		Let paths be the path parents matrix.
+		Let dists be the distances matrix.
+		Let paths be the path parent's matrix.
 
 		Initialize matrices:
 			dists[i][j] = 0 		if i == j
@@ -396,7 +396,7 @@
 
 	Also, we increased the grace period on the watchdog to 5 seconds, as sometimes the
 	poll takes a bit longer to respond - especially when sending in other commands.
-	The reason for this change is that reseting it too early might mean we discard useful
+	The reason for this change is that resetting it too early might mean we discard useful
 	sensor data.
 
 		The detective also keeps a buffer of unaccounted for sensor triggers, but they are
@@ -421,7 +421,7 @@
 		=================
 		The train keeps a buffer of the last 10 track section speeds and calculates the
 		mean and standard deviation of this sample. Data is only added to the buffer
-		when we know the train is not accelerating (and decellerating). This gives us a
+		when we know the train is not accelerating (and decelerating). This gives us a
 		base speed to use in our calculations for current speed.
 		This approach is robust against the train losing speed over time and does not 
 		require hardcoded speed profiles per train. It also has the advantage of not having
@@ -456,7 +456,7 @@
 
 		The neat thing about our calibration mode is that it is also a form of automated testing.
 		As the train is travelling, it is calculating shortest routes via the Route Planner and 
-		reserving and cancelling sections of track. If any part of the system is broken, we can
+		reserving and canceling sections of track. If any part of the system is broken, we can
 		tell immediately during calibration.
 
 		Stopping Distances
@@ -489,7 +489,7 @@
 		Position Update
 		===============
 		When the detective gets a sensor that a train predicted, it tells the 
-		train in the form of a postion update. At that current point in time,
+		train in the form of a position update. At that current point in time,
 		the train knows exactly where it is and its direction.
 
 		At this point we do the following:
@@ -539,13 +539,13 @@
 
 			Hence, we can estimate the train's location anywhere on the track within
 			the train's standard deviation worth of error. Assuming normal distribution
-			this will predict the sensor hit correcly 99% of the time.
+			this will predict the sensor hit correctly 99% of the time.
 			(See Standard Deviation below).
 
 			Route Watcher
 			============
 			This task has already been briefly explained in the Route Planner above.
-			It is only woken up when a train cannot create any vaild path. After
+			It is only woken up when a train cannot create any valid path. After
 			Delaying for a set time, it Sends to the train to wake it up and try
 			to plan a new route. If the blocking train has moved and made new
 			reservations, then this train will be free to plan a route.
@@ -653,7 +653,7 @@
 		implemented an entire 2D geometry class with vectors, single points and 
 		rectangles. 
 
-		Since we are updating reservations and checking for collsions frequently, 
+		Since we are updating reservations and checking for collisions frequently, 
 		we needed to ensure that these operations are fast. Efficient 2D rectangle 
 		intersection code was found online and it used in 2D video games. 
 
@@ -723,7 +723,7 @@
 		- We never reserve a section of track behind a train unless it is stopped.
 		A train travelling behind a train will reserve right up to the back of it.
 		
-		- As mentioned above, collisions near switches are elminated since we create
+		- As mentioned above, collisions near switches are eliminated since we create
 		straight-line rectangles towards the switch.
 		
 		- A train can have as many rectangles as it needs.
@@ -732,7 +732,7 @@
 		due to an idle blocking train, we pick a random destination for the blocking 
 		train and send it there. We hope that by the time the moving train reaches
 		the reserved section it is clear. After moving to the random destination, the
-		blicking idle train will move back to its start location.
+		blocking idle train will move back to its start location.
 		
 		- We believe our reservation is optimal. A train only reserves as far as it wants
 		to go and never any more. 
@@ -793,7 +793,7 @@
 		these local copies as we wish and they will not affect our actual system. Since
 		these are copies, they will act in the same manner as the actual system. 
 		
-		First, we run dijkstra to determine the shortest path from its current node to
+		First, we run Dijkstra to determine the shortest path from its current node to
 		its destination. It does not consider reservations and simply makes the shortest path.
 		This is the path that our simulation will attempt to clear.
 
@@ -827,8 +827,8 @@
 		- We had hoped to simulate a gridlock situation with a path of 4 blocking trains and 
 		move them all out of the way for 1 trapped train.
 
-		- If this code was called often enough, we can run floyd-warshall once to compute all
-		of the shortest paths and used this stored data instead of running dijkstra for every 
+		- If this code was called often enough, we can run Floyd-Warshall once to compute all
+		of the shortest paths and used this stored data instead of running Dijkstra for every 
 		deadlock.
 		
 		Limitations
@@ -836,7 +836,8 @@
 		Here is a list of limitations (other than those listed above):
 
 		- Our reservation system does not look ahead as it is making a reservation and determine
-		that there is a deadlock. 
+		that there a deadlock could occur with a particular reservation. It would probably
+		be smart to do this.
 
 		- This simulation is not bounded in time. It will keep simulating the trains forward 
 		until the path is clear and it no longer needs to move trains. There are some
@@ -1055,7 +1056,7 @@
 		=============================
 		Our reservation system is very aggressive. We always try to make a reservation end
 		as close as it can to the next train. If our train location estimations are
-		slightly off, then train's can colliede even though the reserved sections are 
+		slightly off, then train's can collide even though the reserved sections are 
 		correct. In this case, it is probably a good idea to test the system thoroughly
 		and add an error margin.
 
