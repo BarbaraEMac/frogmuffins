@@ -38,7 +38,7 @@
 	solution. Our goal was to create situations with 5 trains where at least 2 trains
 	were blocking a single train from reaching its destination. The trapped train
 	was supposed to cause the idle blocking trains to move out of its way, let it pass,
-	and move them back into place. 
+	and move them back into place. Optional objective: solve world hunger.
 
 	We were also going to implement a neat method to have trains follow each other 
 	as closely as possible without having collisions occur as the leading train slowed down
@@ -151,7 +151,9 @@
 		Data Accuracy
 		=============
 		We are accepting the data in the track files as being accurate. Cherry confirmed
-		that she measured some of the distances in the previous term.
+		that she measured some of the distances in the previous term. The new measurement
+		double check this and have acutally pointed outa few places where there was a small
+		discrepancy.
 
 		New Measurements
 		================
