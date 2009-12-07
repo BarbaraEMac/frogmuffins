@@ -148,7 +148,10 @@ void res_run () {
 				}
 				assert( reply.stopDist >= 0 );
 				
-				printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
+				if( reply.stopDist < req.stopDist - 50 ) {
+					printf("%d can safely travel %d. Wants to go %d.\r\n", trRes->trainId, reply.stopDist, req.stopDist );
+				}
+
 
 				// Reply to the sender train
 				Reply( senderTid, &reply, sizeof(ResReply) );
@@ -325,8 +328,8 @@ int res_checkIntersect( Reservation *r, Rectangle *rect, int trainId ) {
 			// If the boxes collide OR share an edge,
 			// return there is an intersection
 			if( rect_intersect( rect, rectItr ) != NO_INTERSECTION ) {
-//				printf ("%d rect intersects with this train's (%d).\r\n",
-//						trItr->trainId, trainId);
+				printf ("%d rect intersects with this train's (%d).\r\n",
+						trItr->trainId, trainId);
 				// Move this train out of our way incase we come here
 			//	if ( trItr->idle == true ) {
 			//		printf ("Telling %d to move!\r\n", trItr->trainId);
