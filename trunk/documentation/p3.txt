@@ -670,6 +670,34 @@
 		The error is acceptable because we can only estimate the location of the train
 		to begin with. Our error for the train location is 2cm as well.
 		
+		Data Structures
+		===============
+		The reservation system is a struct of the following form:
+		typedef struct {
+			TrackModel	*model;
+			TrainRes 	 entries  [NUM_TRAINS];
+			TID			 courierTid;
+		} Reservation;
+
+		It stores a pointer to the track model that is shared with the Route Planner. 
+		
+		Each train has a reservation entry of the following form:
+		
+		typedef struct {
+			int 		trainId;			// Train identifier
+			int			trainTid;			// Tid for this train
+
+			bool		idle;				// 1 if this train is idle. 0, otherwise.
+
+			int 		rectLen;			// Number of rectangles
+			Rectangle  	rects[NUM_RECTS];	// TrainRes rectangles
+
+			int 		idxsLen;			// Number of reserved node idxs
+			int			idxs[NUM_IDXS];		// Reserved Node / Edge indexes
+		} TrainRes;
+
+		The data structure is fairly self-explanatory.
+
 		Why?
 		====
 		We noticed that there are sections of the track near switches when two 
@@ -699,6 +727,12 @@
 		straight-line rectangles towards the switch.
 		
 		- A train can have as many rectangles as it needs.
+
+		- During a track reservation, if a train cannot travel its full desired distance
+		due to an idle blocking train, we pick a random destination for the blocking 
+		train and send it there. We hope that by the time the moving train reaches
+		the reserved section it is clear. After moving to the random destination, the
+		blicking idle train will move back to its start location.
 		
 		- We believe our reservation is optimal. A train only reserves as far as it wants
 		to go and never any more. 
@@ -717,29 +751,101 @@
 		Testing will continue until the code freeze at 9:00am to determine the source of the
 		collisions.
 
-
 	Deadlock Detection & Recovery
 	===============================
-	
+	We have a fairly impressive deadlock detection and recovery strategy that is currently 
+	untested. It uses train predictions to simulate moves into the future and determine
+	a set of moves that will clear a train's path as effectively as possible.
+
+	As of 10:00pm the night before this project is due, no part of this system has been tested.
+	It's quite unfortunate since we think it will be VERY neat to watch and it will make the trains
+	look very intelligent. We have spent most of our time over the past few days working on the
+	train task and reservation system to ensure that they are both working as best as they can.
+	Unfortunately, testing the coolest part of our project was pushed off to the back burner. 
+
+	Obviously, since this system has not been tested, it is still in the simplistic early stages.
+	We were hoping to add lots of complexity and special edge cases to make it as optimal as possible.
+	There are many neat real-time AI problems that could be solved!
+
+	If we were allowed to continue working on the train project after the take-home exam, it
+	would be neat to see what our system could accomplish with some more testing and finesse.
 
 		Detection
 		=========
-		- reservation system will return a safe distance of 0
+		During a track reservation, the reservation server knows where each train is
+		by its reservation data and where it wants to go. If a train is unable make 
+		any moves, the reservation system knows this and returns a safe distance of 
+		0. We hope that the train will determine it cannot safely move and will 
+		halt immediately.
+
+		At this point, the train will delay for 500ms and try to make a reservation. 
+		During this time, we hope that a blocking train will move out the way and allow 
+		this train to make a valid track reservation and start moving.
+
+		If a train stays blocked for 5 iterations, we consider it to be stuck. At this point,
+		it tells the reservation system it is stuck and we start the deadlock recovery code.
 
 		Recovery
 		========
-		- First, assume train is moving and will move out of the way
-		- wait for 1000 ms for the train to move and try again
-		- if not successful, check train status
-		- if idle, move it
-		- otherwise, wait more
+		To free a train, we create a simulation system and run a possible set of moves through
+		it to find a way for a trapped train to move. The simulation system is a local copy of
+		the current reservation system with a local copy of the track model. We can alter
+		these local copies as we wish and they will not affect our actual system. Since
+		these are copies, they will act in the same manner as the actual system. 
+		
+		First, we run dijkstra to determine the shortest path from its current node to
+		its destination. It does not consider reservations and simply makes the shortest path.
+		This is the path that our simulation will attempt to clear.
 
-		how does the train get moved?
+		Then we enter a loop until there are no reservations along the entire path by any 
+		train other than the trapped one. Here is what we do in the loop:
 
+			For each reserved node, if the train reserving it is idle, store its 
+			reservation entry. Since we waited before starting the recovery code for
+			non-idle trains to move, we hope that each train along the path is idle.
+			** With testing, we could determine the optimal wait time.
+
+			For each of these idle trains, we simulate moving them forward along a 
+			straight path without flipping any switches. 
+
+			Repeat until the path is clear.
+
+		Once the path is clear, we have the destination sensor (node?) for each train 
+		that is blocking the path. Then, we simply tell the idle trains to move to these 
+		endpoints and allow the trapped train to travel along the now clear path.
+
+		Once the trapped train has travelled the path, the other trains should find their
+		ways back to their starting points. 
+
+		Obviously, this is a very simplistic starting system. We had hoped it make it 
+		much more robust.
+
+		Neat/Useful Things
+		==================
+		Here is a list of neat things:
+
+		- We had hoped to simulate a gridlock situation with a path of 4 blocking trains and 
+		move them all out of the way for 1 trapped train.
+
+		- If this code was called often enough, we can run floyd-warshall once to compute all
+		of the shortest paths and used this stored data instead of running dijkstra for every 
+		deadlock.
+		
 		Limitations
 		===========
-		- cannot predict and prevent
-	
+		Here is a list of limitations (other than those listed above):
+
+		- Our reservation system does not look ahead as it is making a reservation and determine
+		that there is a deadlock. 
+
+		- This simulation is not bounded in time. It will keep simulating the trains forward 
+		until the path is clear and it no longer needs to move trains. There are some
+		situations where this will not end.
+
+		- There are many time-expensive computations during a deadlock recovery. This code
+		is not O(1). Since the reservation server is figuring out these steps, other
+		non-trapped trains cannot make reservations.
+
 	UI / Shell
 	==========
 	We have designed a unique user interface for this project. This UI shows the
@@ -785,8 +891,7 @@
 		Layout
 		======
 		The track map prints at the top of the screen. The switch settings are
-		displayed over the map. 'S' indicates the switch is straight and 'C' 
-		indicates the switch is curved. The train location is displayed inside
+		displayed over the map.  The train location is displayed inside
 		the left-most loop and the current time (in ms) is displayed in the
 		right-most loop.
 
@@ -795,9 +900,6 @@
 
 		The shell prompt will display at the very bottom and can show 3 lines
 		worth of scrolling data.
-
-		We realize that the map is very large and will be modifying it in future
-		iterations of this project.
 
 		Shell
 		=====
@@ -832,26 +934,53 @@
 	===========
 	We did some neat things for this assignment. Here's a brief discussion of
 	some of them.
-	
-		- use lights to determine if connected
-		- flip switches buffer
-		- can travle to any location - not just sensors
+
+		Debug Code
+		==========
+		We have many asserts and debug print statements. This can create bloated code
+		and is not desirable for production (demo) code. Hence, all of our debug code is
+		placed within compiler macros and will be stripped out if we don't need it.
+
+		Train Speed Data
+		================
+		Please see the attached spreadsheet data for all of the data we have collected
+		about each of the trains. We have accurate stopping distances and times for
+		almost all of the trains (Fraser brought in new ones the night before the demo).
+
+		From this data, we have been able to predict acceleration, deceleration, and
+		speed functions. We now use these in our code to predict the location of the train.
+
+		Multi-Track Drifting
+		====================
+		Multi-track drifting occurs when the front and back wheels run on opposite
+		parts of a track after going over a switch. This happens when a switch is changed
+		while the train is on top of it.
+
+		To prevent this, we create a buffer in front of the train and tell it to not
+		flip switches if it is less than this distance away from the switch.
+
+		Stopping Locations
+		==================
+		Since we tell the trains to travel for a set distance, we can have them park
+		at any location on the track, not just at sensors.
 
 		Track Measurements
 		==================
 		We measured the location of every single node on both tracks from an
 		origin point. 
 
-		Calibration Data
-		================
 		Kernel
 		======
-		Since we started working on the project, we have not modified our kernel.
+		Since we started working on the project, we have not modified our kernel. Woot!
 
-	no global OR static vairables. Each class is completely self-contained. Reduces
-	coupling.
+		Global / Static Variables
+		=========================
+		In order to reduce coupling, there are no global or static variables anywhere
+		in our code, except for the sharing of the track model. Each task
+		is completely self-contained.
 
-	Except for the ROute PLanner and the Reservation system. It was more efficient to share the track model then to pass reservation data bck and forth in messages.
+		In this case, it was more efficient to share the data than the pass the updated
+		reservation data back and forth in a message.
 
 		Optimization
 		============
@@ -902,16 +1031,47 @@
 		Notifiers must always have a higher priority than the servers they are
 		notifying.
 
+		Commits
+		=======
+		As of 12:15am before the assignment is due, we are at 911 Subversion commits. 
+		We're hoping to get to 1000 before the night ends, but this is probably unlikely.
+
 	Limitations & Challenges
 	========================
+	There were many challenges we faced while implementing our train application, due to
+	our design decisions.
 
 		Distance System
 		===============
+		Our train still drives "blind". This means that the train does not know anything
+		at all about the track. It is given distances to travel, predicted sensors and
+		nodes, and switches to flip. It was our goal to make the train as simple as 
+		possible so that it can focus on estimating its location and calibration.
 
+		This ended up being very difficult to do. We now feel that the train should
+		have more information to work with.
 
 		Aggressive Reservation System
 		=============================
+		Our reservation system is very aggressive. We always try to make a reservation end
+		as close as it can to the next train. If our train location estimations are
+		slightly off, then train's can colliede even though the reserved sections are 
+		correct. In this case, it is probably a good idea to test the system thoroughly
+		and add an error margin.
 
+	Course Commentary
+	=================
+	Overall, we have both enjoyed the course. We've learned much about time management,
+	dedication, motivation, and determination. These are all qualities that are very 
+	important to learn, but are not usually taught in the classroom.
+
+	We have also learned much about implementing real-time operating systems,
+	programming in C, the frustrations of not having pre-made, well-tested libraries, 
+	device drivers and low-level hardware controls, debugging and many more things.
+
+	We both feel that we needed less time to implement the kernel and more time to
+	implement the real-time train application at the end of the course. If we had a 
+	few extra days, we believe we could have a fully working, impressive project.
 
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||3 ||
@@ -927,5 +1087,41 @@
 	
 	Here are all of the files we are submitting:
 
+	.:
+	arch           include  lib       ot   server  task      train
+	documentation  kern     Makefile  out  src     todo.txt  wishlist
+
+	./arch:
+	drivers.c  ep93xx.c  primitives.S  requests.c  switch.c  switch.S
+
+	./documentation:
+	k1.txt  k2.txt  k4.txt  p2.txt  proposal.txt
+	k2.out  k3.txt  p1.txt  p3.txt  syscall.txt
+
+	./include:
+	buffer.h   fifo.h        model.h         shell.h     td.h
+	bwio.h     gameplayer.h  requests.h      string.h    trackserver.h
+	debug.h    gameserver.h  reservation.h   switch.h    train.h
+	drivers.h  globals.h     routeplanner.h  syscalls.h  ts7200.h
+	error.h    math.h        servers.h       task.h      ui.h
+
+	./kern:
+	main.c  orex.ld  syscalls.c  td.c
+
+	./lib:
+	libbuffer.a  libbwio.a  libdebug.a  libmath.a  libstring.a
+
+	./server:
+	clockserver.c  nameserver.c  serialio.c
+
+	./src:
+	buffer.c  bwio.c  debug.c  fifo.c  Makefile  math.c  string.c
+
+	./task:
+	gameplayer.c  gameserver.c  shell.c  svn-commit.tmp  task.c
+
+	./train:
+	detective2.c  model.c        routeplanner.c  train.c
+	detective.c   reservation.c  trackserver.c   ui.c
 
 	Note: Extra compilation files may be included in the directories (.o, .s etc).
