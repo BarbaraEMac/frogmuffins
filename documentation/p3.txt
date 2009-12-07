@@ -798,7 +798,7 @@
 		To free a train, we create a simulation system and run a possible set of moves through
 		it to find a solution simulation system is a local copy of
 		the current Reservation Server using a local copy of the track model. We can alter
-		these local copies as we wish and they will not affect our actual system. Since
+		these local copies as we wish and they will not affect our actual system. Also since
 		these are copies, they will act in the same manner as the actual system. 
 		
 		First, we run Dijkstra to determine the shortest path from its current node to
@@ -808,10 +808,11 @@
 		Then we enter a loop until there are no reservations along the entire path by any 
 		train other than the trapped one. Here is what we do in the loop:
 
-			For each reserved node, if the train reserving it is idle, store its 
-			reservation entry. Since we waited before starting the recovery code for
+			For each reserved node:
+			If the train reserving it is idle, store its reservation entry. 
+			Since we delayed before starting the deadlock recovery code to allow the
 			non-idle trains to move, we hope that each train along the path is idle.
-			** With testing, we could determine the optimal wait time.
+			** With testing, we could have determined the optimal wait time.
 
 			For each of these idle trains, we simulate moving them forward along a 
 			straight path without flipping any switches. 
@@ -826,14 +827,14 @@
 		ways back to their starting points. 
 
 		Obviously, this is a very simplistic starting system. We had hoped it make it 
-		much more robust.
+		much more robust and add many tweaks.
 
 		Neat/Useful Things
 		==================
-		Here is a list of neat things:
+		Here is a list of neat things pertaining to the deadlock system:
 
-		- We had hoped to simulate a gridlock situation with a path of 4 blocking trains and 
-		move them all out of the way for 1 trapped train.
+		- For the final demo, we had hoped to simulate a gridlock situation with a
+		path of 4 blocking trains and move them all out of the way for 1 trapped train.
 
 		- If this code was called often enough, we can run Floyd-Warshall once to compute all
 		of the shortest paths and used this stored data instead of running Dijkstra for every 
@@ -848,16 +849,18 @@
 		be smart to do this.
 
 		- This simulation is not bounded in time. It will keep simulating the trains forward 
-		until the path is clear and it no longer needs to move trains. There are some
-		situations where this will not end.
+		until the path is clear and it no longer needs to move trains. We can foresee some
+		situations where the loop will not end.
 
 		- There are many time-expensive computations during a deadlock recovery. This code
-		is not O(1). Since the Reservation Server is figuring out these steps, other
+		is definitely not O(1). 
+		
+		- As the Reservation Server is figuring out these simulated steps, other 
 		non-trapped trains cannot make reservations.
 
 	UI / Shell
 	==========
-	We have designed a unique user interface for this project. This UI shows the
+	We have designed a unique user interface (UI) for this project. This UI shows the
 	state of the turn-outs, last 4 triggered sensors, location of the train 
 	(distance in mm from last sensor it hit), current time in ms, and the shell
 	prompt. Much of this information is overlayed on a map of the track. There 
@@ -976,7 +979,9 @@
 		Track Measurements
 		==================
 		We measured the location of every single node on both tracks from an
-		origin point. 
+		origin point. These measurements are stored in our model file and are used to 
+		make the 2D map of the track. We would be happy to share these with the TAs
+		and professor for future offerings of this course.
 
 		Kernel
 		======
@@ -988,7 +993,7 @@
 		in our code, except for the sharing of the track model. Each task
 		is completely self-contained.
 
-		In this case, it was more efficient to share the data than the pass the updated
+		For the track model, it was more efficient to share the data than the pass the updated
 		reservation data back and forth in a message.
 
 		Optimization
@@ -1008,6 +1013,10 @@
 		We do not particularly feel like debugging gcc optimization bugs at this time
 		and so we chose to use the stable O2 optimization instead of O3.
 
+		Cache
+		=====
+		Both the data and instruction caches are on.
+		
 		Task Priorities
 		===============
 		We have designed a task priority hierarchy for this assignment. It works
