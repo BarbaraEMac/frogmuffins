@@ -1102,6 +1102,145 @@
 
 	Here are the md5 hashes for each file:
 
+	6248d233ef4a0935c26cdefbc082ba0a  ./kern/syscalls.s
+	ff334fdf2ea5232f8ff3e374b69e4245  ./kern/main.c
+	4749098b4d898c025e156b3705bbb9b8  ./kern/td.c
+	ebbda576e9a738b99f5384dbcb40348a  ./kern/orex.ld
+	fb33d2c7b3ca4d3c7ce07c8e0638f32b  ./kern/syscalls.c
+	715c0bca62843e796e19dafe7490813b  ./kern/syscalls.o
+	c78c46961c1676ca9660b4d1d86856fd  ./kern/main.s
+	7cfe72db9c3f68b5d58c5885f6698c8d  ./kern/main.o
+	27cdfcf5fb2b0eb02cf07d2198c3dc8b  ./kern/td.s
+	6f45ff20f0fc8dba150a43968468a0d5  ./kern/td.o
+	1e8f49432fef07e525ec2f06c10e51c1  ./kern/main.map
+	f90dbbef944616ea23abc91e4946e6c2  ./kern/main.elf
+
+	4b9d6c583e486a9664371406f87dde3d  ./task/gameplayer.s
+	5c79ef173674f2c84130aecda39abf67  ./task/gameserver.c
+	6152327419cbef8af5e19ce843e1eca3  ./task/task.c
+	43c84644f93f6e78930acf587f491930  ./task/gameplayer.c
+	30213ee4935bb028318ecfa44bf92732  ./task/shell.c
+	28c4a8ae3b1ba4cebdd897cf88b126a6  ./task/gameplayer.o
+	cb2a9fea01f4061c369a2c84748d0bab  ./task/gameserver.s
+	9def214b7db0242e26da04df08f4a253  ./task/gameserver.o
+	4c93a0036e065def4249a79363c66ee5  ./task/shell.s
+	11221852fcc59832a1af3888783abc0b  ./task/shell.o
+	fd5fc50ff7f24001ed59b27189eccd05  ./task/task.s
+	9caf7effc44088bbb4cfb2e723442c2f  ./task/task.o
+
+	e190a73becbcbd7af79987ee8e51fd9f  ./include/servers.h
+	fd1f7faece04ff0500d80c85a5018711  ./include/error.h
+	02bc656dc25ba4af3b4a2b56f9c544df  ./include/math.h
+	3827d6ac49fcd5962842b452c1b85aa6  ./include/trackserver.h
+	5efc2b57900cdd08ee04372ad606edde  ./include/syscalls.h
+	58e7ea88711ea3455cc9b65561e80c14  ./include/ts7200.h
+	8146ed251b92ea06a95351da69340699  ./include/gameserver.h
+	fb7609f4f9b67fa4c3c5f16b02330712  ./include/bwio.h
+	419d45aabe06df9f1a1953679808be36  ./include/model.h
+	7193db01edef139a56deb8c0a8e8b02d  ./include/reservation.h
+	2f03b38f8c205f7f1a08d5b2cfdcb169  ./include/switch.h
+	5696d925f014e68d7d052d9a209125e7  ./include/task.h
+	67a9150395d1ba08a2061552601d24e6  ./include/string.h
+	9a9b2e58b88b5412afefe439cac97326  ./include/td.h
+	660e3c8c27ef66e7e03a7f49b26f4fae  ./include/shell.h
+	6fa2c3d28864f6cd38ff3cea936c104b  ./include/buffer.h
+	83d86af721808a22a092db9d3cbfdf7e  ./include/requests.h
+	803190f8ad15f69ffd4750861676976d  ./include/train.h
+	9312559f8df6a46f874cf4eadff47328  ./include/ui.h
+	67e70e8647557c6d928f15eab1381a49  ./include/drivers.h
+	a4737853ba1313ae28bd2577ae811839  ./include/routeplanner.h
+	3f2c033376145f428dce09075c96cf08  ./include/globals.h
+	88790ee55eb595666ec820418bc74378  ./include/fifo.h
+	ccf98888e8b4b6ad9b9cb429697942f4  ./include/gameplayer.h
+	3a3ce59eb4a90dbf61fcaeb129e47763  ./include/debug.h
+
+	2b26d02a8c605a843ae2c7ba5ed6c649  ./lib/libbwio.a
+	1fcf48eb025c1bc102927a7a490f7790  ./lib/libdebug.a
+	49bedb25173b8198fd60427b9ccc061a  ./lib/libstring.a
+	91c37a9aa39e444a63a4307b32ea499c  ./lib/libmath.a
+	94925c9f601605cb0d8a2dfef8cde65e  ./lib/libbuffer.a
+
+	ab439d208b8327bcd600ab87c9f68ef7  ./server/clockserver.s
+	9a0e976c1f786d68753dce3562e882a8  ./server/clockserver.c
+	5cf469b48fbafcc7b85993eb2a254fcb  ./server/nameserver.c
+	a7ce6cd7ae1805395cade0bfd137a25c  ./server/serialio.c
+	f9d78b0598ee83615856810ff0f3ed20  ./server/clockserver.o
+	6170a5e0825f1776457fe7a143891d23  ./server/nameserver.s
+	0b6b340c9ecc2542a46f536c5fe52977  ./server/nameserver.o
+	0becf5a7ff0386e627a5e788b912f783  ./server/serialio.s
+	959d985ae8ca55d1776d79fe80f06e2c  ./server/serialio.o
+
+	afa37848f6d149701d45394b5eedc527  ./src/bwio.s
+	ab667fc308f3a868abe305dde11d7589  ./src/bwio.c
+	4042844222d0cd3740b18f99b1c824a5  ./src/fifo.c
+	fe7345c32d27b7b615048b272de24c13  ./src/debug.c
+	c2c533982b37adfd03467601f58e40fa  ./src/string.c
+	f469bbdad899eab6fe91dec26ef08917  ./src/math.c
+	c513e3f376cfb4ef77d1796bb48ccdef  ./src/buffer.c
+	fa5e9c4e46d48e60b422286274aadeac  ./src/Makefile
+	2b26d02a8c605a843ae2c7ba5ed6c649  ./src/bwio.a
+	9f492b248467a5e363c930a3ab2daa79  ./src/debug.s
+	1fcf48eb025c1bc102927a7a490f7790  ./src/debug.a
+	9bf27ed1c518c975f9720edf0ef9fa33  ./src/string.s
+	49bedb25173b8198fd60427b9ccc061a  ./src/string.a
+	066fa617df90d5c0ad998c5668cf9580  ./src/math.s
+	91c37a9aa39e444a63a4307b32ea499c  ./src/math.a
+	782b832099da2dbe9956aaf2c30a5034  ./src/buffer.s
+	94925c9f601605cb0d8a2dfef8cde65e  ./src/buffer.a
+
+	3cc746d7e48569566ba91afcd64d1ade  ./documentation/p2.txt
+	e0b45e2bb3becddd1a17646e462336a6  ./documentation/p3.txt
+	0995484f9e2710b57b3cc58924953e51  ./documentation/k2.out
+	52964ac97d4144df7768e6d5f4dba159  ./documentation/syscall.txt
+	fe969235a8cc5bac3991570200e58ae1  ./documentation/k1.txt
+	c12e6a30a6f74cfe0ed6e0d7b42c9d28  ./documentation/k2.txt
+	9abe1c6037cfae6365900a5ba300df23  ./documentation/k3.txt
+	f2c08a56da789e93f3595bd099122a65  ./documentation/k4.txt
+	a1bd6b701571edfd0d7312fdb0bbf5a7  ./documentation/proposal.txt
+	012de728eb811b638c338260d779391c  ./documentation/p1.txt
+
+	b5f288fb854c3bc03fedb3d2b1ab37a8  ./arch/drivers.s
+	af75127f35f286928b8e16153d07f7e7  ./arch/drivers.c
+	29632b3f08e1713528c1145dab2f6388  ./arch/ep93xx.c
+	751398e0370bcd05ee43cacb3ed33ee8  ./arch/switch.S
+	8a714a74e007435dfb4fdc1499cefdf6  ./arch/switch.c
+	8fb6754e34da4be7f442e9ada5eb310f  ./arch/requests.c
+	08936ac97b4e596a0ba49b026339cb6b  ./arch/primitives.S
+	b6adcaf7d0e8b696b91198511ae83676  ./arch/drivers.o
+	e8c58ddb1eaf2e70e4563a0019c297d4  ./arch/requests.s
+	75c4503d58806ca5b444235420083ee0  ./arch/requests.o
+	aa5adcbc0ad30d8c3ba07f96d94fd055  ./arch/primitives.o
+	b272bcab0f3c7818147d59a88ccc9c32  ./arch/switch.o
+	bc371e93f3b392e22dc750e872eb0436  ./arch/ep93xx.s
+	fbce450789f99afe66a2832ca484543d  ./arch/ep93xx.o
+
+	f7ef95a7ed66fc45b8ce9d6087a0e7ac  ./train/detective.s
+	efac1d2d7f02d26a3cac018f4d605d3c  ./train/routeplanner.c
+	2458fbe11fc021c55928252da74cae37  ./train/detective2.c
+	bdc37daaf06c33be966eeac287424859  ./train/model.c
+	49d271eb4187f06a0323156efc40aa15  ./train/reservation.c
+	d15b68801e9d3f2db4fc0b9b4359caef  ./train/trackserver.c
+	a27f2bebe55cb79f5f150cd858fd48ca  ./train/detective.c
+	7a9d7f85c5bd60f9d0761fff098ea13d  ./train/train.c
+	03253f39ce656e150609d15131cbe6a5  ./train/ui.c
+	72ef5a9fe16cee1a3dbf7ea552fd3c9e  ./train/detective.o
+	4aa2dcef24b0ad9b62a53dd42827ffc9  ./train/model.s
+	d5d75bcf25d72056264b82a021bbfde7  ./train/model.o
+	f5c54158e65c81bb28b4a33fd3de3067  ./train/reservation.s
+	6402808263a46b3416869b93fa4bc193  ./train/reservation.o
+	6bd3cf2d7ff28b0c0c44c09ed4954776  ./train/routeplanner.s
+	bad49d75de11a4f093ec3e51542d5ef8  ./train/routeplanner.o
+	70b45cbe0660670e63bdb53e0f2473f0  ./train/trackserver.s
+	981708d75660b9fce1756cad55d20f8f  ./train/trackserver.o
+	df3c2a358a07f71195e1864073568d8c  ./train/train.s
+	3254214a9e2f909f260578cb53640c47  ./train/train.o
+	bb9d536e303d59c7d8fcfd64ec3d6a3e  ./train/ui.s
+	29c1f333b7a01bb9a6dc6e9cae428ba0  ./train/ui.o
+	24e8bc999835a26937df4e4d53725497  ./out
+	de975f7952206ab06c7233a544c0106e  ./todo.txt
+	b713e7fce8154121fdc176acd2a9986c  ./wishlist
+	d74c7c793e55b9fc126c346cec6ff1fb  ./Makefile
+
  ____ ____ ____ ____ ____ ____ ____ ____ _________ ____ 
 ||Q |||u |||e |||s |||t |||i |||o |||n |||       |||4 ||
 ||__|||__|||__|||__|||__|||__|||__|||__|||_______|||__||
