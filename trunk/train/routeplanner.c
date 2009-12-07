@@ -320,19 +320,19 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 
 		case RESERVE:
 			// Check the train id.
-			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
-				req->trainId != 46 && req->trainId != 52 ) {
-				return INVALID_TRAIN;
+//			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
+//				req->trainId != 46 && req->trainId != 52 ) {
+//				return INVALID_TRAIN;
 			}
 		//	TODO:Check something else
 			break;
 				
 		case PLANROUTE:
 			// Check the train id.
-			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
-				req->trainId != 46 && req->trainId != 52 ) {
-				return INVALID_TRAIN;
-			}
+//			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
+//				req->trainId != 46 && req->trainId != 52 ) {
+//				return INVALID_TRAIN;
+//			}
 
 			// Check the last hit sensor.
 			if ( (req->lastSensor < 0) || (req->lastSensor > 80) ) {
