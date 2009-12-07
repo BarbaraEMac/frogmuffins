@@ -323,7 +323,7 @@ int rp_errorCheckTrRequest (RoutePlanner *rp, RPRequest *req) {
 //			if ( req->trainId != 12 && req->trainId != 22 && req->trainId != 24 &&
 //				req->trainId != 46 && req->trainId != 52 ) {
 //				return INVALID_TRAIN;
-			}
+//			}
 		//	TODO:Check something else
 			break;
 				
