@@ -814,7 +814,6 @@
 			If the train reserving it is idle, store its reservation entry. 
 			Since we delayed before starting the deadlock recovery code to allow the
 			non-idle trains to move, we hope that each train along the path is idle.
-			** With testing, we could have determined the optimal wait time.
 
 			For each of these idle trains, we simulate moving them forward along a 
 			straight path without flipping any switches. 
