@@ -386,16 +386,13 @@
 		This request will return the next (unmatched by WATCH_FOR) event. This way the train
 		the train will disregard sensors triggered by other trains, for later assignments.
 
-****TODO****
-	The detective group of tasks is not much different from the last code. There is still
-	one main server task, one poller task and a watchdog task. The few changes that were
-	made are: 
+		The updated made in p2 for the detective are: 
 
-	GET_STRAY and WATCH_FOR will overwrite any previous requests by a train. This is 
-	unlike before where a train had to wait for a request to return. Also these calls 
-	are non-blocking now, with the detective doing an explicit Send() to the train when 
+	GET_STRAY and WATCH_FOR will overwrite any previous requests by a train. Also these calls 
+	are non-blocking, with the detective doing an explicit Send() to the train when 
 	the request is handled. We've made this change because the train task is now a server.
-
+	(We make sure in the train controller to Reply to that Send ASAP and so a courier was not
+	needed.)
 
 	Also, we increased the grace period on the watchdog to 5 seconds, as sometimes the
 	poll takes a bit longer to respond - especially when sending in other commands.
@@ -416,19 +413,23 @@
 	=====
 	The train is, by far, our most complex task. It has an exhaustive calibration system and
 	lots of measured hardcoded values to estimate the train's location within 2cm.
-
-** TODO ** More preamble about our impressive train
+	The train task is implemented a as server and a finite state machine. It spawns 2 tasks:
+	a calibration task that controls is driving around a loop during calibration, and 
+	a timed courier task that send messages over to the detective, polling the train controller
+	every 200ms to do so.
 		
 		
 		Speed Calibration
 		=================
 		The train keeps a buffer of the last 10 track section speeds and calculates the
 		mean and standard deviation of this sample. Data is only added to the buffer
-		when we know the train is not accelerating and decelerating due to the train mode.
+		when we know the train is not accelerating and decelerating.
+		We can tell when it is accelerating as we model the train acceleration.
+		(during calibration we do not change the train's speed)
 		This gives us a base speed to use in our calculations for current speed.
 		This approach is robust against the train losing speed over time and does not 
-		require hardcoded speed profiles per train. It also has the advantage of not having
-		to figure these out ahead of time as this time-costly, at the expense of little extra
+		require hardcoded speed profiles per train. It also has the advantage of working
+		on any train we do not have calibration data for, at the expense of little extra
 		calibration time at each run.
 			
 		The goal of calibration is to be able to track the train and correctly
@@ -457,6 +458,12 @@
 
 		After this, the calibration task Exits.
 
+		Having done extensive measurements on various trains, there seem to be 2 types of
+		trains that have a different speed curve (one type is linear, the other quadratic).
+		Knowing what type the train is and a measurement for one of its speed settings
+		we can predict the train's speed for all the other gear settings rather accurately.
+		(see attached spreadsheet)
+
 		The neat thing about our calibration mode is that it is also a form of automated testing.
 		As the train is travelling, it is calculating shortest routes via the Route Planner and 
 		reserving and canceling sections of track. If any part of the system is broken, we can
@@ -465,29 +472,22 @@
 		Stopping Distances
 		==================
 
-**** TODO ****
+		During calibration, we store the stopping distance of the train and use this information
+		to predict the stopping distance for all the other speed settings as well.
+		This done similarly to the speed prediction: after measuring the stopping distances
+		of the trains present, we have noticed that there ar 2 types of trains, one type
+		has a linear relationsip btw stopping distance and speed setting, in the other
+		it seems to be a 1.75 root power (which is easy enough to calculate using sqrt and 
+		multiplication).
 		
-		During calibration, a manual stopping distance for the calibration speed
-		is stored in the train.
-
-		When determining which speed to travel at, we consider the stopping distance.
-		If we have a long way to go, the train can speed up. The closer a train gets
-		to the desired distance, the slower it should travel. 
-
-		We currently have some stopping distances hardcoded into the train task.
-		As trains are dropped, used more, oiled, etc, their stopping distances 
-		change. To get around this, we can slightly alter the hardcoded stopping
-		distances given the measured one as follows:
-
-			stopDist = Hardcoded distance for the current speed.
-
-			stopDist *= Measured stop distance for default speed.
-			stopDist /= Hardcoded stop distance for default speed.
-
 		We do it in this manner since it will avoid floating point calculations.
 		A similar approach is used for all speed calculations - careful ordering of
 		division and multiplication, coupled with normalizing the data at particular 
 		times.
+
+		When determining which speed to travel at, we consider the stopping distance.
+		If we have a long way to go, the train can speed up. The closer a train gets
+		to the desired distance, the slower it should travel. 
 
 		Position Update
 		===============
